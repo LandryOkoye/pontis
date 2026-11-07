@@ -186,6 +186,18 @@ impl Contract {
         caller
     }
 
+    /// Requires 1 yocto and the pauser or compat_approver role. Deliberately not blocked by the
+    /// global pause: suspension is an emergency control (ADR 0003). Returns the caller.
+    pub(crate) fn assert_suspender(&self) -> AccountId {
+        assert_one_yocto();
+        let caller = env::predecessor_account_id();
+        check(
+            self.pausers.contains(&caller) || self.compat_approvers.contains(&caller),
+            "caller is neither a pauser nor a compat approver",
+        );
+        caller
+    }
+
     pub(crate) fn assert_not_paused(&self) {
         check(!self.paused, "contract is paused");
     }

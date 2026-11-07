@@ -80,6 +80,8 @@ mod compat_lifecycle_tests;
 #[cfg(test)]
 mod compat_reject_tests;
 #[cfg(test)]
+mod compat_suspend_tests;
+#[cfg(test)]
 mod compat_tests;
 #[cfg(test)]
 mod registry_tests;
