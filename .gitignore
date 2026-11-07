@@ -1,0 +1,37 @@
+# Node
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.vite/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+
+# Rust
+target/
+**/*.rs.bk
+
+# Secrets and credentials (quote-signer key, NEAR CLI credentials)
+.env
+.env.*
+!.env.example
+.near-credentials/
+.near/
+*.pem
+
+# Local data
+*.log
+*.sqlite
+pgdata/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Local agent tooling (not part of the repo)
+.agents/
+.claude/
+skills-lock.json
