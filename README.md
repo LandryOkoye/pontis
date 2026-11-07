@@ -20,11 +20,11 @@ Out of scope for the MVP: cross-chain bridges, market-priced exchange, dark pool
 
 ## Where to find things
 
-| Document | Purpose |
-|---|---|
-| [`ProjectBrief.md`](ProjectBrief.md) | Product and protocol source of truth (v2.0) |
-| [`BuildPlan.md`](BuildPlan.md) | MVP build plan: ownership, technical decisions, git rules, work items, Definition of Done |
-| `docs/` | Architecture, ADRs (`decisions/`), asset dossiers, threat model, runbooks (added as work lands) |
+| Document                             | Purpose                                                                                         |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| [`ProjectBrief.md`](ProjectBrief.md) | Product and protocol source of truth (v2.0)                                                     |
+| [`BuildPlan.md`](BuildPlan.md)       | MVP build plan: ownership, technical decisions, git rules, work items, Definition of Done       |
+| `docs/`                              | Architecture, ADRs (`decisions/`), asset dossiers, threat model, runbooks (added as work lands) |
 
 ## Planned layout
 
@@ -46,7 +46,22 @@ docs/                architecture, decisions, dossiers, threat model, runbooks
 - Rust toolchain and `cargo-near` (contracts)
 - Docker (local PostgreSQL 16)
 
-Full setup and demo instructions are added with the tooling and docs PRs (`BuildPlan.md` §6, B1 and B15).
+## Development commands
+
+```bash
+pnpm install                 # install workspace dependencies
+pnpm db:up                   # start local PostgreSQL 16 (docker compose); pnpm db:down to stop
+pnpm format:check            # Prettier (pnpm format to fix)
+pnpm -r lint                 # ESLint in every workspace package (shared root eslint.config.mjs)
+pnpm -r typecheck            # tsc in every workspace package (extend tsconfig.base.json)
+pnpm -r test                 # tests in every workspace package
+pnpm rust:fmt                # cargo fmt --check  (also: rust:clippy, rust:test)
+pnpm build:contracts         # cargo-near build of every contract (cargo install cargo-near --locked)
+```
+
+The Rust toolchain is pinned in `rust-toolchain.toml`. The `rust:*` scripts skip cleanly while the Cargo workspace has no members. Each app has an `.env.example`; copy it to `.env` (never committed). CI (`.github/workflows/ci.yml`) runs the same commands.
+
+Full demo and deploy instructions are added with the later PRs (`BuildPlan.md` §6, B8 and B15).
 
 ## Contributing
 
@@ -55,3 +70,7 @@ Work lands through pull requests into `main`; see `BuildPlan.md` §4 for commit-
 ```bash
 pnpm check:commit-size
 ```
+
+## License
+
+MIT, see [`LICENSE`](LICENSE).

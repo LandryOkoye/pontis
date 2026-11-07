@@ -1,0 +1,19 @@
+# Cargo workspace for the NEAR contracts (BuildPlan.md §2, §3).
+# Members are added explicitly by the contract PRs (B4: synthetic-token, B5: pontis-core).
+# A glob such as "contracts/*" is not used because cargo errors when it matches nothing.
+[workspace]
+resolver = "2"
+members = []
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+publish = false
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true

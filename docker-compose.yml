@@ -1,0 +1,22 @@
+# Local PostgreSQL 16 for the API and indexer (BuildPlan.md §2).
+# Credentials are local-development only.
+services:
+  postgres:
+    image: postgres:16
+    container_name: pontis-postgres
+    environment:
+      POSTGRES_USER: pontis
+      POSTGRES_PASSWORD: pontis
+      POSTGRES_DB: pontis
+    ports:
+      - "5432:5432"
+    volumes:
+      - pontis-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pontis -d pontis"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pontis-pgdata:

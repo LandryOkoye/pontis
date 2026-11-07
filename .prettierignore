@@ -1,0 +1,14 @@
+node_modules
+dist
+build
+coverage
+target
+pnpm-lock.yaml
+Cargo.lock
+# Source-of-truth documents, not reformatted
+ProjectBrief.md
+BuildPlan.md
+# Generated
+**/openapi.yaml
+# Frontend worker owns its own formatting
+apps/web

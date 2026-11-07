@@ -3,12 +3,32 @@
   "version": "0.0.0",
   "private": true,
   "description": "Pontis: NEAR-based RWA interoperability and parity conversion (MVP, testnet, synthetic assets only)",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "packageManager": "pnpm@11.24.0",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build:contracts": "bash scripts/build-contracts.sh",
+    "rust:fmt": "bash scripts/rust-ci.sh fmt",
+    "rust:clippy": "bash scripts/rust-ci.sh clippy",
+    "rust:test": "bash scripts/rust-ci.sh test",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
     "check:commit-size": "bash scripts/check-commit-size.sh"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
   }
 }
