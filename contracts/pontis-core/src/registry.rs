@@ -231,6 +231,9 @@ impl Contract {
                 .get_mut(&subject_id)
                 .map(|r| (&mut r.evidence, r.status))
                 .unwrap_or_else(|| env::panic_str("representation not found")),
+            SubjectType::Compatibility => {
+                env::panic_str("use add_compatibility_evidence for compatibility evidence")
+            }
         };
         check(
             status != Status::Rejected,

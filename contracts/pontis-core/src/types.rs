@@ -87,6 +87,7 @@ pub enum SubjectType {
     Issuer,
     CanonicalAsset,
     Representation,
+    Compatibility,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -328,4 +329,77 @@ pub fn validate_sha256(value: &str) {
                 .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')),
         "sha256 must be 64 lowercase hex characters",
     );
+}
+
+// ---- compatibility (brief §6.5-6.7, ADR 0004) ----
+
+/// Only `DirectEquivalent` + an approved relationship enables parity conversion.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[near(serializers = [borsh, json])]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Classification {
+    DirectEquivalent,
+    EconomicallySimilar,
+    Incompatible,
+    /// Set by suspension; never proposed directly.
+    Suspended,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[near(serializers = [borsh, json])]
+#[serde(rename_all = "snake_case")]
+pub enum RelationshipStatus {
+    Proposed,
+    Approved,
+    Rejected,
+    Suspended,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[near(serializers = [borsh, json])]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewAction {
+    Proposed,
+    Approved,
+    Rejected,
+    Suspended,
+    Reapproved,
+}
+
+/// One immutable entry of a relationship's append-only history. `version` equals the entry's
+/// 1-based position, so the history length is always the current version.
+#[derive(Clone, Debug)]
+#[near(serializers = [borsh, json])]
+pub struct CompatibilityVersion {
+    pub version: u64,
+    pub action: ReviewAction,
+    pub classification: Classification,
+    pub status: RelationshipStatus,
+    pub ratio: Ratio,
+    pub scope: String,
+    pub rationale: String,
+    pub actor: AccountId,
+    pub timestamp_ms: u64,
+}
+
+/// One relationship per unordered pair of representations, keyed `"{a}:{b}"` with `a < b`.
+/// `ratio` is output smallest units of `b` per smallest unit of `a` (the reverse direction is the
+/// reciprocal). `version` increases on every recorded change.
+#[derive(Clone, Debug)]
+#[near(serializers = [borsh, json])]
+pub struct Compatibility {
+    pub id: String,
+    pub representation_a_id: String,
+    pub representation_b_id: String,
+    pub classification: Classification,
+    pub ratio: Ratio,
+    pub scope: String,
+    pub rationale: String,
+    pub status: RelationshipStatus,
+    pub version: u64,
+    pub proposed_by: AccountId,
+    pub approved_by: Option<AccountId>,
+    pub evidence: Vec<EvidenceRef>,
+    pub history: Vec<CompatibilityVersion>,
+    pub updated_at_ms: u64,
 }

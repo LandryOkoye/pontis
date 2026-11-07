@@ -26,6 +26,7 @@ enum StorageKey {
     CanonicalAssets,
     Representations,
     RepresentationByAccount,
+    Compatibilities,
 }
 
 #[derive(PanicOnDefault)]
@@ -42,6 +43,8 @@ pub struct Contract {
     representations: IterableMap<String, Representation>,
     /// Token contract account to representation ID; keeps accounts unique.
     representation_by_account: LookupMap<AccountId, String>,
+    /// Keyed `"{a}:{b}"` with `a < b`.
+    compatibilities: IterableMap<String, Compatibility>,
 }
 
 #[near]
@@ -62,6 +65,7 @@ impl Contract {
             canonical_assets: IterableMap::new(StorageKey::CanonicalAssets),
             representations: IterableMap::new(StorageKey::Representations),
             representation_by_account: LookupMap::new(StorageKey::RepresentationByAccount),
+            compatibilities: IterableMap::new(StorageKey::Compatibilities),
         }
     }
 }
