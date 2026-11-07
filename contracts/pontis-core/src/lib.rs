@@ -5,6 +5,7 @@
 //! 1 yoctoNEAR (so restricted access keys cannot call it), checks the caller's role and the
 //! pause state, and emits an event.
 
+mod compatibility;
 mod events;
 mod registry;
 mod roles;

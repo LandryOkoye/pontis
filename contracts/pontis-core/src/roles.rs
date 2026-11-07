@@ -174,6 +174,18 @@ impl Contract {
         caller
     }
 
+    /// Requires 1 yocto, the compat_approver role and no global pause. Returns the caller.
+    pub(crate) fn assert_compat_approver(&self) -> AccountId {
+        assert_one_yocto();
+        let caller = env::predecessor_account_id();
+        check(
+            self.compat_approvers.contains(&caller),
+            "caller is not a compat approver",
+        );
+        self.assert_not_paused();
+        caller
+    }
+
     pub(crate) fn assert_not_paused(&self) {
         check(!self.paused, "contract is paused");
     }

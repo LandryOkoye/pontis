@@ -488,7 +488,7 @@ impl Contract {
     }
 }
 
-fn page<'a, T: Clone + 'a>(
+pub(crate) fn page<'a, T: Clone + 'a>(
     items: impl Iterator<Item = &'a T>,
     from_index: Option<u32>,
     limit: Option<u32>,
