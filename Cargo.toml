@@ -3,7 +3,7 @@
 # A glob such as "contracts/*" is not used because cargo errors when it matches nothing.
 [workspace]
 resolver = "2"
-members = []
+members = ["contracts/pontis-core"]
 
 [workspace.package]
 edition = "2021"
