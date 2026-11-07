@@ -10,9 +10,11 @@ mod events;
 mod policy;
 mod registry;
 mod roles;
+mod route;
 mod types;
 
 pub use events::{CoreEvent, PauseScope, RoleName};
+pub use route::{RouteRefusal, RouteTerms, RouteView};
 pub use types::*;
 
 use near_sdk::store::{IterableMap, IterableSet, LookupMap, LookupSet};
