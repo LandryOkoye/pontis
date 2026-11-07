@@ -1,4 +1,6 @@
-use crate::registry_tests::{attest, core, new_asset, new_issuer, new_rep, token_a, token_b};
+use crate::registry_tests::{
+    attest, core, new_asset, new_issuer, new_rep, pauser, registrar, token_a, token_b,
+};
 use crate::tests::{account, as_account, last_event, owner};
 use crate::*;
 use near_sdk::json_types::U128;
@@ -142,4 +144,108 @@ fn lookups_of_unknown_pairs_are_empty() {
         .get_compatibility("tgold-a".into(), "tgold-b".into())
         .is_none());
     assert!(c.list_compatibilities(None, None).is_empty());
+}
+
+#[test]
+#[should_panic(expected = "caller is not a compat approver")]
+fn registrar_cannot_propose() {
+    let mut c = two_reps();
+    as_account(registrar());
+    propose_parity(&mut c);
+}
+
+#[test]
+#[should_panic(expected = "caller is not a compat approver")]
+fn owner_is_not_implicitly_an_approver() {
+    let mut c = two_reps();
+    as_account(owner());
+    propose_parity(&mut c);
+}
+
+#[test]
+#[should_panic(expected = "contract is paused")]
+fn proposals_are_blocked_while_globally_paused() {
+    let mut c = two_reps();
+    as_account(pauser());
+    c.pause();
+    as_account(approver());
+    propose_parity(&mut c);
+}
+
+#[test]
+#[should_panic(expected = "two different representations")]
+fn a_representation_cannot_be_paired_with_itself() {
+    let mut c = two_reps();
+    propose(
+        &mut c,
+        "tgold-a",
+        "tgold-a",
+        Classification::DirectEquivalent,
+        ratio(1, 1),
+        "r",
+    );
+}
+
+#[test]
+#[should_panic(expected = "representation not found")]
+fn both_representations_must_exist() {
+    let mut c = two_reps();
+    propose(
+        &mut c,
+        "tgold-a",
+        "ghost",
+        Classification::DirectEquivalent,
+        ratio(1, 1),
+        "r",
+    );
+}
+
+#[test]
+#[should_panic(expected = "SUSPENDED is set by suspension")]
+fn suspended_cannot_be_proposed() {
+    let mut c = two_reps();
+    propose(
+        &mut c,
+        "tgold-a",
+        "tgold-b",
+        Classification::Suspended,
+        ratio(1, 1),
+        "r",
+    );
+}
+
+#[test]
+#[should_panic(expected = "ratio parts must be positive")]
+fn a_zero_ratio_is_rejected() {
+    let mut c = two_reps();
+    propose(
+        &mut c,
+        "tgold-a",
+        "tgold-b",
+        Classification::DirectEquivalent,
+        ratio(0, 1),
+        "r",
+    );
+}
+
+#[test]
+#[should_panic(expected = "rationale must not be empty")]
+fn a_rationale_is_required() {
+    let mut c = two_reps();
+    propose(
+        &mut c,
+        "tgold-a",
+        "tgold-b",
+        Classification::DirectEquivalent,
+        ratio(1000, 1),
+        " ",
+    );
+}
+
+#[test]
+#[should_panic(expected = "only a rejected one can be re-proposed")]
+fn an_existing_relationship_cannot_be_proposed_again() {
+    let mut c = two_reps();
+    propose_parity(&mut c);
+    propose_parity(&mut c);
 }

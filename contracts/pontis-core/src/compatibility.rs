@@ -115,6 +115,51 @@ impl Contract {
         .emit();
     }
 
+    /// Attaches evidence to a relationship that is not rejected. Evidence is not versioned; it is
+    /// recorded with its adder and time, and approving `DIRECT_EQUIVALENT` requires at least one.
+    #[payable]
+    pub fn add_compatibility_evidence(
+        &mut self,
+        representation_a_id: String,
+        representation_b_id: String,
+        evidence: NewEvidence,
+    ) {
+        let by = self.assert_compat_approver();
+        validate_new_evidence(&evidence);
+        let id = pair_key(&representation_a_id, &representation_b_id);
+        let rel = self
+            .compatibilities
+            .get_mut(&id)
+            .unwrap_or_else(|| near_sdk::env::panic_str("relationship not found"));
+        check(
+            rel.status != RelationshipStatus::Rejected,
+            "cannot add evidence to a rejected relationship",
+        );
+        check(
+            rel.evidence.len() < MAX_EVIDENCE_PER_RECORD,
+            "too much evidence on this relationship",
+        );
+        let now = now_ms();
+        let event = CoreEvent::EvidenceAdded {
+            subject_type: SubjectType::Compatibility,
+            subject_id: id,
+            uri: evidence.uri.clone(),
+            sha256: evidence.sha256.clone(),
+            provenance: evidence.provenance,
+            by: by.clone(),
+            timestamp_ms: now,
+        };
+        rel.evidence.push(EvidenceRef {
+            uri: evidence.uri,
+            sha256: evidence.sha256,
+            provenance: evidence.provenance,
+            description: evidence.description,
+            added_by: by,
+            timestamp_ms: now,
+        });
+        event.emit();
+    }
+
     /// The relationship for a pair, in either argument order. `ratio` is in the direction
     /// `representation_a_id` to `representation_b_id` as stored (`a < b`).
     pub fn get_compatibility(

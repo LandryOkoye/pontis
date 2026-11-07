@@ -208,12 +208,7 @@ impl Contract {
         evidence: NewEvidence,
     ) {
         let by = self.assert_registrar();
-        check(
-            !evidence.uri.trim().is_empty() && evidence.uri.len() <= MAX_TEXT_LEN,
-            "uri must be 1-2000 chars",
-        );
-        validate_sha256(&evidence.sha256);
-        require_text(&evidence.description, "description");
+        validate_new_evidence(&evidence);
 
         let (list, status) = match subject_type {
             SubjectType::Issuer => self

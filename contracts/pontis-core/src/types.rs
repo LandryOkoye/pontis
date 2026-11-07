@@ -403,3 +403,13 @@ pub struct Compatibility {
     pub history: Vec<CompatibilityVersion>,
     pub updated_at_ms: u64,
 }
+
+/// Shared by registry and compatibility evidence: a bounded URI, a sha256 digest and a description.
+pub fn validate_new_evidence(evidence: &NewEvidence) {
+    check(
+        !evidence.uri.trim().is_empty() && evidence.uri.len() <= MAX_TEXT_LEN,
+        "uri must be 1-2000 chars",
+    );
+    validate_sha256(&evidence.sha256);
+    require_text(&evidence.description, "description");
+}
