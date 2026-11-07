@@ -33,11 +33,12 @@ Rules for every state-changing method: check caller role, check relevant pause f
 
 ## Event model
 
-NEP-297 logs: `EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":[...]}`. Amounts are decimal strings, timestamps are milliseconds since epoch, account IDs are strings.
+NEP-297 logs: `EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`. `data` is a single JSON object per event (amended in B5; the first draft said an array, but `near-sdk` event enums serialise one object). Amounts are decimal strings, timestamps are milliseconds since epoch, account IDs are strings.
 
 | Event                                                                                                   | Emitted when                                                                  |
 | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `role_granted`, `role_revoked`                                                                          | role set changes                                                              |
+| `ownership_transfer_proposed`, `ownership_transferred`                                                  | two-step ownership change (added in B5)                                       |
 | `paused`, `unpaused`                                                                                    | global or per-asset pause changes (`scope`, `target`)                         |
 | `issuer_registered`, `issuer_status_changed`                                                            | issuer lifecycle                                                              |
 | `canonical_asset_registered`, `canonical_asset_status_changed`                                          | claim lifecycle                                                               |

@@ -101,6 +101,8 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 export const CORE_EVENT_NAMES = [
   "role_granted",
   "role_revoked",
+  "ownership_transfer_proposed",
+  "ownership_transferred",
   "paused",
   "unpaused",
   "issuer_registered",
