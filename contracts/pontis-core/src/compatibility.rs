@@ -232,6 +232,38 @@ impl Contract {
         event.emit();
     }
 
+    /// Rejects a proposed relationship. A rejected relationship can be proposed again.
+    #[payable]
+    pub fn reject_compatibility(
+        &mut self,
+        representation_a_id: String,
+        representation_b_id: String,
+        rationale: String,
+    ) {
+        let by = self.assert_compat_approver();
+        require_text(&rationale, "rationale");
+        let id = pair_key(&representation_a_id, &representation_b_id);
+        let rel = self
+            .compatibilities
+            .get_mut(&id)
+            .unwrap_or_else(|| near_sdk::env::panic_str("relationship not found"));
+        check(
+            rel.status == RelationshipStatus::Proposed,
+            "only a proposed relationship can be rejected",
+        );
+        let now = now_ms();
+        rel.rationale = rationale;
+        rel.status = RelationshipStatus::Rejected;
+        let version = rel.record(ReviewAction::Rejected, &by, now);
+        CoreEvent::CompatibilityRejected {
+            id,
+            version,
+            by,
+            timestamp_ms: now,
+        }
+        .emit();
+    }
+
     /// The relationship for a pair, in either argument order. `ratio` is in the direction
     /// `representation_a_id` to `representation_b_id` as stored (`a < b`).
     pub fn get_compatibility(

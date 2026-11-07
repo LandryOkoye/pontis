@@ -102,3 +102,65 @@ fn a_similar_pair_can_be_approved_without_evidence_or_a_matching_ratio() {
     assert_eq!(rel(&c).status, RelationshipStatus::Approved);
     assert_eq!(rel(&c).classification, Classification::EconomicallySimilar);
 }
+
+#[test]
+#[should_panic(expected = "requires at least one evidence reference")]
+fn parity_cannot_be_approved_without_evidence() {
+    let mut c = two_reps();
+    propose_parity(&mut c);
+    c.approve_compatibility("tgold-a".into(), "tgold-b".into(), "Reviewed".into());
+}
+
+#[test]
+#[should_panic(expected = "ratio does not match the representations' unit multipliers")]
+fn parity_ratio_must_match_the_unit_multipliers() {
+    let mut c = two_reps();
+    c.propose_compatibility(
+        "tgold-a".into(),
+        "tgold-b".into(),
+        Classification::DirectEquivalent,
+        ratio(999, 1),
+        "scope".into(),
+        "r".into(),
+    );
+    attest_pair(&mut c);
+    c.approve_compatibility("tgold-a".into(), "tgold-b".into(), "Reviewed".into());
+}
+
+#[test]
+#[should_panic(expected = "both representations must be active")]
+fn approval_needs_both_representations_active() {
+    let mut c = two_reps();
+    propose_parity(&mut c);
+    attest_pair(&mut c);
+    as_account(registrar());
+    c.set_representation_status("tgold-b".into(), Status::Deprecated);
+    as_account(approver());
+    c.approve_compatibility("tgold-a".into(), "tgold-b".into(), "Reviewed".into());
+}
+
+#[test]
+#[should_panic(expected = "only a proposed or suspended relationship can be approved")]
+fn an_approved_relationship_cannot_be_approved_again() {
+    let mut c = approved_parity();
+    c.approve_compatibility("tgold-a".into(), "tgold-b".into(), "Again".into());
+}
+
+#[test]
+#[should_panic(expected = "caller is not a compat approver")]
+fn registrar_cannot_approve() {
+    let mut c = two_reps();
+    propose_parity(&mut c);
+    attest_pair(&mut c);
+    as_account(registrar());
+    c.approve_compatibility("tgold-a".into(), "tgold-b".into(), "Reviewed".into());
+}
+
+#[test]
+#[should_panic(expected = "rationale must not be empty")]
+fn approval_needs_a_recorded_rationale() {
+    let mut c = two_reps();
+    propose_parity(&mut c);
+    attest_pair(&mut c);
+    c.approve_compatibility("tgold-a".into(), "tgold-b".into(), "".into());
+}
