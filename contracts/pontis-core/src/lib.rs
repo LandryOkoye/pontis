@@ -76,6 +76,8 @@ pub(crate) fn now_ms() -> u64 {
 }
 
 #[cfg(test)]
+mod compat_tests;
+#[cfg(test)]
 mod registry_tests;
 #[cfg(test)]
 mod tests;
