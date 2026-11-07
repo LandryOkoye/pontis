@@ -160,6 +160,78 @@ impl Contract {
         event.emit();
     }
 
+    /// Approves a proposed relationship, or re-approves a suspended one as a new version.
+    /// Both representations must be active. Approving `DIRECT_EQUIVALENT` also requires evidence
+    /// and a ratio equal to the unit-multiplier ratio `multiplier_a / multiplier_b` (ADR 0001).
+    #[payable]
+    pub fn approve_compatibility(
+        &mut self,
+        representation_a_id: String,
+        representation_b_id: String,
+        rationale: String,
+    ) {
+        let by = self.assert_compat_approver();
+        require_text(&rationale, "rationale");
+        let id = pair_key(&representation_a_id, &representation_b_id);
+        let rel = self
+            .compatibilities
+            .get(&id)
+            .unwrap_or_else(|| near_sdk::env::panic_str("relationship not found"));
+        let reapproval = rel.status == RelationshipStatus::Suspended;
+        check(
+            reapproval || rel.status == RelationshipStatus::Proposed,
+            "only a proposed or suspended relationship can be approved",
+        );
+        let mut rel = rel.clone();
+        if reapproval {
+            rel.classification = rel.last_approved_classification();
+        }
+
+        let rep = |id: &String| {
+            self.representations
+                .get(id)
+                .unwrap_or_else(|| near_sdk::env::panic_str("representation not found"))
+        };
+        let (a, b) = (rep(&rel.representation_a_id), rep(&rel.representation_b_id));
+        check(
+            a.status == Status::Active && b.status == Status::Active,
+            "both representations must be active to approve",
+        );
+        if rel.classification == Classification::DirectEquivalent {
+            check(
+                !rel.evidence.is_empty(),
+                "approving DIRECT_EQUIVALENT requires at least one evidence reference",
+            );
+            let derived = a.unit_multiplier.checked_div(b.unit_multiplier);
+            check(
+                derived == Some(rel.ratio),
+                "ratio does not match the representations' unit multipliers",
+            );
+        }
+
+        let now = now_ms();
+        rel.rationale = rationale;
+        rel.status = RelationshipStatus::Approved;
+        rel.approved_by = Some(by.clone());
+        let action = if reapproval {
+            ReviewAction::Reapproved
+        } else {
+            ReviewAction::Approved
+        };
+        let version = rel.record(action, &by, now);
+        let event = CoreEvent::CompatibilityApproved {
+            id: id.clone(),
+            version,
+            classification: rel.classification,
+            ratio: rel.ratio,
+            reapproval,
+            by,
+            timestamp_ms: now,
+        };
+        self.compatibilities.insert(id, rel);
+        event.emit();
+    }
+
     /// The relationship for a pair, in either argument order. `ratio` is in the direction
     /// `representation_a_id` to `representation_b_id` as stored (`a < b`).
     pub fn get_compatibility(
@@ -199,5 +271,17 @@ impl Compatibility {
             timestamp_ms: now,
         });
         version
+    }
+}
+
+impl Compatibility {
+    /// Classification of the most recent approved version; used to restore it on re-approval.
+    pub(crate) fn last_approved_classification(&self) -> Classification {
+        self.history
+            .iter()
+            .rev()
+            .find(|v| v.status == RelationshipStatus::Approved)
+            .map(|v| v.classification)
+            .unwrap_or_else(|| near_sdk::env::panic_str("relationship was never approved"))
     }
 }

@@ -117,6 +117,13 @@ impl Ratio {
             den: U128(den.0 / g),
         }
     }
+
+    /// `self / other` in lowest terms, or `None` if an intermediate product overflows u128.
+    pub fn checked_div(self, other: Ratio) -> Option<Ratio> {
+        let num = self.num.0.checked_mul(other.den.0)?;
+        let den = self.den.0.checked_mul(other.num.0)?;
+        Some(Ratio::normalised(U128(num), U128(den)))
+    }
 }
 
 fn gcd(mut a: u128, mut b: u128) -> u128 {
