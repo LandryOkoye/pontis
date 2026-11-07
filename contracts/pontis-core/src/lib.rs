@@ -101,4 +101,6 @@ mod policy_tests;
 #[cfg(test)]
 mod registry_tests;
 #[cfg(test)]
+mod route_tests;
+#[cfg(test)]
 mod tests;

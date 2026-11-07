@@ -2,7 +2,7 @@
 
 The Pontis protocol contract (one contract, internal modules; [ADR 0002](../../docs/decisions/0002-contract-layout-and-events.md)). Testnet and synthetic assets only.
 
-This crate currently holds the **registry** (B5). Compatibility and policy (B6) and conversion and vault (B7) are added by later PRs.
+This crate holds the **registry** (B5) and **compatibility, policy and route gate** (B6). Conversion and vault (B7) come next.
 
 ## Roles ([ADR 0003](../../docs/decisions/0003-admin-roles-and-pause.md))
 
@@ -26,6 +26,13 @@ Issuers, canonical assets and token representations are separate records ([brief
 - `is_representation_executable(id)` is true only when the contract is unpaused and the representation, issuer and canonical asset are all `active`. B6 adds compatibility to this check.
 
 IDs are lowercase `a-z0-9-`, 2 to 64 characters. List views take `from_index` and `limit` (default 50, max 100).
+
+## Compatibility, policy and route ([ADR 0004](../../docs/decisions/0004-compatibility-and-policy-versioning.md))
+
+- **Relationships** are keyed `"{a}:{b}"` with `a < b`; `ratio` is stored in the `a` to `b` direction (the contract sorts the pair and inverts the ratio when needed). Lifecycle: `propose_compatibility`, `approve_compatibility`, `reject_compatibility`, `suspend_compatibility` (approver or pauser, works during a global pause); suspended pairs return through re-approval. Evidence goes through `add_compatibility_evidence`.
+- **`version`** equals the length of the append-only history and moves on every recorded change. Approving `DIRECT_EQUIVALENT` needs evidence, two active representations and a ratio equal to `multiplier_a / multiplier_b`.
+- **Policy:** `set_allowlist_required` (rule; bumps the global `policy_version`, default required) and `set_allowlist` (membership; does not bump it), both registrar-only.
+- **`get_route(from, to)`** returns `executable` plus `RouteTerms` (ratio in that direction, `compatibility_version`, `policy_version`) or a `RouteRefusal`. Only an approved `DIRECT_EQUIVALENT` pair between active, unpaused representations is executable.
 
 ## Events
 
