@@ -163,7 +163,6 @@ impl Contract {
     }
 
     /// Requires 1 yocto, the registrar role and no global pause. Returns the caller.
-    #[allow(dead_code)] // used by the registry methods
     pub(crate) fn assert_registrar(&self) -> AccountId {
         assert_one_yocto();
         let caller = env::predecessor_account_id();

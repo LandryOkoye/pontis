@@ -1,18 +1,19 @@
 //! Pontis core protocol contract (ADR 0002): one contract, internal modules.
 //!
-//! This module set currently covers roles, pause controls and ownership (`roles`). Registry
-//! records live in `types`; events in `events`. Every state-changing method requires exactly
+//! Modules: `roles` (roles, pause, ownership), `registry` (issuers, canonical assets,
+//! representations, evidence), `types` (record types, validation), `events` (NEP-297). Every state-changing method requires exactly
 //! 1 yoctoNEAR (so restricted access keys cannot call it), checks the caller's role and the
 //! pause state, and emits an event.
 
 mod events;
+mod registry;
 mod roles;
 mod types;
 
 pub use events::{CoreEvent, PauseScope, RoleName};
 pub use types::*;
 
-use near_sdk::store::IterableSet;
+use near_sdk::store::{IterableMap, IterableSet, LookupMap};
 use near_sdk::{env, near, AccountId, BorshStorageKey, PanicOnDefault};
 
 #[derive(BorshStorageKey)]
@@ -21,6 +22,10 @@ enum StorageKey {
     Registrars,
     CompatApprovers,
     Pausers,
+    Issuers,
+    CanonicalAssets,
+    Representations,
+    RepresentationByAccount,
 }
 
 #[derive(PanicOnDefault)]
@@ -32,6 +37,11 @@ pub struct Contract {
     registrars: IterableSet<AccountId>,
     compat_approvers: IterableSet<AccountId>,
     pausers: IterableSet<AccountId>,
+    issuers: IterableMap<String, Issuer>,
+    canonical_assets: IterableMap<String, CanonicalAsset>,
+    representations: IterableMap<String, Representation>,
+    /// Token contract account to representation ID; keeps accounts unique.
+    representation_by_account: LookupMap<AccountId, String>,
 }
 
 #[near]
@@ -48,9 +58,19 @@ impl Contract {
             registrars: IterableSet::new(StorageKey::Registrars),
             compat_approvers: IterableSet::new(StorageKey::CompatApprovers),
             pausers: IterableSet::new(StorageKey::Pausers),
+            issuers: IterableMap::new(StorageKey::Issuers),
+            canonical_assets: IterableMap::new(StorageKey::CanonicalAssets),
+            representations: IterableMap::new(StorageKey::Representations),
+            representation_by_account: LookupMap::new(StorageKey::RepresentationByAccount),
         }
     }
 }
 
+pub(crate) fn now_ms() -> u64 {
+    env::block_timestamp() / 1_000_000
+}
+
+#[cfg(test)]
+mod registry_tests;
 #[cfg(test)]
 mod tests;

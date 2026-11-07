@@ -2,21 +2,21 @@ use super::*;
 use near_sdk::test_utils::{get_logs, VMContextBuilder};
 use near_sdk::{testing_env, NearToken};
 
-fn account(name: &str) -> AccountId {
+pub(crate) fn account(name: &str) -> AccountId {
     name.parse().unwrap()
 }
-fn owner() -> AccountId {
+pub(crate) fn owner() -> AccountId {
     account("owner.testnet")
 }
-fn alice() -> AccountId {
+pub(crate) fn alice() -> AccountId {
     account("alice.testnet")
 }
-fn bob() -> AccountId {
+pub(crate) fn bob() -> AccountId {
     account("bob.testnet")
 }
 
 /// Calls as `who` with exactly 1 yoctoNEAR (required by every state-changing method).
-fn as_account(who: AccountId) {
+pub(crate) fn as_account(who: AccountId) {
     testing_env!(VMContextBuilder::new()
         .current_account_id(account("core.testnet"))
         .predecessor_account_id(who)
@@ -32,12 +32,12 @@ fn without_deposit(who: AccountId) {
         .build());
 }
 
-fn new_core() -> Contract {
+pub(crate) fn new_core() -> Contract {
     as_account(owner());
     Contract::new(owner())
 }
 
-fn last_event() -> near_sdk::serde_json::Value {
+pub(crate) fn last_event() -> near_sdk::serde_json::Value {
     let line = get_logs().pop().expect("no log emitted");
     near_sdk::serde_json::from_str(line.strip_prefix("EVENT_JSON:").expect("not an event")).unwrap()
 }
