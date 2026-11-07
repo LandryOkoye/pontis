@@ -70,3 +70,7 @@ Work lands through pull requests into `main`; see `BuildPlan.md` §4 for commit-
 ```bash
 pnpm check:commit-size
 ```
+
+## License
+
+MIT, see [`LICENSE`](LICENSE).

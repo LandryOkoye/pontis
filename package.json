@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Pontis: NEAR-based RWA interoperability and parity conversion (MVP, testnet, synthetic assets only)",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "packageManager": "pnpm@11.24.0",
   "engines": {
     "node": ">=22"
