@@ -36,7 +36,7 @@ IDs are lowercase `a-z0-9-`, 2 to 64 characters. List views take `from_index` an
 
 ## Events
 
-`EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`. This PR emits `role_granted`, `role_revoked`, `ownership_transfer_proposed`, `ownership_transferred`, `paused`, `unpaused`, `issuer_registered`, `issuer_status_changed`, `canonical_asset_registered`, `canonical_asset_status_changed`, `representation_registered`, `representation_status_changed` and `evidence_added`.
+`EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`. It emits `role_granted`, `role_revoked`, `ownership_transfer_proposed`, `ownership_transferred`, `paused`, `unpaused`, `issuer_registered`, `issuer_status_changed`, `canonical_asset_registered`, `canonical_asset_status_changed`, `representation_registered`, `representation_status_changed`, `evidence_added`, `compatibility_proposed`, `compatibility_approved` (flags re-approval), `compatibility_rejected`, `compatibility_suspended`, `policy_updated` and `allowlist_updated`.
 
 ## Commands
 
