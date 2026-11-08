@@ -3,12 +3,18 @@
 
 import { randomBytes } from "node:crypto";
 import pg from "pg";
-import { createDb } from "../src/db/client.ts";
+import { createDb, type Db } from "../src/db/client.ts";
 import { runMigrations } from "../src/db/migrate.ts";
 
 const BASE_URL = process.env.DATABASE_URL ?? "postgres://pontis:pontis@localhost:5432/pontis";
 
-export async function createTestDb() {
+export interface TestDb {
+  db: Db;
+  pool: pg.Pool;
+  drop(): Promise<void>;
+}
+
+export async function createTestDb(): Promise<TestDb> {
   const name = `pontis_test_${randomBytes(6).toString("hex")}`;
   const admin = new pg.Client({ connectionString: BASE_URL });
   try {
