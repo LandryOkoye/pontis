@@ -73,4 +73,40 @@ describe("acceptQuote", () => {
     expect(await errorCodeOf(acceptQuote(accept(), b.id, "key-one"))).toBe("VALIDATION_ERROR");
     expect(await stateOf(b.id)).toBe("QUOTED");
   });
+
+  it("refuses an expired quote with QUOTE_EXPIRED and records no conversion", async () => {
+    const q = await fresh();
+    const later = new Date(NOW.getTime() + 61_000);
+    expect(await errorCodeOf(acceptQuote(accept({ now: () => later }), q.id, "key-late"))).toBe(
+      "QUOTE_EXPIRED",
+    );
+    expect(await stateOf(q.id)).toBe("EXPIRED");
+    expect(await t.db.select().from(conversions).where(eq(conversions.quoteId, q.id))).toHaveLength(
+      0,
+    );
+    expect(
+      await errorCodeOf(acceptQuote(accept(), "00000000-0000-4000-8000-000000000000", "key-ghost")),
+    ).toBe("NOT_FOUND");
+  });
+
+  it("lets exactly one of two concurrent accepts with different keys win", async () => {
+    const q = await fresh();
+    const results = await Promise.allSettled([
+      acceptQuote(accept(), q.id, "race-a"),
+      acceptQuote(accept(), q.id, "race-b"),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(await t.db.select().from(conversions).where(eq(conversions.quoteId, q.id))).toHaveLength(
+      1,
+    );
+  });
+
+  it("answers two concurrent requests with the same key identically", async () => {
+    const q = await fresh();
+    const [x, y] = await Promise.all([
+      acceptQuote(accept(), q.id, "same-key"),
+      acceptQuote(accept(), q.id, "same-key"),
+    ]);
+    expect(x.conversionId).toBe(y.conversionId);
+  });
 });
