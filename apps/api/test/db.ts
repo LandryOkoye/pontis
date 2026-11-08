@@ -34,7 +34,7 @@ export async function createTestDb(): Promise<TestDb> {
     db,
     pool,
     async drop() {
-      await pool.end();
+      if (!pool.ended) await pool.end();
       await admin.query(`DROP DATABASE ${name} WITH (FORCE)`);
       await admin.end();
     },
