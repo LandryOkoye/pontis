@@ -251,3 +251,19 @@ fn non_owner_cannot_nominate_a_new_owner() {
     as_account(alice());
     c.transfer_ownership(alice());
 }
+
+/// Runs the next call as this contract's own callback with the given promise result.
+pub(crate) fn as_callback(result: near_sdk::PromiseResult) {
+    let core = account("core.testnet");
+    testing_env!(
+        VMContextBuilder::new()
+            .current_account_id(core.clone())
+            .predecessor_account_id(core)
+            .block_timestamp(5_000 * 1_000_000)
+            .build(),
+        near_sdk::test_vm_config(),
+        near_sdk::RuntimeFeesConfig::test(),
+        Default::default(),
+        vec![result]
+    );
+}

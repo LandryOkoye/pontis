@@ -190,4 +190,14 @@ pub enum CoreEvent {
         nonce: Option<String>,
         timestamp_ms: u64,
     },
+    /// Owner withdrawal. `success = false` means the token transfer failed and the inventory
+    /// was restored.
+    #[event_version("1.0.0")]
+    VaultWithdrawn {
+        representation_id: String,
+        amount: U128,
+        receiver_id: AccountId,
+        success: bool,
+        timestamp_ms: u64,
+    },
 }
