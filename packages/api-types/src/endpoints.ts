@@ -4,6 +4,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-ope
 import { z } from "zod";
 import type { ErrorCodeSchema } from "./common.ts";
 import { ApiErrorSchema } from "./common.ts";
+import { AdminAuthHeaderSchema, ReconciliationReportSchema } from "./admin-types.ts";
 import {
   AssetSchema,
   AssetSummarySchema,
@@ -47,7 +48,8 @@ interface Endpoint {
   readonly method: Method;
   readonly path: string;
   readonly summary: string;
-  readonly tag: "Health" | "Registry" | "Routes" | "Quotes" | "Conversions" | "Transactions";
+  readonly tag:
+    "Health" | "Registry" | "Routes" | "Quotes" | "Conversions" | "Transactions" | "Admin";
   readonly status: number;
   readonly response: z.ZodType;
   /** Error codes this endpoint can return, with their HTTP status. */
@@ -226,12 +228,25 @@ export const ENDPOINTS = {
     query: ListTransactionsQuerySchema,
     errors: { ...VALIDATION, ...COMMON },
   },
+  getReconciliation: {
+    method: "get",
+    path: "/v1/admin/reconciliation",
+    summary: "Latest reconciliation findings",
+    tag: "Admin",
+    status: 200,
+    response: ReconciliationReportSchema,
+    headers: AdminAuthHeaderSchema,
+    errors: { 401: ["UNAUTHORIZED"], ...COMMON },
+    description:
+      "Admin only. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.",
+  },
 } as const satisfies Record<string, Endpoint>;
 
 export type OperationId = keyof typeof ENDPOINTS;
 
 const ERROR_DESCRIPTIONS: Record<number, string> = {
   400: "Invalid request",
+  401: "Missing or wrong admin key",
   404: "Not found",
   409: "Conflict",
   410: "Gone",

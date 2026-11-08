@@ -6,6 +6,7 @@ import {
   ERROR_CODES,
   EVIDENCE_PROVENANCES,
   EVIDENCE_SUBJECT_TYPES,
+  FINDING_SEVERITIES,
   NETWORKS,
   RECORD_STATUSES,
   RELATIONSHIP_STATUSES,
@@ -13,6 +14,7 @@ import {
   REVIEW_ACTIONS,
   ROUTE_TYPES,
   QUOTE_STATES,
+  RECONCILIATION_KINDS,
   VERIFICATION_STATUSES,
   isAmountString,
 } from "@pontis/domain";
@@ -84,6 +86,8 @@ export const ReviewActionSchema = z.enum(REVIEW_ACTIONS).meta({ id: "ReviewActio
 export const RouteTypeSchema = z.enum(ROUTE_TYPES).meta({ id: "RouteType" });
 export const RefusalCodeSchema = z.enum(REFUSAL_CODES).meta({ id: "RefusalCode" });
 export const QuoteStateSchema = z.enum(QUOTE_STATES).meta({ id: "QuoteState" });
+export const FindingKindSchema = z.enum(RECONCILIATION_KINDS).meta({ id: "ReconciliationKind" });
+export const FindingSeveritySchema = z.enum(FINDING_SEVERITIES).meta({ id: "FindingSeverity" });
 export const ErrorCodeSchema = z.enum(ERROR_CODES).meta({ id: "ErrorCode" });
 
 /** Structured error returned for every non-2xx response (brief §10.1). */
