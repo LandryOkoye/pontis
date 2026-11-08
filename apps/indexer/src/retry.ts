@@ -2,7 +2,19 @@
 
 import { RpcError } from "@pontis/near-client";
 
-export const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+/** Resolves after `ms`, or as soon as `signal` aborts. */
+export const sleep = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
 
 /** `baseMs`, `2 * baseMs`, `4 * baseMs` ... capped at `maxMs`; `attempt` starts at 0. */
 export function backoffMs(attempt: number, baseMs: number, maxMs: number): number {
