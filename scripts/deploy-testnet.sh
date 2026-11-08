@@ -15,5 +15,5 @@ if [ -z "${DEPLOYER_PRIVATE_KEY:-}" ] && [ ! -f "$HOME/.near-credentials/${NEAR_
 fi
 
 scripts/build-contracts.sh "${1:-non-reproducible}"
-pnpm --filter @pontis/scripts deploy
+pnpm --filter @pontis/scripts deploy-testnet
 pnpm --filter @pontis/scripts seed

@@ -6,7 +6,7 @@
   "description": "Testnet deploy, seed and allowlist tooling for the Pontis contracts",
   "license": "MIT",
   "scripts": {
-    "deploy": "tsx --env-file-if-exists=.env deploy-testnet.ts",
+    "deploy-testnet": "tsx --env-file-if-exists=.env deploy-testnet.ts",
     "seed": "tsx --env-file-if-exists=.env seed-testnet.ts",
     "allowlist": "tsx --env-file-if-exists=.env allowlist.ts",
     "lint": "eslint .",

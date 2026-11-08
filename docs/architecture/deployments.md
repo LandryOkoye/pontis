@@ -26,7 +26,7 @@ scripts/deploy-testnet.sh                # build, create sub-accounts, deploy, i
 
 ```bash
 scripts/build-contracts.sh               # wasm into target/near/<crate>/<crate>.wasm
-pnpm --filter @pontis/scripts deploy     # create accounts, deploy, init; writes this file
+pnpm --filter @pontis/scripts deploy-testnet # create accounts, deploy, init; writes this file
 pnpm --filter @pontis/scripts seed       # roles, registry, relationship, signer, allowlist, vault
 ```
 
