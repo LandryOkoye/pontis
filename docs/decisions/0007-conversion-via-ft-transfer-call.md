@@ -95,3 +95,12 @@ sequenceDiagram
 ```
 
 Both outcomes of the payout leave the user with either the output or the original input, never neither; the sandbox tests in B8 exercise the real token and refund logic.
+
+## Amendments (B11, the unsigned wallet plan)
+
+`POST /v1/conversions` accepts a quote and returns the actions the user's wallet signs. The backend never signs for users.
+
+- **Actions.** `ft_transfer_call` on the source token with exactly 1 yoctoNEAR and 100 Tgas, whose `msg` is `{"quote": ..., "signature": "<base64>"}` as the contract expects. If the user is not registered on the destination token (`storage_balance_of` is null) a `storage_deposit` with `registration_only` comes first, because a payout to an unregistered account fails and refunds the input. Each action has a single receiver, so a wallet sends them as separate transactions, in order.
+- **Idempotency.** The `Idempotency-Key` header is required. The same key and quote return the stored plan unchanged, even if on-chain registration changed since. The same key for another quote is a `400`; a second key for an accepted quote is `409 QUOTE_ALREADY_USED`; an expired quote is `410 QUOTE_EXPIRED`. Acceptance (`QUOTED` to `ACCEPTED`) and the conversion row are one transaction, and concurrent requests resolve to a single winner.
+- **Reporting the hash.** `POST /v1/conversions/{id}/submitted` moves `ACCEPTED` to `SUBMITTED`. The same hash again is a no-op; a different hash is `409`. A hash reported after the quote expired is `410`: the chain is authoritative, and the indexer (B12) reconciles by nonce, so nothing settles unseen.
+- **Verified end to end.** On a local sandbox, a user not registered on TGOLD-B executed the returned plan (storage deposit, then transfer call) and received exactly 999,000,000 of TGOLD-B for 1,000,000 of TGOLD-A.
