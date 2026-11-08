@@ -1,6 +1,8 @@
 // Quote and settlement tables (used from B10 on) plus the indexer cursor and audit log.
 
+import type { WalletAction } from "@pontis/api-types";
 import type { QuoteState } from "@pontis/domain";
+import { sql } from "drizzle-orm";
 import {
   bigint,
   index,
@@ -62,6 +64,11 @@ export const conversions = pgTable("conversions", {
     .unique()
     .references(() => quotes.id),
   idempotencyKey: text().notNull().unique(),
+  /** The unsigned wallet actions returned for this conversion, kept so a repeated request gets the same answer. */
+  plan: jsonb()
+    .$type<WalletAction[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`),
   txHash: text(),
   failureReason: text(),
   submittedAt: at("submitted_at"),

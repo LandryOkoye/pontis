@@ -1,0 +1,1 @@
+ALTER TABLE "conversions" ADD COLUMN "plan" jsonb DEFAULT '[]'::jsonb NOT NULL;
