@@ -2,7 +2,7 @@
 // deployer and initialises them. Idempotent: an account whose contract already answers its owner
 // view is not re-initialised, and code is only replaced with --redeploy.
 //
-//   pnpm --filter @pontis/scripts deploy [--redeploy]
+//   pnpm --filter @pontis/scripts deploy-testnet [--redeploy]
 //
 // Needs built wasm (scripts/build-contracts.sh) and DEPLOYER_ACCOUNT_ID plus a key; see
 // docs/architecture/deployments.md.
@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { Account, KeyPair, JsonRpcProvider } from "near-api-js";
-import { connect, type Chain } from "./lib/chain.ts";
+import { assertDeployerKey, connect, type Chain } from "./lib/chain.ts";
 import { loadConfig } from "./lib/config.ts";
 import { REPO_ROOT } from "./lib/evidence.ts";
 import {
@@ -42,6 +42,7 @@ async function ensureAccount(chain: Chain, target: Target, funding: bigint): Pro
 }
 
 export async function deploy(chain: Chain, redeploy: boolean): Promise<void> {
+  await assertDeployerKey(chain);
   const { config } = chain;
   const rows: { label: string; accountId: string; codeHash: string }[] = [];
   const provider = new JsonRpcProvider({ url: config.rpcUrl });

@@ -25,6 +25,8 @@ scripts/deploy-testnet.sh                # build, create sub-accounts, deploy, i
 `scripts/deploy-testnet.sh` runs three steps you can also run alone:
 
 ```bash
+scripts/build-contracts.sh               # wasm into target/near/<crate>/<crate>.wasm
+pnpm --filter @pontis/scripts deploy-testnet # create accounts, deploy, init; writes this file
 scripts/build-contracts.sh               # wasm into target/near/<crate>/<crate>.wasm (cargo-near)
 scripts/build-contracts.sh slim          # same output with cargo build + wasm-opt, no cargo-near; halves the wasm
 pnpm --filter @pontis/scripts deploy     # create accounts, deploy, init; writes this file

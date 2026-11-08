@@ -1,6 +1,6 @@
 // Thin wrapper over near-api-js: one deployer account, JSON view and call helpers.
 
-import { Account, JsonRpcProvider } from "near-api-js";
+import { Account, JsonRpcProvider, KeyPair } from "near-api-js";
 import type { ChainConfig } from "./config.ts";
 
 export const ONE_YOCTO = 1n;
@@ -64,4 +64,27 @@ export function admin(
   args: Record<string, unknown> = {},
 ): Promise<unknown> {
   return chain.call(contractId, method, args, { deposit: ONE_YOCTO });
+}
+
+/** What is wrong with the deployer key, in plain words, or `undefined` if it is a full-access key. */
+export function deployerKeyProblem(
+  publicKey: string,
+  deployerId: string,
+  fullAccessKeys: string[],
+): string | undefined {
+  if (fullAccessKeys.includes(publicKey)) return undefined;
+  return `The configured key (${publicKey}) is not a full-access key of ${deployerId}. Its full-access keys are: ${fullAccessKeys.join(", ") || "none"}. Check DEPLOYER_PRIVATE_KEY.`;
+}
+
+/** Fails before any transaction if the key cannot sign for the deployer account. */
+export async function assertDeployerKey(chain: Chain): Promise<void> {
+  const publicKey = KeyPair.fromString(chain.config.deployerKey as `ed25519:${string}`)
+    .getPublicKey()
+    .toString();
+  const { keys } = await chain.account.getAccessKeyList();
+  const fullAccess = keys
+    .filter((k) => k.access_key.permission === "FullAccess")
+    .map((k) => k.public_key);
+  const problem = deployerKeyProblem(publicKey, chain.config.deployerId, fullAccess);
+  if (problem) throw new Error(problem);
 }

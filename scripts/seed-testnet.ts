@@ -5,12 +5,13 @@
 //   pnpm --filter @pontis/scripts seed
 
 import { pathToFileURL } from "node:url";
-import { connect, type Chain } from "./lib/chain.ts";
+import { assertDeployerKey, connect, type Chain } from "./lib/chain.ts";
 import { loadConfig } from "./lib/config.ts";
 import { seedOps, type SeedOptions, type SeedResult } from "./lib/seed-ops.ts";
 import { seedRegistry } from "./lib/seed-registry.ts";
 
 export async function seed(chain: Chain, options: SeedOptions = {}): Promise<SeedResult> {
+  await assertDeployerKey(chain);
   await seedRegistry(chain);
   return seedOps(chain, options);
 }
