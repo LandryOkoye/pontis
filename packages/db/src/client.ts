@@ -9,3 +9,6 @@ export function createDb(connectionString: string) {
 }
 
 export type Db = ReturnType<typeof createDb>["db"];
+
+/** The handle inside `db.transaction(async (tx) => ...)`. */
+export type DbTx = Parameters<Parameters<Db["transaction"]>[0]>[0];

@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { compareRoutes } from "../src/quotes/compare.ts";
 import type { QuoteChain } from "../src/quotes/chain.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
-import { createTestDb, type TestDb } from "./db.ts";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 
 let t: TestDb;
 beforeAll(async () => {

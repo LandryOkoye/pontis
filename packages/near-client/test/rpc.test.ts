@@ -62,13 +62,37 @@ describe("RpcClient", () => {
     await expect(down.status()).rejects.toThrow(RpcError);
   });
 
+  it("keeps the node's cause name and HTTP status, even on a non-200 reply", async () => {
+    const unknownBlock = new RpcClient({
+      url: "http://rpc",
+      fetch: fakeFetch(
+        () => ({
+          error: { code: -32000, message: "Server error", cause: { name: "UNKNOWN_BLOCK" } },
+        }),
+        false,
+      ),
+    });
+    await expect(unknownBlock.call("block", { block_id: 1 })).rejects.toMatchObject({
+      causeName: "UNKNOWN_BLOCK",
+      httpStatus: 502,
+      code: -32000,
+    });
+  });
+
   it("reads the chain height from status", async () => {
     const client = new RpcClient({
       url: "http://rpc",
       fetch: fakeFetch(() => ({
-        result: { chain_id: "testnet", sync_info: { latest_block_height: 123 } },
+        result: {
+          chain_id: "testnet",
+          sync_info: { latest_block_height: 123, earliest_block_height: 7 },
+        },
       })),
     });
-    expect(await client.status()).toEqual({ chainId: "testnet", latestBlockHeight: 123 });
+    expect(await client.status()).toEqual({
+      chainId: "testnet",
+      latestBlockHeight: 123,
+      earliestBlockHeight: 7,
+    });
   });
 });

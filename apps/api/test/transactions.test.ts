@@ -5,10 +5,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { acceptQuote } from "../src/conversions/accept.ts";
 import { reportSubmitted } from "../src/conversions/submit.ts";
 import { getTransaction, listTransactions } from "../src/conversions/transactions.ts";
-import { conversions, quotes, settlementEvents } from "../src/db/schema/index.ts";
+import { conversions, quotes, settlementEvents } from "@pontis/db";
 import { createQuote } from "../src/quotes/service.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
-import { createTestDb, type TestDb } from "./db.ts";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 import { errorCodeOf, testAppDeps } from "./helpers.ts";
 
 let t: TestDb;
@@ -69,6 +69,34 @@ describe("reportSubmitted", () => {
     expect(
       await errorCodeOf(reportSubmitted(t.db, "00000000-0000-4000-8000-000000000000", HASH, NOW)),
     ).toBe("NOT_FOUND");
+  });
+});
+
+describe("a hash reported after the indexer settled the conversion", () => {
+  it("is recorded on the conversion and on its events, without changing the settled state", async () => {
+    const { conversionId, quote } = await accepted();
+    await t.db.update(quotes).set({ state: "SETTLED" }).where(eq(quotes.id, quote.id));
+    await t.db.insert(settlementEvents).values({
+      receiptId: "late-1",
+      logIndex: 0,
+      blockHeight: 9,
+      blockTimestamp: NOW,
+      txHash: null,
+      eventName: "conversion_completed",
+      data: {},
+      conversionId,
+    });
+    const tx = TransactionSchema.parse(await reportSubmitted(t.db, conversionId, HASH, NOW));
+    expect([tx.state, tx.txHash, tx.events.map((e) => e.txHash)]).toEqual([
+      "SETTLED",
+      HASH,
+      [HASH],
+    ]);
+    expect(
+      await errorCodeOf(
+        reportSubmitted(t.db, conversionId, "other-hash-other-hash-other-hash-xx", NOW),
+      ),
+    ).toBe("QUOTE_ALREADY_USED");
   });
 });
 

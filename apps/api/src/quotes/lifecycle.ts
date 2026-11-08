@@ -2,8 +2,8 @@
 
 import type { Quote } from "@pontis/api-types";
 import { and, eq, inArray, lte } from "drizzle-orm";
-import type { Db } from "../db/client.ts";
-import { quotes } from "../db/schema/index.ts";
+import type { Db } from "@pontis/db";
+import { quotes } from "@pontis/db";
 import { quoteFromRow } from "./quote-mapper.ts";
 
 /** Marks quotes past their expiry as EXPIRED (QUOTED and ACCEPTED only); returns how many changed. */

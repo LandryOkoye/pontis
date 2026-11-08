@@ -9,7 +9,7 @@ import type {
   compatibilityRelationships,
   compatibilityReviews,
   issuers,
-} from "../db/schema/index.ts";
+} from "@pontis/db";
 
 export type IssuerRow = typeof issuers.$inferSelect;
 export type ClaimRow = typeof canonicalAssets.$inferSelect;

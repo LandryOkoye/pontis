@@ -16,7 +16,7 @@ import type {
   compatibilityRelationships,
   compatibilityReviews,
   issuers,
-} from "../db/schema/index.ts";
+} from "@pontis/db";
 
 const date = (ms: number | null) => (ms === null ? null : new Date(ms));
 const common = (r: ChainIssuer | ChainCanonicalAsset | ChainRepresentation) => ({

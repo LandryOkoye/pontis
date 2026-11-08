@@ -1,5 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
-import type { Db } from "./db/client.ts";
+import type { Db } from "@pontis/db";
 import { errorHandler, notFoundHandler } from "./errors.ts";
 import { registerCatalogRoutes } from "./routes/catalog.ts";
 import type { ConversionChain } from "./conversions/chain.ts";

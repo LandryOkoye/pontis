@@ -132,7 +132,8 @@ export const SettlementEventSchema = z
     logIndex: z.number().int().nonnegative(),
     blockHeight: z.number().int().nonnegative(),
     blockTimestamp: Timestamp,
-    txHash: TxHash,
+    /** The transaction that began the receipt, once known (reported by the wallet); null before that. */
+    txHash: TxHash.nullable(),
     data: z.unknown(),
   })
   .meta({ id: "SettlementEvent" });

@@ -5,8 +5,8 @@
 import type { CreateQuoteRequest, Quote, RouteDescriptor } from "@pontis/api-types";
 import { computeAmounts, newNonce, signQuote, type QuoteKey } from "@pontis/quote-engine";
 import { inArray } from "drizzle-orm";
-import type { Db } from "../db/client.ts";
-import { assetRepresentations, quotes } from "../db/schema/index.ts";
+import type { Db } from "@pontis/db";
+import { assetRepresentations, quotes } from "@pontis/db";
 import { AppError, notFound } from "../errors.ts";
 import type { QuoteChain } from "./chain.ts";
 import { assertAssetsExist } from "./compare.ts";

@@ -1,0 +1,1 @@
+ALTER TABLE "settlement_events" ALTER COLUMN "tx_hash" DROP NOT NULL;

@@ -2,8 +2,8 @@
 
 import { CoreClient, RpcClient } from "@pontis/near-client";
 import { loadConfig } from "../config.ts";
-import { createDb } from "../db/client.ts";
-import { runMigrations } from "../db/migrate.ts";
+import { createDb } from "@pontis/db";
+import { runMigrations } from "@pontis/db";
 import { syncRegistry } from "./registry-sync.ts";
 
 const config = loadConfig();

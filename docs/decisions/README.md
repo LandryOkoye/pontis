@@ -14,6 +14,7 @@ Decisions that settle the open items in brief §23–24. Any change to a decisio
 | [0008](0008-vault-inventory-and-funding.md)         | Vault inventory and funding model           | §24.3, 8       |
 | [0009](0009-synthetic-evidence-labelling.md)        | Synthetic and unverified evidence labelling | §24.6, §16.1   |
 | [0010](0010-deferred-scope.md)                      | Deferred scope                              | §24.9–14       |
+| [0011](0011-indexer.md)                             | Event indexer                               | §7.4, §13.2    |
 
 ## Format
 

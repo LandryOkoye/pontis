@@ -4,12 +4,12 @@ import type { ChainRouteView } from "@pontis/near-client";
 import { keyFromSeed, quoteMessage } from "@pontis/quote-engine";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { quotes } from "../src/db/schema/index.ts";
+import { quotes } from "@pontis/db";
 import type { QuoteChain } from "../src/quotes/chain.ts";
 import { expireQuotes, getQuote } from "../src/quotes/lifecycle.ts";
 import { QUOTE_TTL_MS, createQuote, type QuoteDeps } from "../src/quotes/service.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
-import { createTestDb, type TestDb } from "./db.ts";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 import { errorCodeOf } from "./helpers.ts";
 
 let t: TestDb;

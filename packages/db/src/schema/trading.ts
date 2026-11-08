@@ -84,7 +84,8 @@ export const settlementEvents = pgTable(
     logIndex: integer().notNull(),
     blockHeight: bigint({ mode: "number" }).notNull(),
     blockTimestamp: at("block_timestamp").notNull(),
-    txHash: text().notNull(),
+    /** Null when the origin transaction is unknown: a receipt does not say which transaction began it. */
+    txHash: text(),
     eventName: text().notNull(),
     data: jsonb().$type<unknown>().notNull(),
     conversionId: uuid().references(() => conversions.id),

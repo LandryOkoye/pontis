@@ -2,10 +2,10 @@ import { fixtureSource } from "@pontis/near-client/fixtures";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { acceptQuote, type AcceptDeps } from "../src/conversions/accept.ts";
-import { conversions, quotes } from "../src/db/schema/index.ts";
+import { conversions, quotes } from "@pontis/db";
 import { createQuote } from "../src/quotes/service.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
-import { createTestDb, type TestDb } from "./db.ts";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 import { errorCodeOf, testAppDeps } from "./helpers.ts";
 
 let t: TestDb;

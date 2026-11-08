@@ -19,12 +19,14 @@ export type QuoteState = (typeof QUOTE_STATES)[number];
 const TRANSITIONS: Readonly<Record<QuoteState, readonly QuoteState[]>> = {
   REQUESTED: ["ROUTED", "REJECTED"],
   ROUTED: ["QUOTED", "REJECTED"],
-  QUOTED: ["ACCEPTED", "EXPIRED", "CANCELLED"],
+  // A quote the chain executed without the API seeing it submitted (never accepted, or already
+  // swept as expired) cannot be undone: it goes to reconciliation, not to a silent terminal state.
+  QUOTED: ["ACCEPTED", "EXPIRED", "CANCELLED", "REQUIRES_RECONCILIATION"],
   ACCEPTED: ["SUBMITTED", "EXPIRED", "CANCELLED"],
   SUBMITTED: ["SETTLED", "FAILED", "REQUIRES_RECONCILIATION"],
   REQUIRES_RECONCILIATION: ["SETTLED", "FAILED"],
   SETTLED: [],
-  EXPIRED: [],
+  EXPIRED: ["REQUIRES_RECONCILIATION"],
   REJECTED: [],
   CANCELLED: [],
   FAILED: [],

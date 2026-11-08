@@ -15,6 +15,13 @@
       "when": 1794120423661,
       "tag": "0001_conversion_plan",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794125305521,
+      "tag": "0002_event_tx_hash_optional",
+      "breakpoints": true
     }
   ]
 }

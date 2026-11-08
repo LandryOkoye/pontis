@@ -31,7 +31,8 @@ Out of scope for the MVP: cross-chain bridges, market-priced exchange, dark pool
 ```text
 apps/web/            React frontend
 apps/api/            Fastify REST API
-apps/indexer/        NEAR event indexer and reconciler
+apps/indexer/        NEAR event indexer (settles conversions); reconciler follows
+packages/db/         Postgres schema, migrations and client shared by api and indexer
 contracts/           Rust: synthetic-token (NEP-141) and pontis-core
 packages/            domain, api-types, near-client, quote-engine
 scripts/             deploy, seed, allowlist, fund-vault, check-commit-size
