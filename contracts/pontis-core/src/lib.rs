@@ -6,19 +6,27 @@
 //! pause state, and emits an event.
 
 mod compatibility;
+mod config;
+mod conversion;
 mod events;
+mod math;
 mod policy;
+mod quote;
 mod registry;
 mod roles;
 mod route;
 mod types;
+mod vault;
 
+pub use conversion::{ConversionPlan, ConversionRecord, Rejection};
 pub use events::{CoreEvent, PauseScope, RoleName};
+pub use math::{compute_amounts, Amounts, MAX_FEE_BPS};
+pub use quote::{parse_nonce, ConversionMsg, QuoteInput, QUOTE_DOMAIN, QUOTE_VERSION};
 pub use route::{RouteRefusal, RouteTerms, RouteView};
 pub use types::*;
 
 use near_sdk::store::{IterableMap, IterableSet, LookupMap, LookupSet};
-use near_sdk::{env, near, AccountId, BorshStorageKey, PanicOnDefault};
+use near_sdk::{env, near, AccountId, BorshStorageKey, PanicOnDefault, PublicKey};
 
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]
@@ -33,6 +41,8 @@ enum StorageKey {
     Compatibilities,
     AllowlistRequired,
     Allowlist,
+    Inventory,
+    UsedNonces,
 }
 
 #[derive(PanicOnDefault)]
@@ -56,6 +66,14 @@ pub struct Contract {
     /// Per-representation override; absent means the default, `true`.
     allowlist_required: LookupMap<String, bool>,
     allowlist: LookupSet<(String, AccountId)>,
+    /// ed25519 key that signs quotes (ADR 0006); unset until the owner sets it.
+    quote_signer: Option<PublicKey>,
+    /// `protocol_fee_bps`, capped at 100.
+    fee_bps: u16,
+    /// Vault inventory per representation ID, in smallest units (ADR 0008).
+    inventory: LookupMap<String, u128>,
+    /// Quote nonces already executed or attempted to completion; never pruned (ADR 0006).
+    used_nonces: LookupSet<[u8; 16]>,
 }
 
 #[near]
@@ -80,6 +98,10 @@ impl Contract {
             policy_version: 1,
             allowlist_required: LookupMap::new(StorageKey::AllowlistRequired),
             allowlist: LookupSet::new(StorageKey::Allowlist),
+            quote_signer: None,
+            fee_bps: config::DEFAULT_FEE_BPS,
+            inventory: LookupMap::new(StorageKey::Inventory),
+            used_nonces: LookupSet::new(StorageKey::UsedNonces),
         }
     }
 }
@@ -97,10 +119,24 @@ mod compat_suspend_tests;
 #[cfg(test)]
 mod compat_tests;
 #[cfg(test)]
+mod config_tests;
+#[cfg(test)]
+mod conversion_exec_tests;
+#[cfg(test)]
+mod conversion_state_tests;
+#[cfg(test)]
+mod conversion_tests;
+#[cfg(test)]
+mod math_tests;
+#[cfg(test)]
 mod policy_tests;
+#[cfg(test)]
+mod quote_tests;
 #[cfg(test)]
 mod registry_tests;
 #[cfg(test)]
 mod route_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod vault_tests;

@@ -43,3 +43,10 @@ Execution must reject expired or altered quotes, and the backend must never hold
 - The user's wallet is the only thing that authorises movement of the user's tokens.
 - Replay across contracts, users, pairs and time is closed by the signed fields; replay within the same contract by the nonce set.
 - A signed quote does not expose secrets; it is safe to log the quote ID but not the signer key.
+
+## Amendments (B7, as implemented in `pontis-core`)
+
+- **Wire format.** `msg` is `{"quote": {...}, "signature": "<base64>"}`. Quote fields are exactly the signed fields: `version`, `contract`, `user`, `token_in`, `token_out`, `amount_in`, `amount_out_gross`, `fee`, `amount_out` (decimal strings), `fee_bps`, `expires_at_ms`, `nonce` (32 lowercase hex characters), `compatibility_version`, `policy_version`. The signature is 64 bytes, standard base64.
+- **One byte layout, two languages.** `test-vectors/quote-signing.json` holds a fixed seed, public key, quote, signed message and signature. The message was rebuilt independently in Python from the Borsh rules and matches the Rust output byte for byte. `packages/quote-engine` (B10) must reproduce the same message and signature.
+- **Verification order.** Signer set (`SIGNER_NOT_SET`), nonce parses (`INVALID_MSG`), signature valid (`BAD_SIGNATURE`). Every other check runs only after the signature is valid, so a rejection event can carry the nonce.
+- **Signer key type.** `set_quote_signer` accepts only ed25519 keys and works while the contract is paused, so a compromised key can be rotated during an incident.

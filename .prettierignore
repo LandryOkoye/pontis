@@ -12,3 +12,5 @@ BuildPlan.md
 **/openapi.yaml
 # Frontend worker owns its own formatting
 apps/web
+# Shared cross-language vectors: one case per line, not reformatted
+test-vectors

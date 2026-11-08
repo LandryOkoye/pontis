@@ -51,3 +51,47 @@ The conversion has to be atomic from the user's point of view: either they get t
 
 - _`ft_transfer` then a separate `convert` call:_ rejected; two transactions allow input to be stranded between them.
 - _`storage_deposit` + `ft_transfer_call` combined by the contract:_ rejected; wallet transaction plans already batch actions, so no contract support is needed.
+
+## Amendments (B7)
+
+Validation order as implemented (the first failure wins and returns the whole input): registered token, parseable message, signature, quote `version` and `contract`, expiry (`now >= expires_at_ms` is expired), sender equals user, token equals `token_in`, `token_out` registered, exact amount, route (suspended, paused or inactive, not parity), compatibility version, policy version, fee, allowlist for both representations, recomputed amounts, non-zero output, inventory, unused nonce.
+
+| `conversion_rejected.reason`                                                                                                                                    | API error code (B10)                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `QUOTE_EXPIRED`                                                                                                                                                 | `QUOTE_EXPIRED`                                     |
+| `NONCE_USED`                                                                                                                                                    | `QUOTE_ALREADY_USED`                                |
+| `NOT_ELIGIBLE`, `INSUFFICIENT_INVENTORY`, `ASSET_PAUSED`, `RELATIONSHIP_SUSPENDED`, `NOT_DIRECT_EQUIVALENT`                                                     | same name                                           |
+| `UNKNOWN_TOKEN`, `INVALID_MSG`, `BAD_SIGNATURE`, `SIGNER_NOT_SET`, `UNSUPPORTED_VERSION`, `CONTRACT_MISMATCH`, `WRONG_SENDER`, `WRONG_TOKEN`, `AMOUNT_MISMATCH` | `VALIDATION_ERROR`                                  |
+| `COMPATIBILITY_CHANGED`, `POLICY_CHANGED`, `FEE_CHANGED`, `OUTPUT_MISMATCH`, `AMOUNT_TOO_SMALL`, `INVENTORY_OVERFLOW`, `NOT_OWNER`                              | `INTERNAL` (stale or unexpected; the API re-quotes) |
+
+- A conversion whose output rounds to zero is refused (`AMOUNT_TOO_SMALL`) rather than taking the input for nothing.
+- Inventory and the nonce are updated before the payout promise is created. `on_payout_resolved` returns `0` on success and the whole `amount_in` on failure, after restoring inventory.
+
+### Flow as implemented
+
+```mermaid
+sequenceDiagram
+    participant W as User wallet
+    participant A as Token A (source)
+    participant C as pontis-core
+    participant B as Token B (destination)
+    W->>A: ft_transfer_call(core, amount_in, msg)
+    A->>C: ft_on_transfer(user, amount_in, msg)
+    alt any check fails
+        C-->>A: unused = amount_in, event conversion_rejected
+        A-->>W: ft_resolve_transfer refunds the input
+    else all checks pass
+        Note over C: nonce used, inventory moved
+        C->>B: ft_transfer(user, amount_out)
+        B-->>C: result
+        alt payout succeeded
+            C-->>A: unused = 0, event conversion_completed
+        else payout failed
+            Note over C: inventory restored
+            C-->>A: unused = amount_in, event conversion_failed
+            A-->>W: input refunded, nonce stays used
+        end
+    end
+```
+
+Both outcomes of the payout leave the user with either the output or the original input, never neither; the sandbox tests in B8 exercise the real token and refund logic.

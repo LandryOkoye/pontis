@@ -1,0 +1,9 @@
+{
+  "description": "Quote signing vector (ADR 0006). message = b'pontis-quote-v1' ++ borsh(payload); signature = ed25519 over message. Checked by contracts/pontis-core and packages/quote-engine.",
+  "seed_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+  "public_key": "ed25519:9C6hybhQ6Aycep9jaUnP6uL9ZYvDjUp1aSkFWPUFJtpj",
+  "quote": {"version": 1, "contract": "core.testnet", "user": "alice.testnet", "token_in": "tgold-a.testnet", "token_out": "tgold-b.testnet", "amount_in": "1000000", "amount_out_gross": "1000000000", "fee": "1000000", "amount_out": "999000000", "fee_bps": 10, "expires_at_ms": 1794074460000, "nonce": "000102030405060708090a0b0c0d0e0f", "compatibility_version": 2, "policy_version": 1},
+  "message_hex": "706f6e7469732d71756f74652d7631010c000000636f72652e746573746e65740d000000616c6963652e746573746e65740f00000074676f6c642d612e746573746e65740f00000074676f6c642d622e746573746e657440420f0000000000000000000000000000ca9a3b00000000000000000000000040420f00000000000000000000000000c0878b3b0000000000000000000000000a0060bf2bb7a1010000000102030405060708090a0b0c0d0e0f02000000000000000100000000000000",
+  "signature_hex": "5a1608992c1dbf4e6a9e8239760a508a50f7ac881f15ca2aa3018ca6fd572b0c1edb3077fa90a6cf089036cb46004c342923f2b4cca8cb90847d11b7fd79ba0a",
+  "signature_base64": "WhYImSwdv05qnoI5dgpQilD3rIgfFcoqowGMpv1XKwwe2zB3+pCmzwiQNstGAEw0KSPytMyoy5CEfRG3/Xm6Cg=="
+}

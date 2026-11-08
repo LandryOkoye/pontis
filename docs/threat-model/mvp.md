@@ -75,6 +75,8 @@ Severity is for the MVP's testnet context. "Residual" is what remains after the 
 | T25 | **Reversed ratio.** A route used in the `b to a` direction applies the `a to b` ratio.                   | High | `get_route` inverts the stored ratio by direction; tests cover both directions ([ADR 0004](../decisions/0004-compatibility-and-policy-versioning.md)).                                                        | None expected.                                                                                                            |
 | T26 | **Evidence swapped after approval.** Evidence is added to an approved relationship without a new review. | Low  | Evidence records adder, time and hash and emits `evidence_added`; it is not versioned, so it never changes what was approved.                                                                                 | A reviewer must read the event stream to notice late evidence.                                                            |
 | T27 | **Policy no-op voids quotes.** Repeated rule changes bump `policy_version` and invalidate every quote.   | Low  | Setting a rule to its current value is rejected; membership changes never bump the version ([ADR 0004](../decisions/0004-compatibility-and-policy-versioning.md)).                                            | A registrar can still toggle a rule on purpose.                                                                           |
+| T28 | **Dust conversion.** An input converts to zero output and is taken.                                      | Low  | Zero-output conversions are refused (`AMOUNT_TOO_SMALL`) and the input is returned ([ADR 0007](../decisions/0007-conversion-via-ft-transfer-call.md)).                                                        | None expected.                                                                                                            |
+| T29 | **Failed vault withdrawal loses inventory accounting.**                                                  | Med  | Inventory is debited first and restored by `on_withdraw_resolved`; `vault_withdrawn.success` records the outcome ([ADR 0008](../decisions/0008-vault-inventory-and-funding.md)).                              | Gas for the callback is a placeholder until B8 measures it.                                                               |
 
 ## 4. Admin keys
 
@@ -98,6 +100,7 @@ Rules: no key is stored in git; `.env*` and `.near-credentials` are ignored; the
 ## 6. Verification plan
 
 - Contract negative tests for T2–T4, T7–T8, T12, T14 (BuildPlan B6–B8).
+- B7 tests cover T2 to T5, T7, T8, T12 and T28 to T29 at unit level (`cargo test -p pontis-core`); T13 and T14 need the sandbox (B8).
 - B6 tests cover T9 to T11 (suspension, re-approval, ratio and evidence checks), T25 and T27: `cargo test -p pontis-core`.
 - Property tests (proptest) for T5 using shared Rust and TypeScript vectors (B7, B10).
 - Sandbox integration tests for T13–T14 (B8).

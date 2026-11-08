@@ -1,0 +1,16 @@
+{
+  "description": "Shared quote-math vectors (ADR 0001). expected is null when u128 arithmetic overflows. Checked by contracts/pontis-core and packages/quote-engine.",
+  "cases": [
+    {"name": "1 TGOLD-A to TGOLD-B, default fee", "amount_in": "1000000", "ratio": {"num": "1000", "den": "1"}, "fee_bps": 10, "expected": {"gross": "1000000000", "fee": "1000000", "net": "999000000"}},
+    {"name": "1 smallest unit of A pays a 1 unit fee", "amount_in": "1", "ratio": {"num": "1000", "den": "1"}, "fee_bps": 10, "expected": {"gross": "1000", "fee": "1", "net": "999"}},
+    {"name": "10 B back to A", "amount_in": "1000000000", "ratio": {"num": "1", "den": "1000"}, "fee_bps": 10, "expected": {"gross": "1000000", "fee": "1000", "net": "999000"}},
+    {"name": "B dust below one A unit yields zero", "amount_in": "999", "ratio": {"num": "1", "den": "1000"}, "fee_bps": 10, "expected": {"gross": "0", "fee": "0", "net": "0"}},
+    {"name": "fractional ratio rounds down, fee rounds up", "amount_in": "10", "ratio": {"num": "7", "den": "3"}, "fee_bps": 100, "expected": {"gross": "23", "fee": "1", "net": "22"}},
+    {"name": "zero fee", "amount_in": "123456789", "ratio": {"num": "1000", "den": "1"}, "fee_bps": 0, "expected": {"gross": "123456789000", "fee": "0", "net": "123456789000"}},
+    {"name": "zero amount", "amount_in": "0", "ratio": {"num": "1000", "den": "1"}, "fee_bps": 10, "expected": {"gross": "0", "fee": "0", "net": "0"}},
+    {"name": "exact multiple has no rounding", "amount_in": "10000", "ratio": {"num": "1", "den": "1"}, "fee_bps": 10, "expected": {"gross": "10000", "fee": "10", "net": "9990"}},
+    {"name": "max amount at 1:1 with zero fee", "amount_in": "340282366920938463463374607431768211455", "ratio": {"num": "1", "den": "1"}, "fee_bps": 0, "expected": {"gross": "340282366920938463463374607431768211455", "fee": "0", "net": "340282366920938463463374607431768211455"}},
+    {"name": "product overflow is refused", "amount_in": "340282366920938463463374607431768211455", "ratio": {"num": "1000", "den": "1"}, "fee_bps": 10, "expected": null},
+    {"name": "fee product overflow is refused", "amount_in": "340282366920938463463374607431768211455", "ratio": {"num": "1", "den": "1"}, "fee_bps": 100, "expected": null}
+  ]
+}

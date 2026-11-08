@@ -33,3 +33,9 @@ Inventory-based: the vault holds balances of each registered representation insi
 - Imbalance is expected: users converting mostly A to B drain B inventory. That is visible in the UI and handled by the operator.
 - Only the owner can add inventory, so inventory accounting cannot be polluted by arbitrary senders.
 - The faucet is for demo users' wallets only; the vault is funded by the owner, not the faucet, so faucet caps do not limit vault size.
+
+## Amendments (B7)
+
+- A non-owner `fund_vault` is returned in full and emits `conversion_rejected` with `NOT_OWNER`; a transfer from an unregistered token is returned with `UNKNOWN_TOKEN`. Funding is allowed while the contract is paused.
+- `withdraw_inventory` debits first, pays with `ft_transfer`, and `on_withdraw_resolved` restores the inventory if the transfer failed. `vault_withdrawn` carries `success` so the indexer can tell the two outcomes apart.
+- Inventory addition is checked: a funding or conversion that would overflow `u128` is refused.

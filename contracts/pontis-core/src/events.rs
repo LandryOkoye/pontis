@@ -2,7 +2,8 @@
 //! The log line is `EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`.
 //! `data` is a single JSON object per event. Amounts are decimal strings, times are ms since epoch.
 
-use crate::types::{Classification, Ratio, Status, SubjectType};
+use crate::types::{Classification, Ratio, RejectReason, Status, SubjectType};
+use near_sdk::json_types::U128;
 use near_sdk::{near, AccountId};
 
 #[derive(Clone, Copy)]
@@ -164,6 +165,67 @@ pub enum CoreEvent {
         account_ids: Vec<AccountId>,
         allowed: bool,
         by: AccountId,
+        timestamp_ms: u64,
+    },
+    #[event_version("1.0.0")]
+    QuoteSignerSet { public_key: String, by: AccountId },
+    #[event_version("1.0.0")]
+    FeeUpdated { fee_bps: u16, by: AccountId },
+    /// Inventory added by the owner through `ft_transfer_call` with `msg = "fund_vault"`.
+    #[event_version("1.0.0")]
+    VaultFunded {
+        representation_id: String,
+        amount: U128,
+        by: AccountId,
+        inventory: U128,
+        timestamp_ms: u64,
+    },
+    /// The transfer was returned in full; `nonce` is set when a conversion quote was read.
+    #[event_version("1.0.0")]
+    ConversionRejected {
+        reason: RejectReason,
+        sender_id: AccountId,
+        token: AccountId,
+        amount: U128,
+        nonce: Option<String>,
+        timestamp_ms: u64,
+    },
+    /// Owner withdrawal. `success = false` means the token transfer failed and the inventory
+    /// was restored.
+    #[event_version("1.0.0")]
+    VaultWithdrawn {
+        representation_id: String,
+        amount: U128,
+        receiver_id: AccountId,
+        success: bool,
+        timestamp_ms: u64,
+    },
+    /// The payout succeeded. Carries the full breakdown (ADR 0007).
+    #[event_version("1.0.0")]
+    ConversionCompleted {
+        nonce: String,
+        user: AccountId,
+        from_representation_id: String,
+        to_representation_id: String,
+        token_in: AccountId,
+        token_out: AccountId,
+        amount_in: U128,
+        amount_out_gross: U128,
+        fee: U128,
+        amount_out: U128,
+        ratio: Ratio,
+        fee_bps: u16,
+        compatibility_version: u64,
+        policy_version: u64,
+        timestamp_ms: u64,
+    },
+    /// The payout failed; inventory was restored and the input returned. The nonce stays used.
+    #[event_version("1.0.0")]
+    ConversionFailed {
+        nonce: String,
+        user: AccountId,
+        reason: String,
+        amount_in: U128,
         timestamp_ms: u64,
     },
 }

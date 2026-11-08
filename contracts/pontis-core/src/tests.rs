@@ -17,11 +17,16 @@ pub(crate) fn bob() -> AccountId {
 
 /// Calls as `who` with exactly 1 yoctoNEAR (required by every state-changing method).
 pub(crate) fn as_account(who: AccountId) {
+    as_account_at(who, 5_000);
+}
+
+/// Same as `as_account`, with the block time set to `now_ms`.
+pub(crate) fn as_account_at(who: AccountId, now_ms: u64) {
     testing_env!(VMContextBuilder::new()
         .current_account_id(account("core.testnet"))
         .predecessor_account_id(who)
         .attached_deposit(NearToken::from_yoctonear(1))
-        .block_timestamp(5_000 * 1_000_000)
+        .block_timestamp(now_ms * 1_000_000)
         .build());
 }
 
@@ -250,4 +255,20 @@ fn non_owner_cannot_nominate_a_new_owner() {
     let mut c = new_core();
     as_account(alice());
     c.transfer_ownership(alice());
+}
+
+/// Runs the next call as this contract's own callback with the given promise result.
+pub(crate) fn as_callback(result: near_sdk::PromiseResult) {
+    let core = account("core.testnet");
+    testing_env!(
+        VMContextBuilder::new()
+            .current_account_id(core.clone())
+            .predecessor_account_id(core)
+            .block_timestamp(5_000 * 1_000_000)
+            .build(),
+        near_sdk::test_vm_config(),
+        near_sdk::RuntimeFeesConfig::test(),
+        Default::default(),
+        vec![result]
+    );
 }

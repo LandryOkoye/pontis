@@ -420,3 +420,34 @@ pub fn validate_new_evidence(evidence: &NewEvidence) {
     validate_sha256(&evidence.sha256);
     require_text(&evidence.description, "description");
 }
+
+/// Why `ft_on_transfer` returned the input instead of converting or funding. Emitted in
+/// `conversion_rejected`; the API maps these to its error codes.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[near(serializers = [borsh, json])]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RejectReason {
+    UnknownToken,
+    InvalidMsg,
+    NotOwner,
+    InventoryOverflow,
+    SignerNotSet,
+    BadSignature,
+    UnsupportedVersion,
+    ContractMismatch,
+    QuoteExpired,
+    WrongSender,
+    WrongToken,
+    AmountMismatch,
+    RelationshipSuspended,
+    AssetPaused,
+    NotDirectEquivalent,
+    CompatibilityChanged,
+    PolicyChanged,
+    FeeChanged,
+    NotEligible,
+    OutputMismatch,
+    AmountTooSmall,
+    InsufficientInventory,
+    NonceUsed,
+}
