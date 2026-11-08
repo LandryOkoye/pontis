@@ -1,5 +1,5 @@
-// GET /v1/health: database reachable, chain height, and how far the indexer is behind (B12 writes
-// the cursor; until then lag is null). Never throws: a failed probe reports `degraded`.
+// GET /v1/health: database reachable, chain height, and how far the indexer is behind (it writes
+// the cursor; lag is null until it has run). Never throws: a failed probe reports `degraded`.
 
 import { ENDPOINTS } from "@pontis/api-types";
 import { eq, sql } from "drizzle-orm";

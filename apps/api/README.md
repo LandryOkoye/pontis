@@ -22,7 +22,18 @@ pnpm --filter @pontis/api start          # migrates, starts on :3000, syncs the 
 
 ## Conversions
 
-`POST /v1/conversions` with `{quoteId}` and an `Idempotency-Key` accepts a quote once and returns the **unsigned** wallet actions: an optional `storage_deposit` on the destination token, then `ft_transfer_call` with the signed quote. The wallet signs and sends them (one transaction per receiver, in order) and then reports the hash to `POST /v1/conversions/{id}/submitted`. Settlement states (`SETTLED`, `FAILED`, `REQUIRES_RECONCILIATION`) are set by the indexer in B12; until then a submitted conversion stays `SUBMITTED`.
+`POST /v1/conversions` with `{quoteId}` and an `Idempotency-Key` accepts a quote once and returns the **unsigned** wallet actions: an optional `storage_deposit` on the destination token, then `ft_transfer_call` with the signed quote. The wallet signs and sends them (one transaction per receiver, in order) and then reports the hash to `POST /v1/conversions/{id}/submitted`. Settlement states (`SETTLED`, `FAILED`, `REQUIRES_RECONCILIATION`) are set by [the indexer](../indexer/README.md); without it running, a submitted conversion stays `SUBMITTED`.
+
+### Running with the indexer
+
+The API alone accepts quotes and records hashes. Run the indexer next to it so conversions settle without the wallet's help and `GET /v1/health` reports a real `indexerLagBlocks`:
+
+```bash
+pnpm --filter @pontis/api start        # terminal 1
+pnpm --filter @pontis/indexer start    # terminal 2, same DATABASE_URL and PONTIS_CORE_ACCOUNT_ID
+```
+
+Both apply migrations on start. A conversion is `SETTLED` a few seconds after its transaction finalizes; poll `GET /v1/transactions/{id}` for it.
 
 ### Walkthrough
 
