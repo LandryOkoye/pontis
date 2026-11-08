@@ -50,3 +50,11 @@ Execution must reject expired or altered quotes, and the backend must never hold
 - **One byte layout, two languages.** `test-vectors/quote-signing.json` holds a fixed seed, public key, quote, signed message and signature. The message was rebuilt independently in Python from the Borsh rules and matches the Rust output byte for byte. `packages/quote-engine` (B10) must reproduce the same message and signature.
 - **Verification order.** Signer set (`SIGNER_NOT_SET`), nonce parses (`INVALID_MSG`), signature valid (`BAD_SIGNATURE`). Every other check runs only after the signature is valid, so a rejection event can carry the nonce.
 - **Signer key type.** `set_quote_signer` accepts only ed25519 keys and works while the contract is paused, so a compromised key can be rotated during an incident.
+
+## Amendments (B10, as implemented in `@pontis/quote-engine` and the API)
+
+- **Same bytes, three implementations.** The Rust verifier, the TypeScript signer (`packages/quote-engine`) and an independent Python rebuild all produce the message in `test-vectors/quote-signing.json`. The TypeScript tests reproduce the vector's signature exactly, which is possible because ed25519 signatures are deterministic.
+- **Key format.** `QUOTE_SIGNER_SECRET_KEY` is a NEAR `ed25519:<base58 of seed then public key>` secret key. The API checks that the embedded public key matches the derived one and, at start, compares the derived public key with `get_quote_signer` on-chain. A mismatch is logged as a warning because the contract would reject every quote.
+- **Nonce.** 16 random bytes from the OS CSPRNG, hex-encoded, stored unique in `quotes.nonce`. It is the on-chain operation ID.
+- **Lifetime.** `expires_at = now + 60 s`, set by the API. Expiry is enforced on-chain with `now_ms < expires_at_ms`; the API only marks the row `EXPIRED` (a sweep every 10 s and lazily on read).
+- **What the API checks before signing.** The live route (`get_route`: versions, statuses, pauses), allowlist for both assets, the current fee, a non-zero output and vault inventory. These mirror, but never replace, the contract's checks at execution.

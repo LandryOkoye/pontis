@@ -7,6 +7,7 @@ import { loadConfig } from "./config.ts";
 import { createDb } from "./db/client.ts";
 import { runMigrations } from "./db/migrate.ts";
 import { syncRegistry } from "./sync/registry-sync.ts";
+import { expireQuotes } from "./quotes/lifecycle.ts";
 import { startScheduler } from "./sync/scheduler.ts";
 
 const config = loadConfig();
@@ -43,12 +44,19 @@ core.getQuoteSigner().then(
   },
   (err: unknown) => app.log.warn({ err }, "could not read the on-chain quote signer"),
 );
+const sweep = startScheduler({
+  run: () => expireQuotes(db, new Date()),
+  intervalMs: config.QUOTE_SWEEP_INTERVAL_MS,
+  onError: (err) => app.log.error({ err }, "quote expiry sweep failed"),
+});
+
 await app.listen({ host: config.HOST, port: config.PORT });
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {
     void (async () => {
       await sync?.stop();
+      await sweep.stop();
       await app.close();
       await pool.end();
     })();

@@ -14,6 +14,8 @@ const EnvSchema = z.object({
   QUOTE_SIGNER_SECRET_KEY: z.string().startsWith("ed25519:"),
   /** 0 disables the background registry sync (use `pnpm sync` instead). */
   REGISTRY_SYNC_INTERVAL_MS: z.coerce.number().int().min(0).default(15_000),
+  /** How often unused quotes past their expiry are marked EXPIRED. */
+  QUOTE_SWEEP_INTERVAL_MS: z.coerce.number().int().min(1000).default(10_000),
 });
 
 export type Config = z.infer<typeof EnvSchema>;
