@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "start": "tsx --env-file-if-exists=.env src/server.ts",
-    "sync": "tsx --env-file-if-exists=.env src/sync-once.ts",
+    "sync": "tsx --env-file-if-exists=.env src/sync/sync-once.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate-cli.ts",
     "lint": "eslint .",
