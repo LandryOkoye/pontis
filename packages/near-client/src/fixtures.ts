@@ -1,10 +1,13 @@
 // The MVP seed as pontis-core returns it (see docs/asset-dossiers and scripts/lib/seed-data.ts).
+// `fixtureSource()` is a `RegistrySource` for tests that need a chain without a network.
 
+import type { RegistrySource } from "./core.ts";
 import type {
   ChainCanonicalAsset,
   ChainCompatibility,
   ChainEvidence,
   ChainIssuer,
+  ChainPolicy,
   ChainRepresentation,
 } from "./schemas.ts";
 
@@ -130,3 +133,27 @@ export const compatibilities: ChainCompatibility[] = [
     updated_at_ms: T0 + 2000,
   },
 ];
+
+export const policies: ChainPolicy[] = representations.map((r) => ({
+  representation_id: r.id,
+  allowlist_required: true,
+  policy_version: 1,
+}));
+
+export const inventories: Record<string, string> = {
+  "tgold-a": "1000000000",
+  "tgold-b": "1000000000000",
+};
+
+export function fixtureSource(overrides: Partial<RegistrySource> = {}): RegistrySource {
+  return {
+    blockHeight: async () => 200_000_000,
+    listIssuers: async () => issuers,
+    listCanonicalAssets: async () => canonicalAssets,
+    listRepresentations: async () => representations,
+    listCompatibilities: async () => compatibilities,
+    getPolicy: async (id) => policies.find((p) => p.representation_id === id) ?? null,
+    getInventory: async (id) => inventories[id] ?? "0",
+    ...overrides,
+  };
+}

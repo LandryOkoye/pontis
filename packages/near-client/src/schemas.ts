@@ -131,3 +131,4 @@ export type ChainCanonicalAsset = z.infer<typeof ChainCanonicalAssetSchema>;
 export type ChainRepresentation = z.infer<typeof ChainRepresentationSchema>;
 export type ChainCompatibility = z.infer<typeof ChainCompatibilitySchema>;
 export type ChainPolicy = z.infer<typeof ChainPolicySchema>;
+export type ChainCompatibilityVersion = z.infer<typeof ChainCompatibilityVersionSchema>;
