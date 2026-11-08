@@ -1,6 +1,6 @@
 // API process: migrate, start the HTTP server and the background registry sync, stop cleanly.
 
-import { CoreClient, RpcClient } from "@pontis/near-client";
+import { CoreClient, RpcClient, TokenClient } from "@pontis/near-client";
 import { parseSecretKey } from "@pontis/quote-engine";
 import { buildApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
@@ -14,15 +14,17 @@ const config = loadConfig();
 const { db, pool } = createDb(config.DATABASE_URL);
 await runMigrations(db);
 
-const core = new CoreClient(
-  new RpcClient({ url: config.NEAR_RPC_URL }),
-  config.PONTIS_CORE_ACCOUNT_ID,
-);
+const rpc = new RpcClient({ url: config.NEAR_RPC_URL });
+const core = new CoreClient(rpc, config.PONTIS_CORE_ACCOUNT_ID);
 const key = parseSecretKey(config.QUOTE_SIGNER_SECRET_KEY);
 const app = buildApp({
   db,
   chainHeight: () => core.blockHeight(),
   quotes: { chain: core, key, coreId: config.PONTIS_CORE_ACCOUNT_ID },
+  conversionChain: {
+    isRegistered: async (tokenId, account) =>
+      (await new TokenClient(rpc, tokenId).storageBalanceOf(account)) !== null,
+  },
   logger: true,
 });
 const sync =

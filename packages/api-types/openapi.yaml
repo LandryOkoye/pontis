@@ -1314,6 +1314,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+        "410":
+          description: "Gone. Codes: QUOTE_EXPIRED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "429":
           description: "Rate limited. Codes: RATE_LIMITED."
           content:
