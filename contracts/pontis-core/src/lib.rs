@@ -6,6 +6,7 @@
 //! pause state, and emits an event.
 
 mod compatibility;
+mod config;
 mod events;
 mod math;
 mod policy;
@@ -20,7 +21,7 @@ pub use route::{RouteRefusal, RouteTerms, RouteView};
 pub use types::*;
 
 use near_sdk::store::{IterableMap, IterableSet, LookupMap, LookupSet};
-use near_sdk::{env, near, AccountId, BorshStorageKey, PanicOnDefault};
+use near_sdk::{env, near, AccountId, BorshStorageKey, PanicOnDefault, PublicKey};
 
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]
@@ -58,6 +59,10 @@ pub struct Contract {
     /// Per-representation override; absent means the default, `true`.
     allowlist_required: LookupMap<String, bool>,
     allowlist: LookupSet<(String, AccountId)>,
+    /// ed25519 key that signs quotes (ADR 0006); unset until the owner sets it.
+    quote_signer: Option<PublicKey>,
+    /// `protocol_fee_bps`, capped at 100.
+    fee_bps: u16,
 }
 
 #[near]
@@ -82,6 +87,8 @@ impl Contract {
             policy_version: 1,
             allowlist_required: LookupMap::new(StorageKey::AllowlistRequired),
             allowlist: LookupSet::new(StorageKey::Allowlist),
+            quote_signer: None,
+            fee_bps: config::DEFAULT_FEE_BPS,
         }
     }
 }
@@ -98,6 +105,8 @@ mod compat_reject_tests;
 mod compat_suspend_tests;
 #[cfg(test)]
 mod compat_tests;
+#[cfg(test)]
+mod config_tests;
 #[cfg(test)]
 mod math_tests;
 #[cfg(test)]

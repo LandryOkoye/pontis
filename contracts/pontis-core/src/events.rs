@@ -166,4 +166,8 @@ pub enum CoreEvent {
         by: AccountId,
         timestamp_ms: u64,
     },
+    #[event_version("1.0.0")]
+    QuoteSignerSet { public_key: String, by: AccountId },
+    #[event_version("1.0.0")]
+    FeeUpdated { fee_bps: u16, by: AccountId },
 }
