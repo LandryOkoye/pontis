@@ -7,6 +7,7 @@
 
 mod compatibility;
 mod config;
+mod conversion;
 mod events;
 mod math;
 mod policy;
@@ -17,6 +18,7 @@ mod route;
 mod types;
 mod vault;
 
+pub use conversion::{ConversionPlan, Rejection};
 pub use events::{CoreEvent, PauseScope, RoleName};
 pub use math::{compute_amounts, Amounts, MAX_FEE_BPS};
 pub use quote::{parse_nonce, ConversionMsg, QuoteInput, QUOTE_DOMAIN, QUOTE_VERSION};
@@ -40,6 +42,7 @@ enum StorageKey {
     AllowlistRequired,
     Allowlist,
     Inventory,
+    UsedNonces,
 }
 
 #[derive(PanicOnDefault)]
@@ -69,6 +72,8 @@ pub struct Contract {
     fee_bps: u16,
     /// Vault inventory per representation ID, in smallest units (ADR 0008).
     inventory: LookupMap<String, u128>,
+    /// Quote nonces already executed or attempted to completion; never pruned (ADR 0006).
+    used_nonces: LookupSet<[u8; 16]>,
 }
 
 #[near]
@@ -96,6 +101,7 @@ impl Contract {
             quote_signer: None,
             fee_bps: config::DEFAULT_FEE_BPS,
             inventory: LookupMap::new(StorageKey::Inventory),
+            used_nonces: LookupSet::new(StorageKey::UsedNonces),
         }
     }
 }
