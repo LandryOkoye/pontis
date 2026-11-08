@@ -1,5 +1,6 @@
 import { fixtureSource } from "@pontis/near-client/fixtures";
 import type { ChainRouteView } from "@pontis/near-client";
+import { errorCodeOf } from "./helpers.ts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { compareRoutes } from "../src/quotes/compare.ts";
 import type { QuoteChain } from "../src/quotes/chain.ts";
@@ -69,5 +70,16 @@ describe("compareRoutes", () => {
       (await compareRoutes(t.db, chainWith(executable, "1000"), { ...pair, amount: "1" })).routes[0]
         ?.executable,
     ).toBe(true);
+  });
+
+  it("is a NOT_FOUND error for an asset the catalog does not know", async () => {
+    expect(
+      await errorCodeOf(
+        compareRoutes(t.db, chainWith({ executable: false, refusal: null, terms: null }), {
+          fromId: "ghost",
+          toId: "tgold-b",
+        }),
+      ),
+    ).toBe("NOT_FOUND");
   });
 });
