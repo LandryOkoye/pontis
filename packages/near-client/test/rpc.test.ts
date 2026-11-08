@@ -31,6 +31,14 @@ describe("RpcClient", () => {
     });
   });
 
+  it("decodes a JSON null result", async () => {
+    const client = new RpcClient({
+      url: "http://rpc",
+      fetch: fakeFetch(() => ({ result: { result: bytes(null) } })),
+    });
+    expect(await client.view("core.testnet", "get_issuer", { id: "x" })).toBeNull();
+  });
+
   it("raises a ContractError when the contract panics", async () => {
     const client = new RpcClient({
       url: "http://rpc",
