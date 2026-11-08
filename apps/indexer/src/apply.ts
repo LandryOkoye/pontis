@@ -51,7 +51,9 @@ async function applyEvent(tx: DbTx, execution: CoreExecution, event: CoreEvent):
       .update(conversions)
       .set({
         submittedAt: sql`coalesce(${conversions.submittedAt}, ${at})`,
-        ...(settlement.to === "SETTLED" ? { settledAt: at } : { failureReason: settlement.reason }),
+        ...(settlement.to === "SETTLED"
+          ? { settledAt: at, failureReason: null }
+          : { failureReason: settlement.reason }),
       })
       .where(eq(conversions.id, row.conversion.id));
   }

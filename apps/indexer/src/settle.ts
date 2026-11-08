@@ -29,7 +29,11 @@ function reachable(from: QuoteState, to: QuoteState): boolean {
   return canTransitionQuote(from, to);
 }
 
-function disagreement(quote: QuoteFacts, data: Record<string, unknown>): string | undefined {
+/** How a `conversion_completed` payload differs from the quote it settles, or `undefined` if it matches. */
+export function quoteDisagreement(
+  quote: QuoteFacts,
+  data: Record<string, unknown>,
+): string | undefined {
   const checks: [string, unknown, string][] = [
     ["user", data.user, quote.accountId],
     ["amount_in", data.amount_in, quote.amountIn],
@@ -41,11 +45,16 @@ function disagreement(quote: QuoteFacts, data: Record<string, unknown>): string 
 
 /** The state a quote should move to because of `event`, or `undefined` to leave it alone. */
 export function settlementFor(quote: QuoteFacts, event: CoreEvent): Settlement | undefined {
-  const open = quote.state === "ACCEPTED" || quote.state === "SUBMITTED";
+  // A quote waiting for reconciliation resolves when a matching event finally arrives (a late indexer
+  // after the reconciler flagged it as stuck); a disagreeing one stays where it is.
+  const open =
+    quote.state === "ACCEPTED" ||
+    quote.state === "SUBMITTED" ||
+    quote.state === "REQUIRES_RECONCILIATION";
   let target: Settlement | undefined;
   switch (event.name) {
     case "conversion_completed": {
-      const mismatch = disagreement(quote, event.data);
+      const mismatch = quoteDisagreement(quote, event.data);
       target = mismatch
         ? { to: "REQUIRES_RECONCILIATION", reason: mismatch }
         : { to: "SETTLED", reason: null };
