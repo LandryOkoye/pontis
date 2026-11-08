@@ -132,3 +132,29 @@ export type ChainRepresentation = z.infer<typeof ChainRepresentationSchema>;
 export type ChainCompatibility = z.infer<typeof ChainCompatibilitySchema>;
 export type ChainPolicy = z.infer<typeof ChainPolicySchema>;
 export type ChainCompatibilityVersion = z.infer<typeof ChainCompatibilityVersionSchema>;
+
+/** Why `pontis-core.get_route` refuses a pair (contracts/pontis-core/src/route.rs). */
+export const ROUTE_REFUSALS = [
+  "asset_not_found",
+  "asset_paused",
+  "asset_not_active",
+  "no_relationship",
+  "relationship_not_approved",
+  "relationship_suspended",
+  "not_direct_equivalent",
+] as const;
+export type RouteRefusal = (typeof ROUTE_REFUSALS)[number];
+
+export const ChainRouteViewSchema = z.object({
+  executable: z.boolean(),
+  refusal: z.enum(ROUTE_REFUSALS).nullable(),
+  terms: z
+    .object({
+      /** Output smallest units of the destination per smallest unit of the source. */
+      ratio: ChainRatioSchema,
+      compatibility_version: z.number().int().positive(),
+      policy_version: z.number().int().nonnegative(),
+    })
+    .nullable(),
+});
+export type ChainRouteView = z.infer<typeof ChainRouteViewSchema>;

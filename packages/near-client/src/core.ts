@@ -10,11 +10,13 @@ import {
   ChainIssuerSchema,
   ChainPolicySchema,
   ChainRepresentationSchema,
+  ChainRouteViewSchema,
   type ChainCanonicalAsset,
   type ChainCompatibility,
   type ChainIssuer,
   type ChainPolicy,
   type ChainRepresentation,
+  type ChainRouteView,
 } from "./schemas.ts";
 
 const PAGE = 100;
@@ -69,6 +71,38 @@ export class CoreClient implements RegistrySource {
       representation_id: representationId,
     });
     return amount.parse(raw);
+  }
+
+  /** The parity-route gate for `from` to `to`: terms if executable, else the refusal reason. */
+  async getRoute(fromId: string, toId: string): Promise<ChainRouteView> {
+    const raw = await this.rpc.view(this.accountId, "get_route", { from_id: fromId, to_id: toId });
+    return ChainRouteViewSchema.parse(raw);
+  }
+
+  /** Live allowlist check: true if the representation needs no allowlist or the account is on it. */
+  async isAllowed(representationId: string, account: string): Promise<boolean> {
+    const raw = await this.rpc.view(this.accountId, "is_allowed", {
+      representation_id: representationId,
+      account_id: account,
+    });
+    return z.boolean().parse(raw);
+  }
+
+  async getFeeBps(): Promise<number> {
+    return z
+      .number()
+      .int()
+      .min(0)
+      .max(100)
+      .parse(await this.rpc.view(this.accountId, "get_fee_bps"));
+  }
+
+  /** `ed25519:<base58>` public key of the quote signer, or null until the owner sets one. */
+  async getQuoteSigner(): Promise<string | null> {
+    return z
+      .string()
+      .nullable()
+      .parse(await this.rpc.view(this.accountId, "get_quote_signer"));
   }
 }
 
