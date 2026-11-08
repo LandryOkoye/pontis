@@ -63,6 +63,10 @@ The Rust toolchain is pinned in `rust-toolchain.toml`. The `rust:*` scripts skip
 
 Full demo and deploy instructions are added with the later PRs (`BuildPlan.md` §6, B8 and B15).
 
+## Testnet deployment
+
+Contracts deploy to NEAR Testnet from `scripts/`: `scripts/deploy-testnet.sh` builds, deploys and seeds; `pnpm --filter @pontis/scripts allowlist add all <account>` manages demo users. Account naming, prerequisites, gas figures and every command are in [`docs/architecture/deployments.md`](docs/architecture/deployments.md). The sandbox tests that exercise the real token flow run with `pnpm test:integration`.
+
 ## Contributing
 
 Work lands through pull requests into `main`; see `BuildPlan.md` §4 for commit-size, message and branch rules. Before committing, check the staged diff:

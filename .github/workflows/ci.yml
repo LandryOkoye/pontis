@@ -25,6 +25,20 @@ jobs:
       - run: scripts/rust-ci.sh clippy
       - run: scripts/rust-ci.sh test
 
+  contracts-integration:
+    name: Contracts (sandbox integration)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-near
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/latest/download/cargo-near-installer.sh | sh \
+            || cargo install cargo-near --locked
+      - run: scripts/integration-tests.sh
+
   node:
     name: Node (lint, typecheck, test)
     runs-on: ubuntu-latest

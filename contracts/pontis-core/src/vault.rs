@@ -14,9 +14,10 @@ use near_sdk::{
 };
 
 pub const FUND_VAULT_MSG: &str = "fund_vault";
-/// Gas for a token `ft_transfer` and for this contract's callback. Measured in the sandbox in B8.
-pub const GAS_FT_TRANSFER: Gas = Gas::from_tgas(30);
-pub const GAS_CALLBACK: Gas = Gas::from_tgas(30);
+/// Gas reserved for the token `ft_transfer` payout and for this contract's callback. The sandbox
+/// burns about 1 and 2 Tgas for them (`integration-tests/tests/gas.rs`); these leave headroom.
+pub const GAS_FT_TRANSFER: Gas = Gas::from_tgas(10);
+pub const GAS_CALLBACK: Gas = Gas::from_tgas(15);
 
 #[ext_contract(ext_ft)]
 #[allow(dead_code)] // only the generated `ext_ft` caller is used

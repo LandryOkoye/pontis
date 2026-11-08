@@ -23,6 +23,8 @@ fi
 found=0
 for manifest in contracts/*/Cargo.toml; do
   [ -e "$manifest" ] || continue
+  # Only crates that build a contract (cdylib); skips contracts/integration-tests.
+  grep -q 'cdylib' "$manifest" || continue
   found=1
   dir=$(dirname "$manifest")
   echo "build-contracts: building $dir ($mode)"

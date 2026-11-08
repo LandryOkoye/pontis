@@ -40,7 +40,7 @@ IDs are lowercase `a-z0-9-`, 2 to 64 characters. List views take `from_index` an
 - **Config:** `set_quote_signer` (ed25519 only, replaces the previous key at once) and `set_fee_bps` (default 10, cap 100), both owner-only.
 - **Conversion:** the user calls `ft_transfer_call` on the source token with `msg = {"quote": {...}, "signature": "<base64>"}`. `ft_on_transfer` runs every check against live state and, on any failure, returns the whole input and emits `conversion_rejected` with a `reason`. On success it marks the nonce used and moves inventory, then pays out with `ft_transfer`; `on_payout_resolved` emits `conversion_completed`, or restores inventory, emits `conversion_failed` and returns the input if the payout failed. A failed conversion needs a new quote: the nonce stays used.
 - **Signed bytes:** `b"pontis-quote-v1" ++ borsh(payload)`, pinned by `test-vectors/quote-signing.json`. Amount math is pinned by `test-vectors/quote-math.json` and property tests.
-- **Gas:** `GAS_FT_TRANSFER` and `GAS_CALLBACK` are 30 TGas placeholders until B8 measures them in the sandbox.
+- **Gas:** `GAS_FT_TRANSFER` (10 Tgas) and `GAS_CALLBACK` (15 Tgas) are reserved for the payout and its callback; the sandbox burns about 1 and 2 Tgas. A whole conversion completes with 40 Tgas prepaid (`contracts/integration-tests/tests/gas.rs`).
 
 ## Events
 

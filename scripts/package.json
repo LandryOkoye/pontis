@@ -1,0 +1,25 @@
+{
+  "name": "@pontis/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Testnet deploy, seed and allowlist tooling for the Pontis contracts",
+  "license": "MIT",
+  "scripts": {
+    "deploy": "tsx --env-file-if-exists=.env deploy-testnet.ts",
+    "seed": "tsx --env-file-if-exists=.env seed-testnet.ts",
+    "allowlist": "tsx --env-file-if-exists=.env allowlist.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pontis/domain": "workspace:*",
+    "near-api-js": "^7.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "vitest": "^5.1.0"
+  }
+}
