@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { HistoryUnavailableError } from "../src/chain-source.ts";
 import { NearChainSource } from "../src/near-source.ts";
 import { CORE, block, node, noSleep, proof } from "./fake-node.ts";
 
@@ -7,7 +8,9 @@ describe("NearChainSource failures", () => {
     const { rpc } = node({
       block: (p) => (p.finality ? block(10, []) : block(5, [{ hash: "C", shard: 0, included: 5 }])),
       EXPERIMENTAL_protocol_config: () => ({ result: { shard_layout: "unknown shape" } }),
-      chunk: () => ({ result: { receipts: [{ receipt_id: "r", receiver_id: CORE }] } }),
+      chunk: () => ({
+        result: { receipts: [{ receipt_id: "r", receiver_id: CORE, receipt: { Action: {} } }] },
+      }),
       EXPERIMENTAL_light_client_proof: () =>
         proof(6, { Failure: { ActionError: { kind: "FunctionCallError" } } }, ["EVENT_JSON:{}"]),
     });
@@ -17,15 +20,20 @@ describe("NearChainSource failures", () => {
     expect(execution?.success).toBe(false);
   });
 
-  it("treats a skipped height as empty but surfaces other node errors", async () => {
+  it("treats a skipped height as empty, lost history as an error, and surfaces other node errors", async () => {
     const unknown = {
       error: { code: -32000, message: "Server error", cause: { name: "UNKNOWN_BLOCK" } },
       status: 422,
     };
-    const skipped = node({ block: (p) => (p.finality ? block(10, []) : unknown) });
+    const status = () => ({
+      result: { chain_id: "t", sync_info: { latest_block_height: 10, earliest_block_height: 5 } },
+    });
+    const skipped = node({ block: (p) => (p.finality ? block(10, []) : unknown), status });
     const source = new NearChainSource(skipped.rpc, CORE, { retry: noSleep });
     await source.finalHeight();
     expect(await source.executionsAt(7)).toEqual([]);
+    // Below the node's earliest block the gap is lost history, not an empty block.
+    await expect(source.executionsAt(4)).rejects.toBeInstanceOf(HistoryUnavailableError);
 
     const broken = node({
       block: (p) =>

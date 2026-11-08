@@ -17,3 +17,16 @@ export interface ChainSource {
   /** Executions of receipts delivered to the core contract in block `height` (none for a skipped height). */
   executionsAt(height: number): Promise<CoreExecution[]>;
 }
+
+/** The node no longer has a block the indexer still needs; events in it cannot be recovered from this node. */
+export class HistoryUnavailableError extends Error {
+  constructor(
+    readonly height: number,
+    readonly earliestHeight: number,
+  ) {
+    super(
+      `block ${height} is older than the node's earliest block ${earliestHeight}: use an archival RPC node, or delete the indexer cursor and set INDEXER_START_HEIGHT to accept the gap`,
+    );
+    this.name = "HistoryUnavailableError";
+  }
+}

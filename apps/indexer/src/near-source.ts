@@ -3,7 +3,7 @@
 // (the only node-side lookup by receipt ID that needs no transaction hash).
 
 import { RpcError, type RpcClient } from "@pontis/near-client";
-import type { ChainSource, CoreExecution } from "./chain-source.ts";
+import { HistoryUnavailableError, type ChainSource, type CoreExecution } from "./chain-source.ts";
 import { BlockSchema, ChunkSchema, ProofSchema } from "./rpc-schemas.ts";
 import { withRetry, type RetryOptions } from "./retry.ts";
 import { parseShardLayout, shardOf, type ShardLayout } from "./shard.ts";
@@ -62,7 +62,7 @@ export class NearChainSource implements ChainSource {
     const receiptIds = (
       await this.mapLimit(chunks, async (chunk) =>
         ChunkSchema.parse(await this.call("chunk", { chunk_id: chunk.chunk_hash }))
-          .receipts.filter((r) => r.receiver_id === this.coreId)
+          .receipts.filter((r) => r.receiver_id === this.coreId && r.receipt.Action !== undefined)
           .map((r) => r.receipt_id),
       )
     ).flat();
@@ -73,10 +73,19 @@ export class NearChainSource implements ChainSource {
     try {
       return BlockSchema.parse(await this.call("block", { block_id: height }));
     } catch (error) {
-      // Heights without a block are normal: the chain skips heights when a producer is offline.
-      if (error instanceof RpcError && error.causeName === "UNKNOWN_BLOCK") return undefined;
-      throw error;
+      if (!(error instanceof RpcError) || error.causeName !== "UNKNOWN_BLOCK") throw error;
+      // The chain skips heights when a producer is offline, but a node also forgets old blocks:
+      // only the first is an empty block. Losing history silently would lose settlements.
+      const { earliestBlockHeight } = await this.rpcStatus();
+      if (earliestBlockHeight !== undefined && height < earliestBlockHeight) {
+        throw new HistoryUnavailableError(height, earliestBlockHeight);
+      }
+      return undefined;
     }
+  }
+
+  private rpcStatus() {
+    return withRetry(() => this.rpc.status(), this.retry);
   }
 
   private async execution(receiptId: string, finalHash: string): Promise<CoreExecution> {

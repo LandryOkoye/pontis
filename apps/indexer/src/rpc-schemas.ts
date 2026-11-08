@@ -9,7 +9,14 @@ export const BlockSchema = z.object({
   ),
 });
 export const ChunkSchema = z.object({
-  receipts: z.array(z.object({ receipt_id: z.string(), receiver_id: z.string() })),
+  receipts: z.array(
+    z.object({
+      receipt_id: z.string(),
+      receiver_id: z.string(),
+      // `Action` receipts run code and have outcomes; `Data` receipts only deliver a promise result.
+      receipt: z.object({ Action: z.unknown().optional() }).loose(),
+    }),
+  ),
 });
 export const ProofSchema = z.object({
   block_header_lite: z.object({

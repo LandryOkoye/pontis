@@ -83,9 +83,16 @@ describe("RpcClient", () => {
     const client = new RpcClient({
       url: "http://rpc",
       fetch: fakeFetch(() => ({
-        result: { chain_id: "testnet", sync_info: { latest_block_height: 123 } },
+        result: {
+          chain_id: "testnet",
+          sync_info: { latest_block_height: 123, earliest_block_height: 7 },
+        },
       })),
     });
-    expect(await client.status()).toEqual({ chainId: "testnet", latestBlockHeight: 123 });
+    expect(await client.status()).toEqual({
+      chainId: "testnet",
+      latestBlockHeight: 123,
+      earliestBlockHeight: 7,
+    });
   });
 });

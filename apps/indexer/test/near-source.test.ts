@@ -19,10 +19,15 @@ describe("NearChainSource", () => {
           receipts:
             p.chunk_id === "C1"
               ? [
-                  { receipt_id: "r-core", receiver_id: CORE },
-                  { receipt_id: "r-other", receiver_id: "someone.test.near" },
+                  { receipt_id: "r-core", receiver_id: CORE, receipt: { Action: {} } },
+                  { receipt_id: "r-data", receiver_id: CORE, receipt: { Data: {} } },
+                  {
+                    receipt_id: "r-other",
+                    receiver_id: "someone.test.near",
+                    receipt: { Action: {} },
+                  },
                 ]
-              : [{ receipt_id: "r-wrong-shard", receiver_id: CORE }],
+              : [{ receipt_id: "r-wrong-shard", receiver_id: CORE, receipt: { Action: {} } }],
         },
       }),
       EXPERIMENTAL_light_client_proof: () =>
