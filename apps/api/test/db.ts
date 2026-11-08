@@ -29,6 +29,8 @@ export async function createTestDb(): Promise<TestDb> {
   const url = new URL(BASE_URL);
   url.pathname = `/${name}`;
   const { db, pool } = createDb(url.toString());
+  // DROP DATABASE ... FORCE terminates idle clients; that is expected during teardown.
+  pool.on("error", () => undefined);
   await runMigrations(db);
   return {
     db,

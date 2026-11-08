@@ -11,7 +11,7 @@ let app: FastifyInstance;
 beforeAll(async () => {
   t = await createTestDb();
   await syncRegistry(t.db, fixtureSource());
-  app = buildApp({ db: t.db });
+  app = buildApp({ db: t.db, chainHeight: async () => 1 });
 });
 afterAll(async () => {
   await app.close();
@@ -62,7 +62,7 @@ describe("catalog routes", () => {
 
   it("hides internals behind a structured INTERNAL error", async () => {
     const broken = await createTestDb();
-    const failing = buildApp({ db: broken.db });
+    const failing = buildApp({ db: broken.db, chainHeight: async () => 1 });
     await broken.pool.end();
     const res = await failing.inject({ method: "GET", url: "/v1/issuers" });
     expect(res.statusCode).toBe(500);
