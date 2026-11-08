@@ -1,3 +1,7 @@
+import { keyFromSeed } from "@pontis/quote-engine";
+import type { AppDeps } from "../src/app.ts";
+import type { Db } from "../src/db/client.ts";
+import type { QuoteChain } from "../src/quotes/chain.ts";
 import { AppError } from "../src/errors.ts";
 
 /** The `code` of the AppError a promise rejects with, or undefined if it resolves or throws another error. */
@@ -8,4 +12,25 @@ export async function errorCodeOf(promise: Promise<unknown>): Promise<string | u
     return error instanceof AppError ? error.code : undefined;
   }
   return undefined;
+}
+
+/** App dependencies with a fake chain that approves the MVP pair: tests override what they probe. */
+export function testAppDeps(db: Db, over: Partial<AppDeps> = {}): AppDeps {
+  const chain: QuoteChain = {
+    getRoute: async () => ({
+      executable: true,
+      refusal: null,
+      terms: { ratio: { num: "1000", den: "1" }, compatibility_version: 2, policy_version: 1 },
+    }),
+    isAllowed: async () => true,
+    getInventory: async () => "1000000000000",
+    getFeeBps: async () => 10,
+  };
+  const key = keyFromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1));
+  return {
+    db,
+    chainHeight: async () => 1,
+    quotes: { chain, key, coreId: "core.testnet" },
+    ...over,
+  };
 }

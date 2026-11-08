@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.ts";
 
-const base = { DATABASE_URL: "postgres://x", PONTIS_CORE_ACCOUNT_ID: "core.testnet" };
+const base = {
+  DATABASE_URL: "postgres://x",
+  PONTIS_CORE_ACCOUNT_ID: "core.testnet",
+  QUOTE_SIGNER_SECRET_KEY: "ed25519:abc",
+};
 
 describe("loadConfig", () => {
   it("applies defaults", () => {

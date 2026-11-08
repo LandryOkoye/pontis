@@ -10,6 +10,8 @@ const EnvSchema = z.object({
   NEAR_NETWORK_ID: z.enum(["testnet", "sandbox"]).default("testnet"),
   NEAR_RPC_URL: z.string().url().default("https://rpc.testnet.near.org"),
   PONTIS_CORE_ACCOUNT_ID: z.string().min(2),
+  /** `ed25519:<base58>` quote-signer secret key. Testnet only; never commit it. */
+  QUOTE_SIGNER_SECRET_KEY: z.string().startsWith("ed25519:"),
   /** 0 disables the background registry sync (use `pnpm sync` instead). */
   REGISTRY_SYNC_INTERVAL_MS: z.coerce.number().int().min(0).default(15_000),
 });

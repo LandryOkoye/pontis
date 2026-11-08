@@ -4,6 +4,7 @@ import { buildApp } from "../src/app.ts";
 import { indexerCursor } from "../src/db/schema/index.ts";
 import { INDEXER_CURSOR_NAME } from "../src/routes/health.ts";
 import { createTestDb, type TestDb } from "./db.ts";
+import { testAppDeps } from "./helpers.ts";
 
 let t: TestDb;
 beforeAll(async () => {
@@ -14,7 +15,7 @@ afterAll(async () => {
 });
 
 async function health(chainHeight: () => Promise<number>) {
-  const app = buildApp({ db: t.db, chainHeight });
+  const app = buildApp(testAppDeps(t.db, { chainHeight }));
   const res = await app.inject({ method: "GET", url: "/v1/health" });
   await app.close();
   expect(res.statusCode).toBe(200);
