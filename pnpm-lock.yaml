@@ -72,6 +72,9 @@ importers:
 
   apps/indexer:
     dependencies:
+      '@pontis/api-types':
+        specifier: workspace:*
+        version: link:../../packages/api-types
       '@pontis/db':
         specifier: workspace:*
         version: link:../../packages/db

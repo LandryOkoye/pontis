@@ -5,6 +5,8 @@ import { RpcClient } from "@pontis/near-client";
 import { loadConfig } from "./config.ts";
 import { runIndexer, type Logger } from "./indexer.ts";
 import { NearChainSource } from "./near-source.ts";
+import { nearVaultChain } from "./reconcile/near-vault-chain.ts";
+import { Reconciler, runReconciler } from "./reconcile/reconciler.ts";
 
 const config = loadConfig();
 const log: Logger = {
@@ -30,6 +32,21 @@ log.info("indexer started", {
   rpc: config.NEAR_RPC_URL,
   startHeight: config.INDEXER_START_HEIGHT ?? "chain head",
 });
+const reconciling =
+  config.RECONCILE_INTERVAL_MS > 0
+    ? runReconciler({
+        reconciler: new Reconciler({
+          db,
+          chain: nearVaultChain(rpc, config.PONTIS_CORE_ACCOUNT_ID),
+          coreId: config.PONTIS_CORE_ACCOUNT_ID,
+          stuckAfterMs: config.RECONCILE_STUCK_AFTER_MS,
+          lookbackMs: config.RECONCILE_LOOKBACK_MS,
+        }),
+        intervalMs: config.RECONCILE_INTERVAL_MS,
+        signal: controller.signal,
+        log,
+      })
+    : undefined;
 await runIndexer({
   db,
   source,
@@ -39,5 +56,6 @@ await runIndexer({
   rescanBlocks: config.INDEXER_RESCAN_BLOCKS,
   signal: controller.signal,
 });
+await reconciling;
 await pool.end();
 log.info("indexer stopped");
