@@ -6,7 +6,8 @@
   "description": "Typed NEAR RPC views and unsigned call builders for pontis-core and synthetic-token",
   "license": "MIT",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./fixtures": "./src/fixtures.ts"
   },
   "scripts": {
     "lint": "eslint .",
