@@ -96,6 +96,7 @@ impl Env {
             signer: SigningKey::from_bytes(&seed),
             nonce: std::cell::Cell::new(1),
         };
+        env.init_and_register().await?;
         Ok(env)
     }
 
@@ -118,3 +119,4 @@ impl Env {
 }
 
 mod ops;
+mod setup;
