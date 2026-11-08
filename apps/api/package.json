@@ -1,0 +1,33 @@
+{
+  "name": "@pontis/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pontis REST API (Fastify): catalog, quotes and conversions on NEAR Testnet",
+  "license": "MIT",
+  "scripts": {
+    "start": "tsx --env-file-if-exists=.env src/server.ts",
+    "sync": "tsx --env-file-if-exists=.env src/sync-once.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate-cli.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pontis/api-types": "workspace:*",
+    "@pontis/domain": "workspace:*",
+    "@pontis/near-client": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "fastify": "^5.12.8",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "vitest": "^5.1.0"
+  }
+}
