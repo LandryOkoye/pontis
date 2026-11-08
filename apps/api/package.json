@@ -18,6 +18,7 @@
     "@pontis/api-types": "workspace:*",
     "@pontis/domain": "workspace:*",
     "@pontis/near-client": "workspace:*",
+    "@pontis/quote-engine": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.8",
     "pg": "^8.23.1",

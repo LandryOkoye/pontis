@@ -72,6 +72,40 @@ describe("CoreClient", () => {
   });
 });
 
+describe("CoreClient quote-time views", () => {
+  const terms = { ratio: { num: "1000", den: "1" }, compatibility_version: 2, policy_version: 1 };
+
+  it("returns route terms for an executable pair and a snake_case refusal otherwise", async () => {
+    const ok = new CoreClient(
+      fakeRpc(() => ({ executable: true, refusal: null, terms })).rpc,
+      "core.testnet",
+    );
+    expect((await ok.getRoute("tgold-a", "tgold-b")).terms?.compatibility_version).toBe(2);
+    const refused = { executable: false, refusal: "relationship_suspended", terms: null };
+    const no = new CoreClient(fakeRpc(() => refused).rpc, "core.testnet");
+    expect((await no.getRoute("tgold-a", "tgold-b")).refusal).toBe("relationship_suspended");
+    const unknown = new CoreClient(
+      fakeRpc(() => ({ ...refused, refusal: "made_up" })).rpc,
+      "core.testnet",
+    );
+    await expect(unknown.getRoute("a", "b")).rejects.toThrow();
+  });
+
+  it("passes the account to is_allowed and validates fee and signer", async () => {
+    const { rpc, calls } = fakeRpc(({ method }) =>
+      method === "is_allowed" ? true : method === "get_fee_bps" ? 10 : null,
+    );
+    const core = new CoreClient(rpc, "core.testnet");
+    expect(await core.isAllowed("tgold-a", "alice.testnet")).toBe(true);
+    expect(calls[0]?.args).toEqual({ representation_id: "tgold-a", account_id: "alice.testnet" });
+    expect(await core.getFeeBps()).toBe(10);
+    expect(await core.getQuoteSigner()).toBeNull();
+    await expect(
+      new CoreClient(fakeRpc(() => 101).rpc, "core.testnet").getFeeBps(),
+    ).rejects.toThrow();
+  });
+});
+
 describe("TokenClient", () => {
   it("reads balances and treats an unregistered account as null", async () => {
     const { rpc } = fakeRpc(({ method }) => (method === "ft_balance_of" ? "5" : null));
