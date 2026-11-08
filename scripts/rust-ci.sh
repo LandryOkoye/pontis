@@ -15,6 +15,7 @@ fi
 case "${1:-}" in
   fmt) cargo fmt --all --check ;;
   clippy) cargo clippy --workspace --all-targets --locked -- -D warnings ;;
-  test) cargo test --workspace --locked ;;
+  # integration tests need built wasm and a sandbox; they run in their own job
+  test) cargo test --workspace --exclude pontis-integration-tests --locked ;;
   *) echo "usage: $0 <fmt|clippy|test>" >&2; exit 2 ;;
 esac
