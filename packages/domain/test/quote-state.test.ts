@@ -16,7 +16,7 @@ describe("quote state machine (brief §7.4)", () => {
   });
 
   it("never leaves a terminal state", () => {
-    for (const state of ["SETTLED", "EXPIRED", "REJECTED", "CANCELLED", "FAILED"] as const) {
+    for (const state of ["SETTLED", "REJECTED", "CANCELLED", "FAILED"] as const) {
       expect(isTerminalQuoteState(state)).toBe(true);
       for (const to of QUOTE_STATES) expect(canTransitionQuote(state, to)).toBe(false);
     }
@@ -31,6 +31,14 @@ describe("quote state machine (brief §7.4)", () => {
   it("lets a stuck submission resolve either way after reconciliation", () => {
     expect(allowedQuoteTransitions("SUBMITTED")).toContain("REQUIRES_RECONCILIATION");
     expect(allowedQuoteTransitions("REQUIRES_RECONCILIATION")).toEqual(["SETTLED", "FAILED"]);
+  });
+
+  it("sends a quote the chain executed behind our back to reconciliation, from any open or expired state", () => {
+    for (const from of ["QUOTED", "EXPIRED"] as const) {
+      expect(canTransitionQuote(from, "REQUIRES_RECONCILIATION")).toBe(true);
+      expect(canTransitionQuote(from, "SETTLED")).toBe(false);
+    }
+    expect(allowedQuoteTransitions("EXPIRED")).toEqual(["REQUIRES_RECONCILIATION"]);
   });
 
   it("only transitions to known states and never to itself", () => {
