@@ -14,9 +14,15 @@ import { Account, KeyPair, JsonRpcProvider } from "near-api-js";
 import { assertDeployerKey, connect, type Chain } from "./lib/chain.ts";
 import { loadConfig } from "./lib/config.ts";
 import { REPO_ROOT } from "./lib/evidence.ts";
-import { renderDeployments, targets, wasmPath, type Target } from "./lib/deploy-plan.ts";
+import {
+  fundingFor,
+  renderDeployments,
+  targets,
+  wasmPath,
+  type Target,
+} from "./lib/deploy-plan.ts";
 
-async function ensureAccount(chain: Chain, target: Target): Promise<void> {
+async function ensureAccount(chain: Chain, target: Target, funding: bigint): Promise<void> {
   if (await chain.exists(target.accountId)) return;
   const suffix = `.${chain.config.deployerId}`;
   if (!target.accountId.endsWith(suffix)) {
@@ -30,7 +36,7 @@ async function ensureAccount(chain: Chain, target: Target): Promise<void> {
   await chain.account.createSubAccount({
     accountOrPrefix: target.accountId.slice(0, -suffix.length),
     publicKey,
-    nearToTransfer: target.funding,
+    nearToTransfer: funding,
   });
   console.log(`created ${target.accountId}`);
 }
@@ -46,8 +52,8 @@ export async function deploy(chain: Chain, redeploy: boolean): Promise<void> {
     a: config.tokenAId,
     b: config.tokenBId,
   }).entries()) {
-    await ensureAccount(chain, target);
     const code = readFileSync(wasmPath(target.wasm));
+    await ensureAccount(chain, target, fundingFor(code.length));
     const owner = await chain
       .view<string>(target.accountId, target.ownerView)
       .catch(() => undefined);

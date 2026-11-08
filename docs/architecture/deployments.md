@@ -14,7 +14,7 @@ Contracts live on sub-accounts of the deployer (`DEPLOYER_ACCOUNT_ID`), which is
 
 ## Fresh deploy and seed
 
-Prerequisites: a funded testnet account (about 40 NEAR for the three sub-accounts), `cargo-near`, Node 22 and pnpm.
+Prerequisites: a funded testnet account, Node 22 and pnpm, and either `cargo-near` or `wasm-opt` (binaryen). Each contract account is funded with 0.01 NEAR per byte of its wasm plus 1 NEAR: about 14 NEAR in total with the slim build (core 403 KB, tokens 180 KB each) and about 29 NEAR with the unoptimised build, plus the deployer's gas. Keep at least 20 NEAR on the deployer for a slim build.
 
 ```bash
 pnpm install
@@ -27,6 +27,9 @@ scripts/deploy-testnet.sh                # build, create sub-accounts, deploy, i
 ```bash
 scripts/build-contracts.sh               # wasm into target/near/<crate>/<crate>.wasm
 pnpm --filter @pontis/scripts deploy-testnet # create accounts, deploy, init; writes this file
+scripts/build-contracts.sh               # wasm into target/near/<crate>/<crate>.wasm (cargo-near)
+scripts/build-contracts.sh slim          # same output with cargo build + wasm-opt, no cargo-near; halves the wasm
+pnpm --filter @pontis/scripts deploy     # create accounts, deploy, init; writes this file
 pnpm --filter @pontis/scripts seed       # roles, registry, relationship, signer, allowlist, vault
 ```
 

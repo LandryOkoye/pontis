@@ -4,12 +4,16 @@ import { REPO_ROOT } from "./evidence.ts";
 
 const NEAR = 10n ** 24n;
 
+/** NEAR to give a contract account: 0.01 NEAR per stored byte of code, plus 1 NEAR for state and gas. */
+export function fundingFor(codeBytes: number): bigint {
+  return BigInt(codeBytes) * 10n ** 19n + NEAR;
+}
+
 export interface Target {
   readonly accountId: string;
   readonly wasm: string;
   readonly ownerView: string;
   readonly init: Record<string, unknown>;
-  readonly funding: bigint;
 }
 
 export function targets(deployerId: string, ids: { core: string; a: string; b: string }): Target[] {
@@ -27,21 +31,18 @@ export function targets(deployerId: string, ids: { core: string; a: string; b: s
       wasm: "pontis_core",
       ownerView: "get_owner",
       init: { owner_id: deployerId },
-      funding: 15n * NEAR,
     },
     {
       accountId: ids.a,
       wasm: "synthetic_token",
       ownerView: "owner_id",
       init: token("SYNTHETIC TEST Gold A", "TGOLD-A", 6),
-      funding: 8n * NEAR,
     },
     {
       accountId: ids.b,
       wasm: "synthetic_token",
       ownerView: "owner_id",
       init: token("SYNTHETIC TEST Gold B", "TGOLD-B", 8),
-      funding: 8n * NEAR,
     },
   ];
 }
