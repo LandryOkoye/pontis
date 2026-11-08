@@ -99,6 +99,8 @@ mod compat_suspend_tests;
 #[cfg(test)]
 mod compat_tests;
 #[cfg(test)]
+mod math_tests;
+#[cfg(test)]
 mod policy_tests;
 #[cfg(test)]
 mod registry_tests;
