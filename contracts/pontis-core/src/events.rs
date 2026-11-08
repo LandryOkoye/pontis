@@ -2,7 +2,8 @@
 //! The log line is `EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`.
 //! `data` is a single JSON object per event. Amounts are decimal strings, times are ms since epoch.
 
-use crate::types::{Classification, Ratio, Status, SubjectType};
+use crate::types::{Classification, Ratio, RejectReason, Status, SubjectType};
+use near_sdk::json_types::U128;
 use near_sdk::{near, AccountId};
 
 #[derive(Clone, Copy)]
@@ -170,4 +171,23 @@ pub enum CoreEvent {
     QuoteSignerSet { public_key: String, by: AccountId },
     #[event_version("1.0.0")]
     FeeUpdated { fee_bps: u16, by: AccountId },
+    /// Inventory added by the owner through `ft_transfer_call` with `msg = "fund_vault"`.
+    #[event_version("1.0.0")]
+    VaultFunded {
+        representation_id: String,
+        amount: U128,
+        by: AccountId,
+        inventory: U128,
+        timestamp_ms: u64,
+    },
+    /// The transfer was returned in full; `nonce` is set when a conversion quote was read.
+    #[event_version("1.0.0")]
+    ConversionRejected {
+        reason: RejectReason,
+        sender_id: AccountId,
+        token: AccountId,
+        amount: U128,
+        nonce: Option<String>,
+        timestamp_ms: u64,
+    },
 }

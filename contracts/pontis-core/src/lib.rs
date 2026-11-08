@@ -14,6 +14,7 @@ mod registry;
 mod roles;
 mod route;
 mod types;
+mod vault;
 
 pub use events::{CoreEvent, PauseScope, RoleName};
 pub use math::{compute_amounts, Amounts, MAX_FEE_BPS};
@@ -36,6 +37,7 @@ enum StorageKey {
     Compatibilities,
     AllowlistRequired,
     Allowlist,
+    Inventory,
 }
 
 #[derive(PanicOnDefault)]
@@ -63,6 +65,8 @@ pub struct Contract {
     quote_signer: Option<PublicKey>,
     /// `protocol_fee_bps`, capped at 100.
     fee_bps: u16,
+    /// Vault inventory per representation ID, in smallest units (ADR 0008).
+    inventory: LookupMap<String, u128>,
 }
 
 #[near]
@@ -89,6 +93,7 @@ impl Contract {
             allowlist: LookupSet::new(StorageKey::Allowlist),
             quote_signer: None,
             fee_bps: config::DEFAULT_FEE_BPS,
+            inventory: LookupMap::new(StorageKey::Inventory),
         }
     }
 }
@@ -117,3 +122,5 @@ mod registry_tests;
 mod route_tests;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod vault_tests;
