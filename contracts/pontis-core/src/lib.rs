@@ -10,6 +10,7 @@ mod config;
 mod events;
 mod math;
 mod policy;
+mod quote;
 mod registry;
 mod roles;
 mod route;
@@ -18,6 +19,7 @@ mod vault;
 
 pub use events::{CoreEvent, PauseScope, RoleName};
 pub use math::{compute_amounts, Amounts, MAX_FEE_BPS};
+pub use quote::{parse_nonce, ConversionMsg, QuoteInput, QUOTE_DOMAIN, QUOTE_VERSION};
 pub use route::{RouteRefusal, RouteTerms, RouteView};
 pub use types::*;
 
@@ -116,6 +118,8 @@ mod config_tests;
 mod math_tests;
 #[cfg(test)]
 mod policy_tests;
+#[cfg(test)]
+mod quote_tests;
 #[cfg(test)]
 mod registry_tests;
 #[cfg(test)]
