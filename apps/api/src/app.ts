@@ -4,6 +4,7 @@ import { errorHandler, notFoundHandler } from "./errors.ts";
 import { registerCatalogRoutes } from "./routes/catalog.ts";
 import type { ConversionChain } from "./conversions/chain.ts";
 import type { QuoteDeps } from "./quotes/service.ts";
+import { registerAdminRoutes } from "./routes/admin.ts";
 import { registerConversionRoutes } from "./routes/conversions.ts";
 import { registerHealthRoute } from "./routes/health.ts";
 import { registerQuoteRoutes } from "./routes/quotes.ts";
@@ -16,6 +17,8 @@ export interface AppDeps {
   quotes: Omit<QuoteDeps, "db">;
   /** Token registration reads for the wallet plan. */
   conversionChain: ConversionChain;
+  /** Bearer key for the admin endpoints; without one they refuse everyone. */
+  adminApiKey?: string;
   logger?: boolean;
 }
 
@@ -32,5 +35,6 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     coreId: deps.quotes.coreId,
     ...(deps.quotes.now ? { now: deps.quotes.now } : {}),
   });
+  registerAdminRoutes(app, deps.db, deps.adminApiKey);
   return app;
 }
