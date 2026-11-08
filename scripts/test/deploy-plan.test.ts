@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderDeployments, targets, wasmPath } from "../lib/deploy-plan.ts";
+import { fundingFor, renderDeployments, targets, wasmPath } from "../lib/deploy-plan.ts";
 import { REPO_ROOT } from "../lib/evidence.ts";
 
 describe("deploy plan", () => {
@@ -38,5 +38,10 @@ describe("deploy plan", () => {
     expect(md).toContain("`c.pontis.testnet`");
     expect(md).toContain("ab12");
     expect(md).not.toMatch(/ed25519:/);
+  });
+
+  it("funds an account by its code size: 0.01 NEAR per byte plus 1 NEAR", () => {
+    expect(fundingFor(400_000)).toBe(5n * 10n ** 24n);
+    expect(fundingFor(0)).toBe(10n ** 24n);
   });
 });
