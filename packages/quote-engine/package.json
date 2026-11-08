@@ -1,0 +1,23 @@
+{
+  "name": "@pontis/quote-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure quote math and signing that mirror pontis-core exactly",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pontis/domain": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "vitest": "^5.1.0"
+  }
+}
