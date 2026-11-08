@@ -1,6 +1,6 @@
 // Quote and settlement tables (used from B10 on) plus the indexer cursor and audit log.
 
-import type { WalletAction } from "@pontis/api-types";
+import type { ReconciliationRun, WalletAction } from "@pontis/api-types";
 import type { QuoteState } from "@pontis/domain";
 import { sql } from "drizzle-orm";
 import {
@@ -107,5 +107,12 @@ export const indexerCursor = pgTable("indexer_cursor", {
   name: text().primaryKey(),
   blockHeight: bigint({ mode: "number" }).notNull(),
   blockHash: text(),
+  updatedAt: at("updated_at").notNull().defaultNow(),
+});
+
+/** The reconciler's latest run (B13), one row per name; the admin endpoint serves it. */
+export const reconciliationReport = pgTable("reconciliation_report", {
+  name: text().primaryKey(),
+  report: jsonb().$type<ReconciliationRun>().notNull(),
   updatedAt: at("updated_at").notNull().defaultNow(),
 });
