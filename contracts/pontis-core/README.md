@@ -2,7 +2,7 @@
 
 The Pontis protocol contract (one contract, internal modules; [ADR 0002](../../docs/decisions/0002-contract-layout-and-events.md)). Testnet and synthetic assets only.
 
-This crate holds the **registry** (B5) and **compatibility, policy and route gate** (B6). Conversion and vault (B7) come next.
+This crate holds the **registry** (B5) and **compatibility, policy and route gate** (B6), and **conversion and vault** (B7).
 
 ## Roles ([ADR 0003](../../docs/decisions/0003-admin-roles-and-pause.md))
 
@@ -34,9 +34,17 @@ IDs are lowercase `a-z0-9-`, 2 to 64 characters. List views take `from_index` an
 - **Policy:** `set_allowlist_required` (rule; bumps the global `policy_version`, default required) and `set_allowlist` (membership; does not bump it), both registrar-only.
 - **`get_route(from, to)`** returns `executable` plus `RouteTerms` (ratio in that direction, `compatibility_version`, `policy_version`) or a `RouteRefusal`. Only an approved `DIRECT_EQUIVALENT` pair between active, unpaused representations is executable.
 
+## Conversion and vault ([ADR 0006](../../docs/decisions/0006-quote-signing-model.md), [0007](../../docs/decisions/0007-conversion-via-ft-transfer-call.md), [0008](../../docs/decisions/0008-vault-inventory-and-funding.md))
+
+- **Funding:** the owner calls `ft_transfer_call` on a token with `msg = "fund_vault"`. Anyone else is refunded. `withdraw_inventory` (owner) debits first and restores on a failed payout. `get_inventory(id)` is the tracked balance.
+- **Config:** `set_quote_signer` (ed25519 only, replaces the previous key at once) and `set_fee_bps` (default 10, cap 100), both owner-only.
+- **Conversion:** the user calls `ft_transfer_call` on the source token with `msg = {"quote": {...}, "signature": "<base64>"}`. `ft_on_transfer` runs every check against live state and, on any failure, returns the whole input and emits `conversion_rejected` with a `reason`. On success it marks the nonce used and moves inventory, then pays out with `ft_transfer`; `on_payout_resolved` emits `conversion_completed`, or restores inventory, emits `conversion_failed` and returns the input if the payout failed. A failed conversion needs a new quote: the nonce stays used.
+- **Signed bytes:** `b"pontis-quote-v1" ++ borsh(payload)`, pinned by `test-vectors/quote-signing.json`. Amount math is pinned by `test-vectors/quote-math.json` and property tests.
+- **Gas:** `GAS_FT_TRANSFER` and `GAS_CALLBACK` are 30 TGas placeholders until B8 measures them in the sandbox.
+
 ## Events
 
-`EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`. It emits `role_granted`, `role_revoked`, `ownership_transfer_proposed`, `ownership_transferred`, `paused`, `unpaused`, `issuer_registered`, `issuer_status_changed`, `canonical_asset_registered`, `canonical_asset_status_changed`, `representation_registered`, `representation_status_changed`, `evidence_added`, `compatibility_proposed`, `compatibility_approved` (flags re-approval), `compatibility_rejected`, `compatibility_suspended`, `policy_updated` and `allowlist_updated`.
+`EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`. It emits `role_granted`, `role_revoked`, `ownership_transfer_proposed`, `ownership_transferred`, `paused`, `unpaused`, `issuer_registered`, `issuer_status_changed`, `canonical_asset_registered`, `canonical_asset_status_changed`, `representation_registered`, `representation_status_changed`, `evidence_added`, `compatibility_proposed`, `compatibility_approved` (flags re-approval), `compatibility_rejected`, `compatibility_suspended`, `policy_updated`, `allowlist_updated`, `quote_signer_set`, `fee_updated`, `vault_funded`, `vault_withdrawn`, `conversion_completed`, `conversion_failed` and `conversion_rejected`.
 
 ## Commands
 
