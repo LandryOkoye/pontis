@@ -196,7 +196,13 @@ export const ENDPOINTS = {
     response: TransactionSchema,
     params: UuidParam,
     body: SubmittedRequestSchema,
-    errors: { ...VALIDATION, 404: ["NOT_FOUND"], 409: ["QUOTE_ALREADY_USED"], ...COMMON },
+    errors: {
+      ...VALIDATION,
+      404: ["NOT_FOUND"],
+      409: ["QUOTE_ALREADY_USED"],
+      410: ["QUOTE_EXPIRED"],
+      ...COMMON,
+    },
     description:
       "Moves the quote to `SUBMITTED`. Repeating with the same hash is a no-op; a different hash is a conflict.",
   },
