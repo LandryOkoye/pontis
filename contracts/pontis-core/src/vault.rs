@@ -4,6 +4,7 @@
 //! `ft_transfer_call` with `msg = "fund_vault"`. Everything the receiver does not accept is
 //! returned in full (the unused amount), so the token refunds the sender.
 
+use crate::conversion::Rejection;
 use crate::events::CoreEvent;
 use crate::types::*;
 use crate::{now_ms, Contract, ContractExt};
@@ -33,24 +34,19 @@ impl Contract {
         msg: String,
     ) -> PromiseOrValue<U128> {
         let token = env::predecessor_account_id();
-        let outcome = match self.representation_by_account.get(&token).cloned() {
-            None => Err(RejectReason::UnknownToken),
-            Some(rep_id) if msg == FUND_VAULT_MSG => self.fund_vault(&rep_id, &sender_id, amount),
-            Some(_) => Err(RejectReason::InvalidMsg),
+        let Some(rep_id) = self.representation_by_account.get(&token).cloned() else {
+            return self.refuse(RejectReason::UnknownToken, None, sender_id, token, amount);
         };
-        match outcome {
-            Ok(()) => PromiseOrValue::Value(U128(0)),
-            Err(reason) => {
-                CoreEvent::ConversionRejected {
-                    reason,
-                    sender_id,
-                    token,
-                    amount,
-                    nonce: None,
-                    timestamp_ms: now_ms(),
-                }
-                .emit();
-                PromiseOrValue::Value(amount)
+        if msg == FUND_VAULT_MSG {
+            return match self.fund_vault(&rep_id, &sender_id, amount) {
+                Ok(()) => PromiseOrValue::Value(U128(0)),
+                Err(reason) => self.refuse(reason, None, sender_id, token, amount),
+            };
+        }
+        match self.validate_conversion(&token, &sender_id, amount, &msg) {
+            Ok(plan) => self.execute_conversion(plan),
+            Err(Rejection { reason, nonce }) => {
+                self.refuse(reason, nonce, sender_id, token, amount)
             }
         }
     }
@@ -61,6 +57,27 @@ impl Contract {
 }
 
 impl Contract {
+    /// Emits `conversion_rejected` and returns the whole amount so the token refunds the sender.
+    pub(crate) fn refuse(
+        &self,
+        reason: RejectReason,
+        nonce: Option<String>,
+        sender_id: AccountId,
+        token: AccountId,
+        amount: U128,
+    ) -> PromiseOrValue<U128> {
+        CoreEvent::ConversionRejected {
+            reason,
+            sender_id,
+            token,
+            amount,
+            nonce,
+            timestamp_ms: now_ms(),
+        }
+        .emit();
+        PromiseOrValue::Value(amount)
+    }
+
     fn fund_vault(
         &mut self,
         rep_id: &str,

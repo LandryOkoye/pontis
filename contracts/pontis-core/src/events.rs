@@ -200,4 +200,32 @@ pub enum CoreEvent {
         success: bool,
         timestamp_ms: u64,
     },
+    /// The payout succeeded. Carries the full breakdown (ADR 0007).
+    #[event_version("1.0.0")]
+    ConversionCompleted {
+        nonce: String,
+        user: AccountId,
+        from_representation_id: String,
+        to_representation_id: String,
+        token_in: AccountId,
+        token_out: AccountId,
+        amount_in: U128,
+        amount_out_gross: U128,
+        fee: U128,
+        amount_out: U128,
+        ratio: Ratio,
+        fee_bps: u16,
+        compatibility_version: u64,
+        policy_version: u64,
+        timestamp_ms: u64,
+    },
+    /// The payout failed; inventory was restored and the input returned. The nonce stays used.
+    #[event_version("1.0.0")]
+    ConversionFailed {
+        nonce: String,
+        user: AccountId,
+        reason: String,
+        amount_in: U128,
+        timestamp_ms: u64,
+    },
 }

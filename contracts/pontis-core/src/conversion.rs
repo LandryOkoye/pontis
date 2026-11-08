@@ -3,13 +3,15 @@
 //! if the compatibility version, policy version, fee, statuses, pauses, allowlist, inventory and
 //! nonce all still match. The first failing check names the `RejectReason`.
 
+use crate::events::CoreEvent;
 use crate::math::{compute_amounts, Amounts};
 use crate::quote::{ConversionMsg, QuoteInput, QUOTE_VERSION};
 use crate::route::{RouteRefusal, RouteTerms};
-use crate::types::RejectReason;
-use crate::{now_ms, Contract};
+use crate::types::{Ratio, RejectReason};
+use crate::vault::{ext_ft, GAS_CALLBACK, GAS_FT_TRANSFER};
+use crate::{now_ms, Contract, ContractExt};
 use near_sdk::json_types::U128;
-use near_sdk::{env, serde_json, AccountId};
+use near_sdk::{env, near, serde_json, AccountId, NearToken, PromiseError, PromiseOrValue};
 
 /// A validated conversion, ready to execute.
 #[derive(Clone, Debug)]
@@ -133,5 +135,131 @@ impl Contract {
             amounts,
             terms,
         })
+    }
+}
+
+/// What the payout callback needs; JSON so it travels as the callback's arguments.
+#[derive(Clone, Debug)]
+#[near(serializers = [json])]
+pub struct ConversionRecord {
+    pub nonce: String,
+    pub user: AccountId,
+    pub from_id: String,
+    pub to_id: String,
+    pub token_in: AccountId,
+    pub token_out: AccountId,
+    pub amount_in: U128,
+    pub amount_out_gross: U128,
+    pub fee: U128,
+    pub amount_out: U128,
+    pub ratio: Ratio,
+    pub fee_bps: u16,
+    pub compatibility_version: u64,
+    pub policy_version: u64,
+}
+
+impl Contract {
+    /// Executes a validated conversion: marks the nonce used and moves inventory *before* the
+    /// payout promise is created, so no later step can observe stale state.
+    pub(crate) fn execute_conversion(&mut self, plan: ConversionPlan) -> PromiseOrValue<U128> {
+        let q = &plan.quote;
+        let inventory_in = self
+            .get_inventory(plan.from_id.clone())
+            .0
+            .checked_add(q.amount_in.0);
+        let Some(inventory_in) = inventory_in else {
+            let (user, token, amount) = (plan.user.clone(), q.token_in.clone(), q.amount_in);
+            let nonce = Some(q.nonce.clone());
+            return self.refuse(RejectReason::InventoryOverflow, nonce, user, token, amount);
+        };
+        let inventory_out = self.get_inventory(plan.to_id.clone()).0 - plan.amounts.net;
+        self.used_nonces.insert(plan.nonce);
+        self.inventory.insert(plan.from_id.clone(), inventory_in);
+        self.inventory.insert(plan.to_id.clone(), inventory_out);
+
+        let record = ConversionRecord {
+            nonce: q.nonce.clone(),
+            user: plan.user.clone(),
+            from_id: plan.from_id,
+            to_id: plan.to_id,
+            token_in: q.token_in.clone(),
+            token_out: q.token_out.clone(),
+            amount_in: q.amount_in,
+            amount_out_gross: U128(plan.amounts.gross),
+            fee: U128(plan.amounts.fee),
+            amount_out: U128(plan.amounts.net),
+            ratio: plan.terms.ratio,
+            fee_bps: q.fee_bps,
+            compatibility_version: plan.terms.compatibility_version,
+            policy_version: plan.terms.policy_version,
+        };
+        ext_ft::ext(q.token_out.clone())
+            .with_attached_deposit(NearToken::from_yoctonear(1))
+            .with_static_gas(GAS_FT_TRANSFER)
+            .ft_transfer(
+                plan.user,
+                U128(plan.amounts.net),
+                Some("pontis conversion".to_string()),
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_CALLBACK)
+                    .on_payout_resolved(record),
+            )
+            .into()
+    }
+}
+
+#[near]
+impl Contract {
+    /// Callback of the payout. Returns the amount of the input to refund: `0` on success, the
+    /// whole input if the payout failed (inventory is restored; the nonce stays used).
+    #[private]
+    pub fn on_payout_resolved(
+        &mut self,
+        record: ConversionRecord,
+        #[callback_result] result: Result<(), PromiseError>,
+    ) -> U128 {
+        let timestamp_ms = now_ms();
+        if result.is_ok() {
+            CoreEvent::ConversionCompleted {
+                nonce: record.nonce,
+                user: record.user,
+                from_representation_id: record.from_id,
+                to_representation_id: record.to_id,
+                token_in: record.token_in,
+                token_out: record.token_out,
+                amount_in: record.amount_in,
+                amount_out_gross: record.amount_out_gross,
+                fee: record.fee,
+                amount_out: record.amount_out,
+                ratio: record.ratio,
+                fee_bps: record.fee_bps,
+                compatibility_version: record.compatibility_version,
+                policy_version: record.policy_version,
+                timestamp_ms,
+            }
+            .emit();
+            return U128(0);
+        }
+        let inventory_in = self.get_inventory(record.from_id.clone()).0;
+        self.inventory.insert(
+            record.from_id,
+            inventory_in.saturating_sub(record.amount_in.0),
+        );
+        let inventory_out = self.get_inventory(record.to_id.clone()).0;
+        self.inventory.insert(
+            record.to_id,
+            inventory_out.saturating_add(record.amount_out.0),
+        );
+        CoreEvent::ConversionFailed {
+            nonce: record.nonce,
+            user: record.user,
+            reason: "PAYOUT_FAILED".to_string(),
+            amount_in: record.amount_in,
+            timestamp_ms,
+        }
+        .emit();
+        record.amount_in
     }
 }

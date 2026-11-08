@@ -18,7 +18,7 @@ mod route;
 mod types;
 mod vault;
 
-pub use conversion::{ConversionPlan, Rejection};
+pub use conversion::{ConversionPlan, ConversionRecord, Rejection};
 pub use events::{CoreEvent, PauseScope, RoleName};
 pub use math::{compute_amounts, Amounts, MAX_FEE_BPS};
 pub use quote::{parse_nonce, ConversionMsg, QuoteInput, QUOTE_DOMAIN, QUOTE_VERSION};
