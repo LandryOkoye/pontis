@@ -144,3 +144,20 @@ fn a_malformed_signature_or_nonce_is_rejected_not_panicking() {
         );
     }
 }
+
+/// Signs `quote` with the vector's key, as the backend would.
+pub(crate) fn sign(quote: QuoteInput) -> ConversionMsg {
+    use ed25519_dalek::{Signer, SigningKey};
+    let seed: [u8; 32] = (1..=32u8).collect::<Vec<_>>().try_into().unwrap();
+    let signature = SigningKey::from_bytes(&seed).sign(&quote.signing_message().unwrap());
+    ConversionMsg {
+        quote,
+        signature: Base64VecU8(signature.to_bytes().to_vec()),
+    }
+}
+
+#[test]
+fn the_test_signer_reproduces_the_vector_signature() {
+    let expected = signed_vector();
+    assert_eq!(sign(expected.quote.clone()).signature, expected.signature);
+}
