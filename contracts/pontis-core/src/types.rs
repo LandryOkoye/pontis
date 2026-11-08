@@ -431,4 +431,6 @@ pub enum RejectReason {
     InvalidMsg,
     NotOwner,
     InventoryOverflow,
+    SignerNotSet,
+    BadSignature,
 }

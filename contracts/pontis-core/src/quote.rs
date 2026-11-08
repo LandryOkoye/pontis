@@ -4,8 +4,10 @@
 //! TypeScript signer and this verifier share one byte layout, pinned by
 //! `test-vectors/quote-signing.json`.
 
+use crate::types::RejectReason;
+use crate::Contract;
 use near_sdk::json_types::{Base64VecU8, U128};
-use near_sdk::{borsh, near, AccountId};
+use near_sdk::{borsh, env, near, AccountId};
 
 pub const QUOTE_DOMAIN: &[u8] = b"pontis-quote-v1";
 pub const QUOTE_VERSION: u8 = 1;
@@ -99,5 +101,34 @@ impl QuoteInput {
         let mut message = QUOTE_DOMAIN.to_vec();
         message.extend(borsh::to_vec(&payload).ok()?);
         Some(message)
+    }
+}
+
+impl Contract {
+    /// Checks the signature against the stored quote signer and returns the decoded nonce.
+    pub fn verify_quote(&self, msg: &ConversionMsg) -> Result<[u8; 16], RejectReason> {
+        let signer = self
+            .quote_signer
+            .as_ref()
+            .ok_or(RejectReason::SignerNotSet)?;
+        let nonce = parse_nonce(&msg.quote.nonce).ok_or(RejectReason::InvalidMsg)?;
+        let message = msg
+            .quote
+            .signing_message()
+            .ok_or(RejectReason::InvalidMsg)?;
+        let signature: [u8; 64] = msg
+            .signature
+            .0
+            .as_slice()
+            .try_into()
+            .map_err(|_| RejectReason::BadSignature)?;
+        let public_key: [u8; 32] = signer.as_bytes()[1..]
+            .try_into()
+            .map_err(|_| RejectReason::BadSignature)?;
+        if env::ed25519_verify(&signature, &message, &public_key) {
+            Ok(nonce)
+        } else {
+            Err(RejectReason::BadSignature)
+        }
     }
 }
