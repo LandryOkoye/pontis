@@ -1,7 +1,7 @@
 // Chain to DB (B9): read all from the chain, then replace the mirror in one transaction. Idempotent.
 
 import type { RegistrySource } from "@pontis/near-client";
-import type { Db } from "../db/client.ts";
+import type { Db } from "@pontis/db";
 import {
   assetEvidence,
   assetRepresentations,
@@ -10,7 +10,7 @@ import {
   compatibilityReviews,
   issuers,
   transferPolicies,
-} from "../db/schema/index.ts";
+} from "@pontis/db";
 import {
   claimRow,
   evidenceRow,

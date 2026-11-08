@@ -4,8 +4,8 @@
 import type { CreateConversionResponse } from "@pontis/api-types";
 import { canTransitionQuote } from "@pontis/domain";
 import { and, eq } from "drizzle-orm";
-import type { Db } from "../db/client.ts";
-import { conversions, quotes } from "../db/schema/index.ts";
+import type { Db } from "@pontis/db";
+import { conversions, quotes } from "@pontis/db";
 import { AppError, notFound } from "../errors.ts";
 import type { QuoteRow } from "../quotes/quote-mapper.ts";
 

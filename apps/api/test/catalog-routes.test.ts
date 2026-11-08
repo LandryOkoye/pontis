@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
-import { createTestDb, type TestDb } from "./db.ts";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 import { testAppDeps } from "./helpers.ts";
 
 let t: TestDb;

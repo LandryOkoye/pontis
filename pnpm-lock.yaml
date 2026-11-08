@@ -35,6 +35,9 @@ importers:
       '@pontis/api-types':
         specifier: workspace:*
         version: link:../../packages/api-types
+      '@pontis/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@pontis/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -60,12 +63,6 @@ importers:
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
-      '@types/pg':
-        specifier: ^8.23.1
-        version: 8.23.1
-      drizzle-kit:
-        specifier: ^0.31.11
-        version: 0.31.11
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -100,6 +97,34 @@ importers:
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
+
+  packages/db:
+    dependencies:
+      '@pontis/api-types':
+        specifier: workspace:*
+        version: link:../api-types
+      '@pontis/domain':
+        specifier: workspace:*
+        version: link:../domain
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.5
+        version: 22.20.5
+      '@types/pg':
+        specifier: ^8.23.1
+        version: 8.23.1
+      drizzle-kit:
+        specifier: ^0.31.11
+        version: 0.31.11
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
 
   packages/domain:
     devDependencies:

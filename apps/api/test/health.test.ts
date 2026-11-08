@@ -1,9 +1,9 @@
 import { HealthSchema } from "@pontis/api-types";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.ts";
-import { indexerCursor } from "../src/db/schema/index.ts";
+import { indexerCursor } from "@pontis/db";
 import { INDEXER_CURSOR_NAME } from "../src/routes/health.ts";
-import { createTestDb, type TestDb } from "./db.ts";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 import { testAppDeps } from "./helpers.ts";
 
 let t: TestDb;

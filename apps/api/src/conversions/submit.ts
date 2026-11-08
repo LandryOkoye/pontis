@@ -5,8 +5,8 @@
 
 import type { Transaction } from "@pontis/api-types";
 import { and, eq } from "drizzle-orm";
-import type { Db } from "../db/client.ts";
-import { conversions, quotes } from "../db/schema/index.ts";
+import type { Db } from "@pontis/db";
+import { conversions, quotes } from "@pontis/db";
 import { AppError, notFound } from "../errors.ts";
 import { getTransaction } from "./transactions.ts";
 

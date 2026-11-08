@@ -3,8 +3,8 @@
 
 import { randomBytes } from "node:crypto";
 import pg from "pg";
-import { createDb, type Db } from "../src/db/client.ts";
-import { runMigrations } from "../src/db/migrate.ts";
+import { createDb, type Db } from "./client.ts";
+import { runMigrations } from "./migrate.ts";
 
 const BASE_URL = process.env.DATABASE_URL ?? "postgres://pontis:pontis@localhost:5432/pontis";
 

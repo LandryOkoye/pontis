@@ -15,4 +15,4 @@ apps/web
 # Shared cross-language vectors: one case per line, not reformatted
 test-vectors
 # drizzle-kit output (SQL, snapshots, journal)
-apps/api/drizzle
+packages/db/drizzle

@@ -5,10 +5,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { acceptQuote } from "../src/conversions/accept.ts";
 import { reportSubmitted } from "../src/conversions/submit.ts";
 import { getTransaction, listTransactions } from "../src/conversions/transactions.ts";
-import { conversions, quotes, settlementEvents } from "../src/db/schema/index.ts";
+import { conversions, quotes, settlementEvents } from "@pontis/db";
 import { createQuote } from "../src/quotes/service.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
-import { createTestDb, type TestDb } from "./db.ts";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 import { errorCodeOf, testAppDeps } from "./helpers.ts";
 
 let t: TestDb;

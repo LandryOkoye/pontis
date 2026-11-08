@@ -1,6 +1,6 @@
 import { keyFromSeed } from "@pontis/quote-engine";
 import type { AppDeps } from "../src/app.ts";
-import type { Db } from "../src/db/client.ts";
+import type { Db } from "@pontis/db";
 import type { QuoteChain } from "../src/quotes/chain.ts";
 import { AppError } from "../src/errors.ts";
 

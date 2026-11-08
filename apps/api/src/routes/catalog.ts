@@ -11,7 +11,7 @@ import {
   listAssets,
   listIssuers,
 } from "../catalog/repository.ts";
-import type { Db } from "../db/client.ts";
+import type { Db } from "@pontis/db";
 import { notFound } from "../errors.ts";
 
 /** OpenAPI `/v1/assets/{id}` to Fastify `/v1/assets/:id`. */

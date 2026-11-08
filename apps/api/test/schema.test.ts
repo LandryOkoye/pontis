@@ -1,14 +1,9 @@
 import { fixtureSource } from "@pontis/near-client/fixtures";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  assetRepresentations,
-  conversions,
-  quotes,
-  settlementEvents,
-} from "../src/db/schema/index.ts";
+import { assetRepresentations, conversions, quotes, settlementEvents } from "@pontis/db";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
-import { createTestDb, type TestDb } from "./db.ts";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 
 let t: TestDb;
 beforeAll(async () => {

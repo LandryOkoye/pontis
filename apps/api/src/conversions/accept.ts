@@ -4,8 +4,8 @@
 
 import type { CreateConversionResponse } from "@pontis/api-types";
 import { and, eq, inArray } from "drizzle-orm";
-import type { Db } from "../db/client.ts";
-import { assetRepresentations, conversions, quotes } from "../db/schema/index.ts";
+import type { Db } from "@pontis/db";
+import { assetRepresentations, conversions, quotes } from "@pontis/db";
 import { existingFor, openQuote } from "./accept-checks.ts";
 import { AppError } from "../errors.ts";
 import type { ConversionChain } from "./chain.ts";

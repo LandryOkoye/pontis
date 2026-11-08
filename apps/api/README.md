@@ -42,7 +42,7 @@ curl -s "$API/v1/transactions?account=alice.testnet"
 
 ## Database
 
-Drizzle schema in `src/db/schema/` (12 tables), migrations in `drizzle/` (generated: `pnpm --filter @pontis/api db:generate --name <name>`). Amounts and ratio parts are `numeric(39, 0)` and travel as strings.
+Drizzle schema (12 tables) and migrations live in the shared `packages/db` (`@pontis/db`), which the indexer also uses. Generate a migration with `pnpm --filter @pontis/db db:generate --name <name>`. Amounts and ratio parts are `numeric(39, 0)` and travel as strings.
 
 ## Tests
 

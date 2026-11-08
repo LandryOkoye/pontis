@@ -8,14 +8,13 @@
   "scripts": {
     "start": "tsx --env-file-if-exists=.env src/server.ts",
     "sync": "tsx --env-file-if-exists=.env src/sync/sync-once.ts",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx --env-file-if-exists=.env src/db/migrate-cli.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
     "@pontis/api-types": "workspace:*",
+    "@pontis/db": "workspace:*",
     "@pontis/domain": "workspace:*",
     "@pontis/near-client": "workspace:*",
     "@pontis/quote-engine": "workspace:*",
@@ -26,8 +25,6 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
-    "@types/pg": "^8.23.1",
-    "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15",
     "vitest": "^5.1.0"
   }

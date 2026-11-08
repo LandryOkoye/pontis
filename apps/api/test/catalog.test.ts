@@ -15,7 +15,7 @@ import {
   listIssuers,
 } from "../src/catalog/repository.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
-import { createTestDb, type TestDb } from "./db.ts";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 
 let t: TestDb;
 beforeAll(async () => {

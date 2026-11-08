@@ -1,5 +1,5 @@
 import { RouteDescriptorSchema, type Quote } from "@pontis/api-types";
-import type { quotes } from "../db/schema/index.ts";
+import type { quotes } from "@pontis/db";
 
 export type QuoteRow = typeof quotes.$inferSelect;
 

@@ -4,8 +4,8 @@
 import { ENDPOINTS } from "@pontis/api-types";
 import { eq, sql } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
-import type { Db } from "../db/client.ts";
-import { indexerCursor } from "../db/schema/index.ts";
+import type { Db } from "@pontis/db";
+import { indexerCursor } from "@pontis/db";
 
 export const INDEXER_CURSOR_NAME = "indexer";
 

@@ -3,8 +3,8 @@
 
 import type { CompareRoutesRequest, CompareRoutesResponse } from "@pontis/api-types";
 import { eq } from "drizzle-orm";
-import type { Db } from "../db/client.ts";
-import { assetRepresentations } from "../db/schema/index.ts";
+import type { Db } from "@pontis/db";
+import { assetRepresentations } from "@pontis/db";
 import { notFound } from "../errors.ts";
 import type { QuoteChain } from "./chain.ts";
 import { PARITY_EXPLANATION, explain, refusalCode } from "./reasons.ts";

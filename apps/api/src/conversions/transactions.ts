@@ -3,8 +3,8 @@
 
 import type { Transaction } from "@pontis/api-types";
 import { desc, eq, inArray } from "drizzle-orm";
-import type { Db } from "../db/client.ts";
-import { conversions, quotes, settlementEvents } from "../db/schema/index.ts";
+import type { Db } from "@pontis/db";
+import { conversions, quotes, settlementEvents } from "@pontis/db";
 import { quoteFromRow } from "../quotes/quote-mapper.ts";
 
 type ConversionRow = typeof conversions.$inferSelect;

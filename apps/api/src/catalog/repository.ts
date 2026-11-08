@@ -2,7 +2,7 @@
 
 import type { Asset, AssetSummary, Compatibility, Issuer, IssuerSummary } from "@pontis/api-types";
 import { and, asc, eq, inArray, or } from "drizzle-orm";
-import type { Db } from "../db/client.ts";
+import type { Db } from "@pontis/db";
 import {
   assetEvidence,
   assetRepresentations,
@@ -10,7 +10,7 @@ import {
   compatibilityRelationships,
   compatibilityReviews,
   issuers,
-} from "../db/schema/index.ts";
+} from "@pontis/db";
 import { asset, assetSummary } from "./asset-mappers.ts";
 import { compatibility } from "./compat-mapper.ts";
 import { issuer, issuerSummary } from "./mappers.ts";
