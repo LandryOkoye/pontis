@@ -24,6 +24,14 @@ pnpm --filter @pontis/api start          # migrates, starts on :3000, syncs the 
 
 `POST /v1/conversions` with `{quoteId}` and an `Idempotency-Key` accepts a quote once and returns the **unsigned** wallet actions: an optional `storage_deposit` on the destination token, then `ft_transfer_call` with the signed quote. The wallet signs and sends them (one transaction per receiver, in order) and then reports the hash to `POST /v1/conversions/{id}/submitted`. Settlement states (`SETTLED`, `FAILED`, `REQUIRES_RECONCILIATION`) are set by [the indexer](../indexer/README.md); without it running, a submitted conversion stays `SUBMITTED`.
 
+### Admin
+
+`GET /v1/admin/reconciliation` returns the reconciler's last run (findings, each vault's inventory against the tokens the core holds) and the quotes waiting in `REQUIRES_RECONCILIATION`. It needs `Authorization: Bearer $ADMIN_API_KEY` (at least 16 characters); with no key set it refuses everyone.
+
+```bash
+curl -s -H "Authorization: Bearer $ADMIN_API_KEY" $API/v1/admin/reconciliation
+```
+
 ### Running with the indexer
 
 The API alone accepts quotes and records hashes. Run the indexer next to it so conversions settle without the wallet's help and `GET /v1/health` reports a real `indexerLagBlocks`:
