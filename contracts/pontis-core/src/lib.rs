@@ -7,6 +7,7 @@
 
 mod compatibility;
 mod events;
+mod math;
 mod policy;
 mod registry;
 mod roles;
@@ -14,6 +15,7 @@ mod route;
 mod types;
 
 pub use events::{CoreEvent, PauseScope, RoleName};
+pub use math::{compute_amounts, Amounts, MAX_FEE_BPS};
 pub use route::{RouteRefusal, RouteTerms, RouteView};
 pub use types::*;
 
