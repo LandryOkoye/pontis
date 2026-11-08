@@ -163,3 +163,15 @@ fn a_zero_withdrawal_is_refused() {
     let mut c = funded();
     let _ = c.withdraw_inventory("tgold-a".into(), U128(0), alice());
 }
+
+#[test]
+fn a_user_calling_ft_on_transfer_directly_is_refunded_not_credited() {
+    let mut c = two_reps();
+    // predecessor is the owner's own account, not a registered token contract.
+    assert_eq!(
+        transfer_in(&mut c, owner(), owner(), 50, FUND_VAULT_MSG),
+        50
+    );
+    assert_eq!(last_event()["data"]["reason"], "UNKNOWN_TOKEN");
+    assert_eq!(inventory(&c, "tgold-a"), 0);
+}
