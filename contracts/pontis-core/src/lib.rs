@@ -5,15 +5,19 @@
 //! 1 yoctoNEAR (so restricted access keys cannot call it), checks the caller's role and the
 //! pause state, and emits an event.
 
+mod compatibility;
 mod events;
+mod policy;
 mod registry;
 mod roles;
+mod route;
 mod types;
 
 pub use events::{CoreEvent, PauseScope, RoleName};
+pub use route::{RouteRefusal, RouteTerms, RouteView};
 pub use types::*;
 
-use near_sdk::store::{IterableMap, IterableSet, LookupMap};
+use near_sdk::store::{IterableMap, IterableSet, LookupMap, LookupSet};
 use near_sdk::{env, near, AccountId, BorshStorageKey, PanicOnDefault};
 
 #[derive(BorshStorageKey)]
@@ -26,6 +30,9 @@ enum StorageKey {
     CanonicalAssets,
     Representations,
     RepresentationByAccount,
+    Compatibilities,
+    AllowlistRequired,
+    Allowlist,
 }
 
 #[derive(PanicOnDefault)]
@@ -42,6 +49,13 @@ pub struct Contract {
     representations: IterableMap<String, Representation>,
     /// Token contract account to representation ID; keeps accounts unique.
     representation_by_account: LookupMap<AccountId, String>,
+    /// Keyed `"{a}:{b}"` with `a < b`.
+    compatibilities: IterableMap<String, Compatibility>,
+    /// Global policy version; moves on rule changes only (ADR 0004). Starts at 1.
+    policy_version: u64,
+    /// Per-representation override; absent means the default, `true`.
+    allowlist_required: LookupMap<String, bool>,
+    allowlist: LookupSet<(String, AccountId)>,
 }
 
 #[near]
@@ -62,6 +76,10 @@ impl Contract {
             canonical_assets: IterableMap::new(StorageKey::CanonicalAssets),
             representations: IterableMap::new(StorageKey::Representations),
             representation_by_account: LookupMap::new(StorageKey::RepresentationByAccount),
+            compatibilities: IterableMap::new(StorageKey::Compatibilities),
+            policy_version: 1,
+            allowlist_required: LookupMap::new(StorageKey::AllowlistRequired),
+            allowlist: LookupSet::new(StorageKey::Allowlist),
         }
     }
 }
@@ -71,6 +89,18 @@ pub(crate) fn now_ms() -> u64 {
 }
 
 #[cfg(test)]
+mod compat_lifecycle_tests;
+#[cfg(test)]
+mod compat_reject_tests;
+#[cfg(test)]
+mod compat_suspend_tests;
+#[cfg(test)]
+mod compat_tests;
+#[cfg(test)]
+mod policy_tests;
+#[cfg(test)]
 mod registry_tests;
+#[cfg(test)]
+mod route_tests;
 #[cfg(test)]
 mod tests;

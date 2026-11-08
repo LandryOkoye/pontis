@@ -23,3 +23,8 @@ Real RWAs carry investor eligibility and transfer restrictions (brief §6.6 item
 - The recipient of the converted tokens is always the sender; there is no third-party recipient in the MVP, so only one account needs checking.
 - A removed account's in-flight quote fails at execution and its input is refunded.
 - Real eligibility (KYC/KYB, jurisdiction, lockups) is explicitly out of scope until legal review ([0010](0010-deferred-scope.md)).
+
+## Amendments (B6)
+
+- Membership is changed with `set_allowlist(representation_id, account_ids, allowed)`, up to 50 accounts per call, one `allowlist_updated` event per call.
+- `is_allowed(representation_id, account)` is true when the representation does not require an allowlist or the account is on it. Conversion (B7) checks it for the input and the output representation.

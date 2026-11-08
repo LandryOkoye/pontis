@@ -208,12 +208,7 @@ impl Contract {
         evidence: NewEvidence,
     ) {
         let by = self.assert_registrar();
-        check(
-            !evidence.uri.trim().is_empty() && evidence.uri.len() <= MAX_TEXT_LEN,
-            "uri must be 1-2000 chars",
-        );
-        validate_sha256(&evidence.sha256);
-        require_text(&evidence.description, "description");
+        validate_new_evidence(&evidence);
 
         let (list, status) = match subject_type {
             SubjectType::Issuer => self
@@ -231,6 +226,9 @@ impl Contract {
                 .get_mut(&subject_id)
                 .map(|r| (&mut r.evidence, r.status))
                 .unwrap_or_else(|| env::panic_str("representation not found")),
+            SubjectType::Compatibility => {
+                env::panic_str("use add_compatibility_evidence for compatibility evidence")
+            }
         };
         check(
             status != Status::Rejected,
@@ -485,7 +483,7 @@ impl Contract {
     }
 }
 
-fn page<'a, T: Clone + 'a>(
+pub(crate) fn page<'a, T: Clone + 'a>(
     items: impl Iterator<Item = &'a T>,
     from_index: Option<u32>,
     limit: Option<u32>,

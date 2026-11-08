@@ -87,6 +87,7 @@ pub enum SubjectType {
     Issuer,
     CanonicalAsset,
     Representation,
+    Compatibility,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -115,6 +116,13 @@ impl Ratio {
             num: U128(num.0 / g),
             den: U128(den.0 / g),
         }
+    }
+
+    /// `self / other` in lowest terms, or `None` if an intermediate product overflows u128.
+    pub fn checked_div(self, other: Ratio) -> Option<Ratio> {
+        let num = self.num.0.checked_mul(other.den.0)?;
+        let den = self.den.0.checked_mul(other.num.0)?;
+        Some(Ratio::normalised(U128(num), U128(den)))
     }
 }
 
@@ -328,4 +336,87 @@ pub fn validate_sha256(value: &str) {
                 .all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')),
         "sha256 must be 64 lowercase hex characters",
     );
+}
+
+// ---- compatibility (brief §6.5-6.7, ADR 0004) ----
+
+/// Only `DirectEquivalent` + an approved relationship enables parity conversion.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[near(serializers = [borsh, json])]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Classification {
+    DirectEquivalent,
+    EconomicallySimilar,
+    Incompatible,
+    /// Set by suspension; never proposed directly.
+    Suspended,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[near(serializers = [borsh, json])]
+#[serde(rename_all = "snake_case")]
+pub enum RelationshipStatus {
+    Proposed,
+    Approved,
+    Rejected,
+    Suspended,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[near(serializers = [borsh, json])]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewAction {
+    Proposed,
+    Approved,
+    Rejected,
+    Suspended,
+    Reapproved,
+}
+
+/// One immutable entry of a relationship's append-only history. `version` equals the entry's
+/// 1-based position, so the history length is always the current version.
+#[derive(Clone, Debug)]
+#[near(serializers = [borsh, json])]
+pub struct CompatibilityVersion {
+    pub version: u64,
+    pub action: ReviewAction,
+    pub classification: Classification,
+    pub status: RelationshipStatus,
+    pub ratio: Ratio,
+    pub scope: String,
+    pub rationale: String,
+    pub actor: AccountId,
+    pub timestamp_ms: u64,
+}
+
+/// One relationship per unordered pair of representations, keyed `"{a}:{b}"` with `a < b`.
+/// `ratio` is output smallest units of `b` per smallest unit of `a` (the reverse direction is the
+/// reciprocal). `version` increases on every recorded change.
+#[derive(Clone, Debug)]
+#[near(serializers = [borsh, json])]
+pub struct Compatibility {
+    pub id: String,
+    pub representation_a_id: String,
+    pub representation_b_id: String,
+    pub classification: Classification,
+    pub ratio: Ratio,
+    pub scope: String,
+    pub rationale: String,
+    pub status: RelationshipStatus,
+    pub version: u64,
+    pub proposed_by: AccountId,
+    pub approved_by: Option<AccountId>,
+    pub evidence: Vec<EvidenceRef>,
+    pub history: Vec<CompatibilityVersion>,
+    pub updated_at_ms: u64,
+}
+
+/// Shared by registry and compatibility evidence: a bounded URI, a sha256 digest and a description.
+pub fn validate_new_evidence(evidence: &NewEvidence) {
+    check(
+        !evidence.uri.trim().is_empty() && evidence.uri.len() <= MAX_TEXT_LEN,
+        "uri must be 1-2000 chars",
+    );
+    validate_sha256(&evidence.sha256);
+    require_text(&evidence.description, "description");
 }

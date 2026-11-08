@@ -3,22 +3,22 @@ use crate::*;
 use near_sdk::json_types::U128;
 use near_sdk::AccountId;
 
-fn registrar() -> AccountId {
+pub(crate) fn registrar() -> AccountId {
     account("registrar.testnet")
 }
-fn pauser() -> AccountId {
+pub(crate) fn pauser() -> AccountId {
     account("pauser.testnet")
 }
-fn token_a() -> AccountId {
+pub(crate) fn token_a() -> AccountId {
     account("tgold-a.testnet")
 }
-fn token_b() -> AccountId {
+pub(crate) fn token_b() -> AccountId {
     account("tgold-b.testnet")
 }
-const SHA: &str = "a3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
+pub(crate) const SHA: &str = "a3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90";
 
 /// Core with a registrar and a pauser; the context is left as the registrar.
-fn core() -> Contract {
+pub(crate) fn core() -> Contract {
     let mut c = new_core();
     c.grant_role(RoleName::Registrar, registrar());
     c.grant_role(RoleName::Pauser, pauser());
@@ -26,7 +26,7 @@ fn core() -> Contract {
     c
 }
 
-fn new_issuer(id: &str) -> NewIssuer {
+pub(crate) fn new_issuer(id: &str) -> NewIssuer {
     NewIssuer {
         id: id.to_string(),
         name: "Synthetic Issuer".to_string(),
@@ -39,7 +39,7 @@ fn new_issuer(id: &str) -> NewIssuer {
     }
 }
 
-fn new_asset(id: &str) -> NewCanonicalAsset {
+pub(crate) fn new_asset(id: &str) -> NewCanonicalAsset {
     let t = |s: &str| s.to_string();
     NewCanonicalAsset {
         id: t(id),
@@ -60,7 +60,12 @@ fn new_asset(id: &str) -> NewCanonicalAsset {
     }
 }
 
-fn new_rep(id: &str, issuer: &str, asset: &str, account_id: AccountId) -> NewRepresentation {
+pub(crate) fn new_rep(
+    id: &str,
+    issuer: &str,
+    asset: &str,
+    account_id: AccountId,
+) -> NewRepresentation {
     let t = |s: &str| s.to_string();
     NewRepresentation {
         id: t(id),
@@ -84,7 +89,7 @@ fn new_rep(id: &str, issuer: &str, asset: &str, account_id: AccountId) -> NewRep
     }
 }
 
-fn evidence(provenance: Provenance) -> NewEvidence {
+pub(crate) fn evidence(provenance: Provenance) -> NewEvidence {
     NewEvidence {
         uri: "docs/asset-dossiers/TGOLD-A.md".to_string(),
         sha256: SHA.to_string(),
@@ -93,7 +98,7 @@ fn evidence(provenance: Provenance) -> NewEvidence {
     }
 }
 
-fn attest(c: &mut Contract, subject: SubjectType, id: &str) {
+pub(crate) fn attest(c: &mut Contract, subject: SubjectType, id: &str) {
     c.add_evidence(
         subject,
         id.to_string(),

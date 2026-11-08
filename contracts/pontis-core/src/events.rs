@@ -2,7 +2,7 @@
 //! The log line is `EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`.
 //! `data` is a single JSON object per event. Amounts are decimal strings, times are ms since epoch.
 
-use crate::types::{Status, SubjectType};
+use crate::types::{Classification, Ratio, Status, SubjectType};
 use near_sdk::{near, AccountId};
 
 #[derive(Clone, Copy)]
@@ -111,6 +111,58 @@ pub enum CoreEvent {
         uri: String,
         sha256: String,
         provenance: crate::types::Provenance,
+        by: AccountId,
+        timestamp_ms: u64,
+    },
+    #[event_version("1.0.0")]
+    CompatibilityProposed {
+        id: String,
+        version: u64,
+        classification: Classification,
+        ratio: Ratio,
+        by: AccountId,
+        timestamp_ms: u64,
+    },
+    /// `reapproval` is true when a suspended relationship is approved again.
+    #[event_version("1.0.0")]
+    CompatibilityApproved {
+        id: String,
+        version: u64,
+        classification: Classification,
+        ratio: Ratio,
+        reapproval: bool,
+        by: AccountId,
+        timestamp_ms: u64,
+    },
+    #[event_version("1.0.0")]
+    CompatibilityRejected {
+        id: String,
+        version: u64,
+        by: AccountId,
+        timestamp_ms: u64,
+    },
+    #[event_version("1.0.0")]
+    CompatibilitySuspended {
+        id: String,
+        version: u64,
+        by: AccountId,
+        timestamp_ms: u64,
+    },
+    /// A policy rule changed; `policy_version` is the new global version (ADR 0004).
+    #[event_version("1.0.0")]
+    PolicyUpdated {
+        representation_id: String,
+        allowlist_required: bool,
+        policy_version: u64,
+        by: AccountId,
+        timestamp_ms: u64,
+    },
+    /// Allowlist membership changed. Does not change `policy_version`.
+    #[event_version("1.0.0")]
+    AllowlistUpdated {
+        representation_id: String,
+        account_ids: Vec<AccountId>,
+        allowed: bool,
         by: AccountId,
         timestamp_ms: u64,
     },
