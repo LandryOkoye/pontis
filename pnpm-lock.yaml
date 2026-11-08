@@ -41,6 +41,9 @@ importers:
       '@pontis/near-client':
         specifier: workspace:*
         version: link:../../packages/near-client
+      '@pontis/quote-engine':
+        specifier: workspace:*
+        version: link:../../packages/quote-engine
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
