@@ -72,6 +72,34 @@ describe("reportSubmitted", () => {
   });
 });
 
+describe("a hash reported after the indexer settled the conversion", () => {
+  it("is recorded on the conversion and on its events, without changing the settled state", async () => {
+    const { conversionId, quote } = await accepted();
+    await t.db.update(quotes).set({ state: "SETTLED" }).where(eq(quotes.id, quote.id));
+    await t.db.insert(settlementEvents).values({
+      receiptId: "late-1",
+      logIndex: 0,
+      blockHeight: 9,
+      blockTimestamp: NOW,
+      txHash: null,
+      eventName: "conversion_completed",
+      data: {},
+      conversionId,
+    });
+    const tx = TransactionSchema.parse(await reportSubmitted(t.db, conversionId, HASH, NOW));
+    expect([tx.state, tx.txHash, tx.events.map((e) => e.txHash)]).toEqual([
+      "SETTLED",
+      HASH,
+      [HASH],
+    ]);
+    expect(
+      await errorCodeOf(
+        reportSubmitted(t.db, conversionId, "other-hash-other-hash-other-hash-xx", NOW),
+      ),
+    ).toBe("QUOTE_ALREADY_USED");
+  });
+});
+
 describe("transaction history", () => {
   it("lists an account's conversions newest first with their events, in contract shape", async () => {
     const first = await accepted("carol.testnet");

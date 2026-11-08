@@ -1,14 +1,18 @@
 // POST /v1/conversions/{id}/submitted (BuildPlan B11): the frontend reports the hash of the
 // transaction it sent. Repeating the same hash is a no-op; a different hash is a conflict. A quote
 // that expired before the hash was reported is refused: the indexer (B12) reconciles from chain
-// events by nonce, so no settlement is lost.
+// events by nonce, so no settlement is lost. If the indexer already settled the conversion, the
+// hash is still recorded, on the conversion and on its events.
 
 import type { Transaction } from "@pontis/api-types";
-import { and, eq } from "drizzle-orm";
+import type { QuoteState } from "@pontis/domain";
 import type { Db } from "@pontis/db";
-import { conversions, quotes } from "@pontis/db";
+import { conversions, quotes, settlementEvents } from "@pontis/db";
+import { and, eq, isNull } from "drizzle-orm";
 import { AppError, notFound } from "../errors.ts";
 import { getTransaction } from "./transactions.ts";
+
+const SETTLED_BY_CHAIN = new Set<QuoteState>(["SETTLED", "FAILED", "REQUIRES_RECONCILIATION"]);
 
 async function reported(db: Db, conversionId: string): Promise<Transaction> {
   const found = await getTransaction(db, conversionId);
@@ -36,6 +40,19 @@ export async function reportSubmitted(
       409,
       "A different transaction was already reported for this conversion",
     );
+  }
+  if (SETTLED_BY_CHAIN.has(quote.state)) {
+    // The indexer saw the result before the wallet reported the hash; keep the hash for the record.
+    await db.transaction(async (tx) => {
+      await tx.update(conversions).set({ txHash }).where(eq(conversions.id, conversionId));
+      await tx
+        .update(settlementEvents)
+        .set({ txHash })
+        .where(
+          and(eq(settlementEvents.conversionId, conversionId), isNull(settlementEvents.txHash)),
+        );
+    });
+    return reported(db, conversionId);
   }
   if (quote.state === "ACCEPTED" && quote.expiresAt <= now) {
     await db
