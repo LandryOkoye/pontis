@@ -85,11 +85,13 @@ export async function deploy(chain: Chain, redeploy: boolean): Promise<void> {
     });
   }
   const date = new Date().toISOString().slice(0, 10);
+  // The end-to-end run deploys to a throwaway sandbox and must not rewrite the committed record.
+  const record = process.env.DEPLOYMENTS_FILE ?? `${REPO_ROOT}/docs/architecture/deployments.md`;
   writeFileSync(
-    `${REPO_ROOT}/docs/architecture/deployments.md`,
+    record,
     renderDeployments({ networkId: config.networkId, deployerId: config.deployerId, rows, date }),
   );
-  console.log("wrote docs/architecture/deployments.md");
+  console.log(`wrote ${record}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

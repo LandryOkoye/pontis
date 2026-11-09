@@ -10,6 +10,8 @@ const BASE_URL = process.env.DATABASE_URL ?? "postgres://pontis:pontis@localhost
 
 export interface TestDb {
   db: Db;
+  /** Connection string of the throwaway database, for processes started by a test. */
+  url: string;
   pool: pg.Pool;
   drop(): Promise<void>;
 }
@@ -34,6 +36,7 @@ export async function createTestDb(): Promise<TestDb> {
   await runMigrations(db);
   return {
     db,
+    url: url.toString(),
     pool,
     async drop() {
       if (!pool.ended) await pool.end();
