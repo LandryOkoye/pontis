@@ -39,3 +39,8 @@ Inventory-based: the vault holds balances of each registered representation insi
 - A non-owner `fund_vault` is returned in full and emits `conversion_rejected` with `NOT_OWNER`; a transfer from an unregistered token is returned with `UNKNOWN_TOKEN`. Funding is allowed while the contract is paused.
 - `withdraw_inventory` debits first, pays with `ft_transfer`, and `on_withdraw_resolved` restores the inventory if the transfer failed. `vault_withdrawn` carries `success` so the indexer can tell the two outcomes apart.
 - Inventory addition is checked: a funding or conversion that would overflow `u128` is refused.
+
+## Amendments (B15)
+
+- Rule 4 said a direct transfer is "recovered by an owner action". The contract has no such action: `withdraw_inventory` only debits recorded inventory, and `fund_vault` needs `ft_on_transfer`. A token sent with a plain `ft_transfer` therefore stays in `pontis-core` as unspendable surplus, and the reconciler reports `VAULT_UNTRACKED_BALANCE` until the contract is redeployed. This is harmless to solvency (inventory never exceeds the balance because of it) and is recorded as a known limitation. A sweep method would need an owner-only, evented, pause-aware addition and its own review.
+- The "vault low" threshold is 20% of the seeded amount; the runbook gives the steps.

@@ -20,25 +20,33 @@ Out of scope for the MVP: cross-chain bridges, market-priced exchange, dark pool
 
 ## Where to find things
 
-| Document                             | Purpose                                                                                         |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| [`ProjectBrief.md`](ProjectBrief.md) | Product and protocol source of truth (v2.0)                                                     |
-| [`BuildPlan.md`](BuildPlan.md)       | MVP build plan: ownership, technical decisions, git rules, work items, Definition of Done       |
-| `docs/`                              | Architecture, ADRs (`decisions/`), asset dossiers, threat model, runbooks (added as work lands) |
+| Document                                                         | Purpose                                                                                   |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [`ProjectBrief.md`](ProjectBrief.md)                             | Product and protocol source of truth (v2.0)                                               |
+| [`BuildPlan.md`](BuildPlan.md)                                   | MVP build plan: ownership, technical decisions, git rules, work items, Definition of Done |
+| [`docs/architecture/overview.md`](docs/architecture/overview.md) | Components, diagrams, the conversion flow and quote lifecycle, trust boundaries           |
+| [`docs/local-setup.md`](docs/local-setup.md)                     | Clean checkout to a running system, locally and on Testnet                                |
+| [`docs/demo-script.md`](docs/demo-script.md)                     | A ten-minute walkthrough                                                                  |
+| [`docs/runbooks/`](docs/runbooks/README.md)                      | Expired quote, failed payout, stuck submission, vault low, pause                          |
+| [`docs/known-limitations.md`](docs/known-limitations.md)         | What the MVP does not do                                                                  |
+| [`docs/definition-of-done.md`](docs/definition-of-done.md)       | Each Definition of Done item with its evidence                                            |
+| [`docs/decisions/`](docs/decisions/README.md)                    | ADRs 0001 to 0013                                                                         |
+| [`docs/threat-model/mvp.md`](docs/threat-model/mvp.md)           | Threats, mitigations and accepted limitations                                             |
 
-## Planned layout
+## Layout
 
 ```text
-apps/web/            React frontend
 apps/api/            Fastify REST API
-apps/indexer/        NEAR event indexer (settles conversions); reconciler follows
-packages/db/         Postgres schema, migrations and client shared by api and indexer
+apps/indexer/        NEAR event indexer and reconciler
+apps/web/            React frontend (separate branch and pull request)
 contracts/           Rust: synthetic-token (NEP-141) and pontis-core
-packages/            domain, api-types, near-client, quote-engine
-scripts/             deploy, seed, allowlist, fund-vault, check-commit-size
-tests/e2e/           cross-component tests
+packages/            domain, api-types, db, near-client, quote-engine
+scripts/             deploy, seed, allowlist, ops (operator commands), check-commit-size
+tests/e2e/           script-driven end-to-end run on a local sandbox or Testnet
 docs/                architecture, decisions, dossiers, threat model, runbooks
 ```
+
+Run the whole product end to end on a local chain with `pnpm --filter @pontis/e2e e2e` (see [local setup](docs/local-setup.md)).
 
 ## Prerequisites
 
@@ -60,9 +68,7 @@ pnpm rust:fmt                # cargo fmt --check  (also: rust:clippy, rust:test)
 pnpm build:contracts         # cargo-near build of every contract (cargo install cargo-near --locked)
 ```
 
-The Rust toolchain is pinned in `rust-toolchain.toml`. The `rust:*` scripts skip cleanly while the Cargo workspace has no members. Each app has an `.env.example`; copy it to `.env` (never committed). CI (`.github/workflows/ci.yml`) runs the same commands.
-
-Full demo and deploy instructions are added with the later PRs (`BuildPlan.md` §6, B8 and B15).
+The Rust toolchain is pinned in `rust-toolchain.toml`. Each app has an `.env.example`; copy it to `.env` (never committed). CI (`.github/workflows/ci.yml`) runs the same commands. Setup steps are in [`docs/local-setup.md`](docs/local-setup.md).
 
 ## Testnet deployment
 
