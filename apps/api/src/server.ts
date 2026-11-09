@@ -26,6 +26,16 @@ const app = buildApp({
       (await new TokenClient(rpc, tokenId).storageBalanceOf(account)) !== null,
   },
   ...(config.ADMIN_API_KEY ? { adminApiKey: config.ADMIN_API_KEY } : {}),
+  security: {
+    corsOrigins: config.CORS_ORIGIN,
+    trustProxy: config.TRUST_PROXY,
+    rateLimits: {
+      read: config.RATE_LIMIT_READ,
+      write: config.RATE_LIMIT_WRITE,
+      admin: config.RATE_LIMIT_ADMIN,
+      windowMs: config.RATE_LIMIT_WINDOW_MS,
+    },
+  },
   logger: true,
 });
 const sync =
