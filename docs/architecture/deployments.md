@@ -22,20 +22,18 @@ cp scripts/.env.example scripts/.env     # set DEPLOYER_ACCOUNT_ID and DEPLOYER_
 scripts/deploy-testnet.sh                # build, create sub-accounts, deploy, init, seed
 ```
 
-`scripts/deploy-testnet.sh` runs three steps you can also run alone:
+`scripts/deploy-testnet.sh [slim]` runs three steps you can also run alone:
 
 ```bash
-scripts/build-contracts.sh               # wasm into target/near/<crate>/<crate>.wasm
+scripts/build-contracts.sh slim              # wasm into target/near/<crate>/<crate>.wasm; cargo build + wasm-opt, halves the size
+scripts/build-contracts.sh                   # the same with cargo-near instead
 pnpm --filter @pontis/scripts deploy-testnet # create accounts, deploy, init; writes this file
-scripts/build-contracts.sh               # wasm into target/near/<crate>/<crate>.wasm (cargo-near)
-scripts/build-contracts.sh slim          # same output with cargo build + wasm-opt, no cargo-near; halves the wasm
-pnpm --filter @pontis/scripts deploy     # create accounts, deploy, init; writes this file
-pnpm --filter @pontis/scripts seed       # roles, registry, relationship, signer, allowlist, vault
+pnpm --filter @pontis/scripts seed           # roles, registry, relationship, signer, allowlist, vault
 ```
 
 Every step reads current state first, so re-running is safe. The seed prints a generated quote-signer secret key once; put it in `apps/api/.env` as `QUOTE_SIGNER_SECRET_KEY` and never commit it.
 
-Add or remove demo users:
+Add or remove demo users (operator commands for pausing, funding and status are in the [runbooks](../runbooks/README.md)):
 
 ```bash
 pnpm --filter @pontis/scripts allowlist add all alice.testnet bob.testnet

@@ -1,0 +1,86 @@
+# Local setup
+
+From a clean checkout to a running system, on your machine and then on NEAR Testnet. Testnet and synthetic assets only.
+
+## Prerequisites
+
+| Tool                           | For                                                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------------------- |
+| Node.js 22+ and pnpm           | Everything in TypeScript (the pnpm version is pinned by `packageManager`)                 |
+| Docker                         | Local PostgreSQL 16                                                                       |
+| Rust (`rust-toolchain.toml`)   | Contracts and the sandbox tests                                                           |
+| `cargo-near` **or** `wasm-opt` | Building the wasm: `cargo-near` for the default build, `binaryen`'s `wasm-opt` for `slim` |
+
+## 1. Install and check
+
+```bash
+pnpm install --frozen-lockfile
+POSTGRES_PORT=5432 pnpm db:up        # use another port if 5432 is taken, and set DATABASE_URL to match
+export DATABASE_URL=postgres://pontis:pontis@localhost:5432/pontis
+pnpm format:check && pnpm -r lint && pnpm -r typecheck && pnpm -r test
+pnpm rust:fmt && pnpm rust:clippy && pnpm rust:test      # contract unit tests
+```
+
+Database tests create and drop a throwaway database each, so they can run in parallel and leave nothing behind.
+
+## 2. Build the contracts
+
+```bash
+scripts/build-contracts.sh slim      # cargo build + wasm-opt; about half the size of the default build
+# or: scripts/build-contracts.sh     # cargo-near
+```
+
+Output is `target/near/<crate>/<crate>.wasm`. The sandbox tests and the end-to-end run need it:
+
+```bash
+pnpm test:integration                # near-workspaces sandbox tests (downloads the sandbox binary once)
+```
+
+## 3. Run everything on a local chain
+
+One command starts a sandbox, deploys and seeds the contracts, starts the API and the indexer on a throwaway database, and walks the whole product through it (see [`tests/e2e`](../tests/e2e)):
+
+```bash
+pnpm --filter @pontis/e2e e2e        # about three minutes after the first build; logs go to a temp directory, printed on failure
+```
+
+## 4. Run the services by hand against Testnet
+
+1. **Deploy and seed** (needs about 20 NEAR on the deployer; see [deployments](architecture/deployments.md)):
+
+   ```bash
+   cp scripts/.env.example scripts/.env          # DEPLOYER_ACCOUNT_ID and DEPLOYER_PRIVATE_KEY
+   scripts/deploy-testnet.sh slim
+   ```
+
+   The seed prints a generated quote-signer key once. Keep it; it is the only copy.
+
+2. **Configure the services.** Copy `apps/api/.env.example` and `apps/indexer/.env.example` to `.env` and set the contract account IDs, `QUOTE_SIGNER_SECRET_KEY` and `ADMIN_API_KEY`. `.env` files are ignored by git.
+
+3. **Start them** (two terminals; both apply migrations on start):
+
+   ```bash
+   pnpm --filter @pontis/api start       # http://localhost:3000
+   pnpm --filter @pontis/indexer start
+   ```
+
+4. **Check.** `curl localhost:3000/v1/health` should answer `ok` with a real `chainHeight`, and `indexerLagBlocks` should settle at a few blocks. `pnpm --filter @pontis/scripts ops status` prints the contract's state.
+
+5. **Let users in.** Eligibility is an on-chain allowlist:
+
+   ```bash
+   pnpm --filter @pontis/scripts allowlist add all alice.testnet
+   ```
+
+   Test tokens come from the token's `faucet_mint` or the owner's `mint`.
+
+## Troubleshooting
+
+| Symptom                                       | Cause                                                                                                 |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `Postgres is not reachable`                   | Container stopped or on another port: `docker start pontis-postgres`, or fix `DATABASE_URL`           |
+| `configured key ... is not a full-access key` | `DEPLOYER_PRIVATE_KEY` belongs to another key of the account; the message lists the right public keys |
+| `missing ... .wasm`                           | Build the contracts first (step 2)                                                                    |
+| Quotes are refused with `NOT_ELIGIBLE`        | The account is not on the allowlist (step 4.5)                                                        |
+| `indexerLagBlocks` null                       | The indexer has not run yet                                                                           |
+| `HistoryUnavailableError` in the indexer log  | See the [indexer operating notes](../apps/indexer/README.md)                                          |
