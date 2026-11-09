@@ -74,10 +74,17 @@ pnpm --filter @pontis/e2e e2e        # about three minutes after the first build
 
    Test tokens come from the token's `faucet_mint` or the owner's `mint`.
 
+## RPC endpoints
+
+`https://rpc.testnet.near.org` is deprecated and answers `429`. The examples use FastNEAR's free testnet endpoint, `https://test.rpc.fastnear.com`. Check what an endpoint serves before pointing anything at it: `https://free.rpc.fastnear.com` is **mainnet**, and the scripts refuse to send a transaction when the node's chain does not match `NEAR_NETWORK_ID`.
+
+A free endpoint is rate limited. One idle deployment (the indexer reading a block and a chunk per second, the reconciler, quoting) stays under it; a busy run (`E2E_MODE=testnet`) can exceed it, and then the indexer backs off and settlements arrive late, not lost. For anything beyond a demo use a keyed endpoint or your own node.
+
 ## Troubleshooting
 
 | Symptom                                       | Cause                                                                                                 |
 | --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `Rate limits exceeded` or `429` in a log      | Public RPC limit: wait, or use a keyed endpoint (RPC endpoints above)                                 |
 | `Postgres is not reachable`                   | Container stopped or on another port: `docker start pontis-postgres`, or fix `DATABASE_URL`           |
 | `configured key ... is not a full-access key` | `DEPLOYER_PRIVATE_KEY` belongs to another key of the account; the message lists the right public keys |
 | `missing ... .wasm`                           | Build the contracts first (step 2)                                                                    |

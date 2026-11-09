@@ -14,6 +14,7 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 
 - **One admin key** for the API's admin endpoint; audit rows name a key fingerprint, not a person. One operator holds every contract role; separation of proposer and approver is not enforced on chain.
 - **One API instance.** Rate-limit counters live in the process.
+- **Free public RPC endpoints rate limit.** The indexer reads about two calls per block; with the reconciler and the API on the same free endpoint it gets `429`, backs off, and settlements arrive late (they are not lost). A demo wants a keyed endpoint or a node of its own.
 - **The indexer trusts its RPC node.** It reads proven outcomes but does not verify the light-client proof itself. It follows final blocks about four blocks behind, reads only the core's shard, and stalls visibly (health shows lag) rather than skipping a block it cannot read. Past a node's retention, history needs an archival node ([indexer notes](../apps/indexer/README.md)).
 - **The reconciler flags; it does not repair.** A stuck or inconsistent conversion becomes `REQUIRES_RECONCILIATION` and waits for a person, except that a late matching event settles it by itself. Vault findings need two consecutive runs, so they appear after about two minutes.
 - **No alerting.** Reconciliation results are served at `GET /v1/admin/reconciliation`; nothing pages anyone.

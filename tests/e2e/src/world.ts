@@ -107,7 +107,12 @@ export async function startWorld(): Promise<World> {
       start("indexer", "pnpm", ["--filter", "@pontis/indexer", "start"], {
         cwd: REPO_ROOT,
         logDir,
-        env: { ...common, RECONCILE_INTERVAL_MS: "5000", RECONCILE_STUCK_AFTER_MS: "60000" },
+        env: {
+          ...common,
+          // A shared public RPC rate limits; a faster reconciler would starve the indexer.
+          RECONCILE_INTERVAL_MS: mode === "sandbox" ? "5000" : "30000",
+          RECONCILE_STUCK_AFTER_MS: "60000",
+        },
       }),
     ];
     for (const p of processes) cleanups.push(() => p.stop());

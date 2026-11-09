@@ -26,7 +26,8 @@ export async function createUser(
   await chain.account.createSubAccount({
     accountOrPrefix: prefix,
     publicKey: key.getPublicKey(),
-    nearToTransfer: 5n * NEAR,
+    // A sandbox is free; on Testnet this NEAR is gone with the throwaway key, so send little.
+    nearToTransfer: world.mode === "sandbox" ? 5n * NEAR : NEAR / 2n,
   });
   const accountId = `${prefix}.${config.deployerId}`;
   if (options.allowlisted) {
