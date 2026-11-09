@@ -16,6 +16,7 @@ Decisions that settle the open items in brief §23–24. Any change to a decisio
 | [0010](0010-deferred-scope.md)                      | Deferred scope                              | §24.9–14       |
 | [0011](0011-indexer.md)                             | Event indexer                               | §7.4, §13.2    |
 | [0012](0012-reconciliation.md)                      | Reconciliation                              | §7.4, §24.3    |
+| [0013](0013-api-hardening.md)                       | API hardening                               | §10.1, §14.3   |
 
 ## Format
 
