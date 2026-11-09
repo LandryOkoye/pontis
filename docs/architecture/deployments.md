@@ -1,6 +1,6 @@
 # Deployments
 
-**Status: not deployed yet.** The deploy script overwrites this file with the real account IDs and wasm hashes after the first testnet deployment. Testnet and synthetic assets only.
+**Status: deployed to NEAR Testnet** on 2026-11-09 under `pontis.testnet`; the accounts and wasm hashes are in the [deployment record](deployment-record.md), which the deploy script rewrites. This page is the guide. Testnet and synthetic assets only.
 
 ## Account naming
 
@@ -27,7 +27,7 @@ scripts/deploy-testnet.sh                # build, create sub-accounts, deploy, i
 ```bash
 scripts/build-contracts.sh slim              # wasm into target/near/<crate>/<crate>.wasm; cargo build + wasm-opt, halves the size
 scripts/build-contracts.sh                   # the same with cargo-near instead
-pnpm --filter @pontis/scripts deploy-testnet # create accounts, deploy, init; writes this file
+pnpm --filter @pontis/scripts deploy-testnet # create accounts, deploy, init; writes deployment-record.md
 pnpm --filter @pontis/scripts seed           # roles, registry, relationship, signer, allowlist, vault
 ```
 

@@ -5,7 +5,7 @@
 //   pnpm --filter @pontis/scripts deploy-testnet [--redeploy]
 //
 // Needs built wasm (scripts/build-contracts.sh) and DEPLOYER_ACCOUNT_ID plus a key; see
-// docs/architecture/deployments.md.
+// docs/architecture/deployments.md; the result is written to docs/architecture/deployment-record.md.
 
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -86,7 +86,8 @@ export async function deploy(chain: Chain, redeploy: boolean): Promise<void> {
   }
   const date = new Date().toISOString().slice(0, 10);
   // The end-to-end run deploys to a throwaway sandbox and must not rewrite the committed record.
-  const record = process.env.DEPLOYMENTS_FILE ?? `${REPO_ROOT}/docs/architecture/deployments.md`;
+  const record =
+    process.env.DEPLOYMENTS_FILE ?? `${REPO_ROOT}/docs/architecture/deployment-record.md`;
   writeFileSync(
     record,
     renderDeployments({ networkId: config.networkId, deployerId: config.deployerId, rows, date }),
