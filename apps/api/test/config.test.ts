@@ -40,4 +40,30 @@ describe("loadConfig", () => {
     );
     expect(() => loadConfig({ ...base, NEAR_NETWORK_ID: "mainnet" })).toThrow(/NEAR_NETWORK_ID/);
   });
+
+  it("reads CORS origins, admin key and rate limits, treating an empty admin key as unset", () => {
+    const config = loadConfig({
+      ...base,
+      CORS_ORIGIN: "https://a.example, http://localhost:5173",
+      ADMIN_API_KEY: "",
+      RATE_LIMIT_ADMIN: "3",
+      TRUST_PROXY: "true",
+    });
+    expect(config).toMatchObject({
+      CORS_ORIGIN: ["https://a.example", "http://localhost:5173"],
+      ADMIN_API_KEY: undefined,
+      RATE_LIMIT_ADMIN: 3,
+      RATE_LIMIT_READ: 120,
+      RATE_LIMIT_WRITE: 30,
+      TRUST_PROXY: true,
+    });
+  });
+
+  it("refuses a wildcard or path in CORS_ORIGIN and an admin key under 16 characters", () => {
+    expect(() => loadConfig({ ...base, CORS_ORIGIN: "*" })).toThrow(/CORS_ORIGIN/);
+    expect(() => loadConfig({ ...base, CORS_ORIGIN: "https://a.example/app" })).toThrow(
+      /CORS_ORIGIN/,
+    );
+    expect(() => loadConfig({ ...base, ADMIN_API_KEY: "short" })).toThrow(/ADMIN_API_KEY/);
+  });
 });
