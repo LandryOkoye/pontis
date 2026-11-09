@@ -71,8 +71,13 @@ export function deployerKeyProblem(
   publicKey: string,
   deployerId: string,
   fullAccessKeys: string[],
+  /** The value of `DEPLOYER_PRIVATE_KEY`, to spot a public key pasted by mistake. */
+  configuredKey?: string,
 ): string | undefined {
   if (fullAccessKeys.includes(publicKey)) return undefined;
+  if (configuredKey !== undefined && fullAccessKeys.includes(configuredKey)) {
+    return `DEPLOYER_PRIVATE_KEY holds a PUBLIC key of ${deployerId}, not a secret key. The secret key is the "private_key" of its NEAR credentials file or its exported account: ed25519: followed by about 88 characters.`;
+  }
   return `The configured key (${publicKey}) is not a full-access key of ${deployerId}. Its full-access keys are: ${fullAccessKeys.join(", ") || "none"}. Check DEPLOYER_PRIVATE_KEY.`;
 }
 
@@ -85,6 +90,11 @@ export async function assertDeployerKey(chain: Chain): Promise<void> {
   const fullAccess = keys
     .filter((k) => k.access_key.permission === "FullAccess")
     .map((k) => k.public_key);
-  const problem = deployerKeyProblem(publicKey, chain.config.deployerId, fullAccess);
+  const problem = deployerKeyProblem(
+    publicKey,
+    chain.config.deployerId,
+    fullAccess,
+    chain.config.deployerKey,
+  );
   if (problem) throw new Error(problem);
 }
