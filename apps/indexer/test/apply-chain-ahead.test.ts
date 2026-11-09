@@ -1,4 +1,4 @@
-import { settlementEvents } from "@pontis/db";
+import { conversions, settlementEvents } from "@pontis/db";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { completed, execution, useSeededDb } from "./harness.ts";
@@ -45,5 +45,20 @@ describe("applyExecutions: chain ahead of the API", () => {
       .from(settlementEvents)
       .where(eq(settlementEvents.receiptId, admin.receiptId));
     expect([event?.eventName, event?.conversionId]).toEqual(["fee_updated", null]);
+  });
+
+  it("settles a quote flagged for reconciliation when the matching completion finally arrives", async () => {
+    const q = await seedQuote(h.db, "REQUIRES_RECONCILIATION", "HASH-LATE");
+    await h.db
+      .update(conversions)
+      .set({ failureReason: "No settlement event 10 minutes after submission" })
+      .where(eq(conversions.id, q.conversionId ?? ""));
+    await h.apply(execution([completed(q.nonce)]));
+    expect(await h.quoteState(q.quoteId)).toBe("SETTLED");
+    expect((await h.conversion(q.conversionId))?.failureReason).toBeNull();
+
+    const wrong = await seedQuote(h.db, "REQUIRES_RECONCILIATION");
+    await h.apply(execution([completed(wrong.nonce, { amount_out: "1" })]));
+    expect(await h.quoteState(wrong.quoteId)).toBe("REQUIRES_RECONCILIATION");
   });
 });

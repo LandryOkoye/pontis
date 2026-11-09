@@ -1,3 +1,4 @@
+export * from "./admin-types.ts";
 export * from "./common.ts";
 export * from "./endpoints.ts";
 export * from "./registry-types.ts";

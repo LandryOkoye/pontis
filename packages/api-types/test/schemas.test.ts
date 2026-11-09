@@ -13,6 +13,8 @@ import {
   IssuerSchema,
   ListTransactionsQuerySchema,
   QuoteSchema,
+  ReconciliationFindingSchema,
+  ReconciliationReportSchema,
   SubmittedRequestSchema,
   TransactionSchema,
 } from "./helpers.ts";
@@ -152,5 +154,60 @@ describe("requests and errors", () => {
       expect(ApiErrorSchema.safeParse({ code, message: "m" }).success).toBe(true);
     }
     expect(ApiErrorSchema.safeParse({ code: "SOMETHING_ELSE", message: "m" }).success).toBe(false);
+  });
+});
+
+describe("reconciliation report", () => {
+  const finding = {
+    key: "vault:tgold-b:insolvent",
+    kind: "VAULT_INSOLVENT",
+    severity: "critical",
+    subject: "tgold-b",
+    message: "Inventory 5 exceeds the token balance 3",
+    firstSeenAt: "2026-11-09T10:00:00.000Z",
+  };
+
+  it("accepts a populated report and a never-run report", () => {
+    const report = {
+      status: "ATTENTION",
+      ranAt: "2026-11-09T10:01:00.000Z",
+      findings: [finding],
+      vaults: [
+        {
+          representationId: "tgold-b",
+          tokenAccountId: "tgold-b.testnet",
+          inventory: "5",
+          balance: "3",
+        },
+      ],
+      requiresReconciliation: [],
+    };
+    expect(ReconciliationReportSchema.parse(report)).toEqual(report);
+    expect(
+      ReconciliationReportSchema.parse({
+        status: "NEVER_RUN",
+        ranAt: null,
+        findings: [],
+        vaults: [],
+        requiresReconciliation: [],
+      }).status,
+    ).toBe("NEVER_RUN");
+  });
+
+  it("rejects a finding of an unknown kind and a non-integer amount", () => {
+    expect(
+      ReconciliationFindingSchema.safeParse({ ...finding, kind: "SOMETHING_ELSE" }).success,
+    ).toBe(false);
+    expect(
+      ReconciliationReportSchema.safeParse({
+        status: "OK",
+        ranAt: null,
+        findings: [],
+        requiresReconciliation: [],
+        vaults: [
+          { representationId: "a", tokenAccountId: "a.testnet", inventory: "1.5", balance: "1" },
+        ],
+      }).success,
+    ).toBe(false);
   });
 });

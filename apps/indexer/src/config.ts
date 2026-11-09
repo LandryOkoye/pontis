@@ -12,6 +12,12 @@ const EnvSchema = z.object({
   INDEXER_POLL_MS: z.coerce.number().int().min(100).default(2_000),
   /** Blocks re-read behind the cursor on start, in case a node served an incomplete view. */
   INDEXER_RESCAN_BLOCKS: z.coerce.number().int().min(0).default(30),
+  /** Pause between reconciliation runs; 0 turns the reconciler off. */
+  RECONCILE_INTERVAL_MS: z.coerce.number().int().min(0).default(60_000),
+  /** A submitted quote with no outcome event after this long is flagged for reconciliation. */
+  RECONCILE_STUCK_AFTER_MS: z.coerce.number().int().min(60_000).default(600_000),
+  /** Settlement consistency is checked for quotes touched within this window. */
+  RECONCILE_LOOKBACK_MS: z.coerce.number().int().min(60_000).default(604_800_000),
   /** Parallel chunk reads per block; keep low on public RPC endpoints. */
   INDEXER_CHUNK_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
 });

@@ -92,6 +92,7 @@ export const ERROR_CODES = [
   ...REFUSAL_CODES,
   "QUOTE_EXPIRED",
   "QUOTE_ALREADY_USED",
+  "UNAUTHORIZED",
   "RATE_LIMITED",
   "INTERNAL",
 ] as const;
@@ -127,3 +128,23 @@ export const CORE_EVENT_NAMES = [
   "conversion_rejected",
 ] as const;
 export type CoreEventName = (typeof CORE_EVENT_NAMES)[number];
+
+/** What the reconciler (B13) can flag; each finding has one kind. */
+export const RECONCILIATION_KINDS = [
+  /** A `SUBMITTED` quote with no settlement event long after submission. */
+  "STUCK_SUBMITTED",
+  /** A `SETTLED` quote with no `conversion_completed` event stored for it. */
+  "SETTLED_WITHOUT_EVENT",
+  /** A stored `conversion_completed` event for a quote that is not `SETTLED`. */
+  "COMPLETION_NOT_SETTLED",
+  /** A `SETTLED` quote whose completion event shows other amounts or another user. */
+  "SETTLEMENT_MISMATCH",
+  /** Vault inventory exceeds the token balance the core holds: it owes more than it has. */
+  "VAULT_INSOLVENT",
+  /** The core holds more tokens than its inventory records (a direct transfer, ADR 0008). */
+  "VAULT_UNTRACKED_BALANCE",
+] as const;
+export type ReconciliationKind = (typeof RECONCILIATION_KINDS)[number];
+
+export const FINDING_SEVERITIES = ["critical", "warning"] as const;
+export type FindingSeverity = (typeof FINDING_SEVERITIES)[number];

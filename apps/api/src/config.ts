@@ -12,6 +12,8 @@ const EnvSchema = z.object({
   PONTIS_CORE_ACCOUNT_ID: z.string().min(2),
   /** `ed25519:<base58>` quote-signer secret key. Testnet only; never commit it. */
   QUOTE_SIGNER_SECRET_KEY: z.string().startsWith("ed25519:"),
+  /** Bearer key for `/v1/admin/*`; unset closes the admin endpoints. At least 16 characters. */
+  ADMIN_API_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(16).optional()),
   /** 0 disables the background registry sync (use `pnpm sync` instead). */
   REGISTRY_SYNC_INTERVAL_MS: z.coerce.number().int().min(0).default(15_000),
   /** How often unused quotes past their expiry are marked EXPIRED. */

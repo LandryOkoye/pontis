@@ -25,6 +25,7 @@ const app = buildApp({
     isRegistered: async (tokenId, account) =>
       (await new TokenClient(rpc, tokenId).storageBalanceOf(account)) !== null,
   },
+  ...(config.ADMIN_API_KEY ? { adminApiKey: config.ADMIN_API_KEY } : {}),
   logger: true,
 });
 const sync =

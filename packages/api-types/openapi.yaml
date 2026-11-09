@@ -69,6 +69,7 @@ components:
         - INSUFFICIENT_INVENTORY
         - QUOTE_EXPIRED
         - QUOTE_ALREADY_USED
+        - UNAUTHORIZED
         - RATE_LIMITED
         - INTERNAL
     IssuerList:
@@ -875,6 +876,109 @@ components:
             $ref: "#/components/schemas/Transaction"
       required:
         - items
+    ReconciliationReport:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - OK
+            - ATTENTION
+            - NEVER_RUN
+        ranAt:
+          $ref: "#/components/schemas/Timestamp"
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconciliationFinding"
+        vaults:
+          type: array
+          items:
+            $ref: "#/components/schemas/VaultReading"
+        requiresReconciliation:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlaggedQuote"
+      required:
+        - status
+        - ranAt
+        - findings
+        - vaults
+        - requiresReconciliation
+    ReconciliationFinding:
+      type: object
+      properties:
+        key:
+          type: string
+        kind:
+          $ref: "#/components/schemas/ReconciliationKind"
+        severity:
+          $ref: "#/components/schemas/FindingSeverity"
+        subject:
+          type: string
+        message:
+          type: string
+        firstSeenAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - key
+        - kind
+        - severity
+        - subject
+        - message
+        - firstSeenAt
+    ReconciliationKind:
+      type: string
+      enum:
+        - STUCK_SUBMITTED
+        - SETTLED_WITHOUT_EVENT
+        - COMPLETION_NOT_SETTLED
+        - SETTLEMENT_MISMATCH
+        - VAULT_INSOLVENT
+        - VAULT_UNTRACKED_BALANCE
+    FindingSeverity:
+      type: string
+      enum:
+        - critical
+        - warning
+    VaultReading:
+      type: object
+      properties:
+        representationId:
+          type: string
+        tokenAccountId:
+          $ref: "#/components/schemas/AccountId"
+        inventory:
+          $ref: "#/components/schemas/AmountString"
+        balance:
+          $ref: "#/components/schemas/AmountString"
+      required:
+        - representationId
+        - tokenAccountId
+        - inventory
+        - balance
+    FlaggedQuote:
+      type: object
+      properties:
+        quoteId:
+          $ref: "#/components/schemas/Uuid"
+        conversionId:
+          allOf:
+            - $ref: "#/components/schemas/Uuid"
+            - type:
+                - string
+                - "null"
+        reason:
+          type:
+            - string
+            - "null"
+        flaggedAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - quoteId
+        - conversionId
+        - reason
+        - flaggedAt
   parameters: {}
 paths:
   /v1/health:
@@ -1406,6 +1510,47 @@ paths:
                 $ref: "#/components/schemas/TransactionList"
         "400":
           description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/admin/reconciliation:
+    get:
+      operationId: getReconciliation
+      summary: Latest reconciliation findings
+      description: Admin only. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.
+      tags:
+        - Admin
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <ADMIN_API_KEY>`."
+            example: Bearer 0123456789abcdef0123456789abcdef
+          required: true
+          description: "`Bearer <ADMIN_API_KEY>`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationReport"
+        "401":
+          description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
           content:
             application/json:
               schema:

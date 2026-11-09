@@ -28,6 +28,19 @@ The indexer applies migrations on start, so it can run before or after the API.
 - `quotes.state` and `conversions`: `SETTLED` or `FAILED` from the conversion events; `REQUIRES_RECONCILIATION` (and an `audit_log` row) when the chain disagrees with the quote.
 - `indexer_cursor`: the last block fully applied. `GET /v1/health` reports `indexerLagBlocks` from it.
 
+## Reconciler
+
+Every `RECONCILE_INTERVAL_MS` (60 s; 0 turns it off) the reconciler compares the database with the chain and stores a report that `GET /v1/admin/reconciliation` serves ([ADR 0012](../../docs/decisions/0012-reconciliation.md)). It never writes to the chain.
+
+| Finding                   | Meaning                                                                                           | Typical remedy                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `STUCK_SUBMITTED`         | No outcome event `RECONCILE_STUCK_AFTER_MS` after the hash was reported; the quote is now flagged | Look the transaction up in an explorer; it settles by itself if the event shows |
+| `SETTLED_WITHOUT_EVENT`   | A settled quote has no completion event stored                                                    | Check the indexer cursor and the receipt on chain                               |
+| `COMPLETION_NOT_SETTLED`  | A completion event is stored but the quote is not settled                                         | Compare quote state and event; correct by hand                                  |
+| `SETTLEMENT_MISMATCH`     | A settled quote's event shows another user or amount                                              | Treat as an incident: compare the receipt with the quote                        |
+| `VAULT_INSOLVENT`         | Inventory exceeds the tokens the core holds (two runs in a row)                                   | Stop converting that pair; investigate the token transfers                      |
+| `VAULT_UNTRACKED_BALANCE` | The core holds more tokens than inventory records (a direct transfer)                             | Owner recovers or credits it (ADR 0008)                                         |
+
 ## Operating notes
 
 | Symptom                                         | Cause and remedy                                                                                                                                                                                        |

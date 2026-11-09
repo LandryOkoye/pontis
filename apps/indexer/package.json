@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@pontis/api-types": "workspace:*",
     "@pontis/db": "workspace:*",
     "@pontis/domain": "workspace:*",
     "@pontis/near-client": "workspace:*",
