@@ -1,6 +1,8 @@
+import type { Writable } from "node:stream";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Db } from "@pontis/db";
 import { errorHandler, notFoundHandler } from "./errors.ts";
+import { loggerOptions } from "./logging.ts";
 import { registerCatalogRoutes } from "./routes/catalog.ts";
 import type { ConversionChain } from "./conversions/chain.ts";
 import type { QuoteDeps } from "./quotes/service.ts";
@@ -23,11 +25,13 @@ export interface AppDeps {
   /** CORS origins and rate limits; see `registerSecurity`. */
   security?: SecurityOptions;
   logger?: boolean;
+  /** Where log lines go when `logger` is on; default is stdout. */
+  logStream?: Writable;
 }
 
 export function buildApp(deps: AppDeps): FastifyInstance {
   const app = Fastify({
-    logger: deps.logger ?? false,
+    logger: deps.logger ? loggerOptions(deps.logStream) : false,
     bodyLimit: 16 * 1024,
     trustProxy: deps.security?.trustProxy ?? false,
   });
