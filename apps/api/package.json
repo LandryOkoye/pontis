@@ -13,6 +13,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fastify/cors": "^11.4.1",
+    "@fastify/rate-limit": "^11.2.2",
     "@pontis/api-types": "workspace:*",
     "@pontis/db": "workspace:*",
     "@pontis/domain": "workspace:*",

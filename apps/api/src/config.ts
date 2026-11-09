@@ -14,6 +14,36 @@ const EnvSchema = z.object({
   QUOTE_SIGNER_SECRET_KEY: z.string().startsWith("ed25519:"),
   /** Bearer key for `/v1/admin/*`; unset closes the admin endpoints. At least 16 characters. */
   ADMIN_API_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(16).optional()),
+  /** Comma-separated browser origins allowed by CORS, for example `https://app.example.com`. */
+  CORS_ORIGIN: z
+    .string()
+    .default("http://localhost:5173")
+    .transform((v) =>
+      v
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean),
+    )
+    .pipe(
+      z.array(
+        z
+          .string()
+          .refine(
+            (o) => URL.canParse(o) && new URL(o).origin === o,
+            "must be an origin such as https://app.example.com",
+          ),
+      ),
+    ),
+  /** Requests per client per window: reads, writes (POST) and `/v1/admin`. */
+  RATE_LIMIT_READ: z.coerce.number().int().min(1).default(120),
+  RATE_LIMIT_WRITE: z.coerce.number().int().min(1).default(30),
+  RATE_LIMIT_ADMIN: z.coerce.number().int().min(1).default(10),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1000).default(60_000),
+  /** Behind a reverse proxy, take the client address from `X-Forwarded-For`. */
+  TRUST_PROXY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   /** 0 disables the background registry sync (use `pnpm sync` instead). */
   REGISTRY_SYNC_INTERVAL_MS: z.coerce.number().int().min(0).default(15_000),
   /** How often unused quotes past their expiry are marked EXPIRED. */

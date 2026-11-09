@@ -24,6 +24,20 @@ pnpm --filter @pontis/api start          # migrates, starts on :3000, syncs the 
 
 `POST /v1/conversions` with `{quoteId}` and an `Idempotency-Key` accepts a quote once and returns the **unsigned** wallet actions: an optional `storage_deposit` on the destination token, then `ft_transfer_call` with the signed quote. The wallet signs and sends them (one transaction per receiver, in order) and then reports the hash to `POST /v1/conversions/{id}/submitted`. Settlement states (`SETTLED`, `FAILED`, `REQUIRES_RECONCILIATION`) are set by [the indexer](../indexer/README.md); without it running, a submitted conversion stays `SUBMITTED`.
 
+### Hardening
+
+Settings are in `.env.example`; reasons are in [ADR 0013](../../docs/decisions/0013-api-hardening.md).
+
+| Variable                                                    | Default                 | Meaning                                                              |
+| ----------------------------------------------------------- | ----------------------- | -------------------------------------------------------------------- |
+| `CORS_ORIGIN`                                               | `http://localhost:5173` | Comma-separated browser origins; exact origins only                  |
+| `RATE_LIMIT_READ` / `RATE_LIMIT_WRITE` / `RATE_LIMIT_ADMIN` | `120` / `30` / `10`     | Requests per client per window, by class                             |
+| `RATE_LIMIT_WINDOW_MS`                                      | `60000`                 | Window length                                                        |
+| `TRUST_PROXY`                                               | `false`                 | Read the client address from `X-Forwarded-For` (behind a proxy only) |
+| `ADMIN_API_KEY`                                             | unset                   | Bearer key for `/v1/admin/*`; at least 16 characters                 |
+
+An excess request gets `429` with `Retry-After`. Logs hold method and path only; every admin call is written to `audit_log`.
+
 ### Admin
 
 `GET /v1/admin/reconciliation` returns the reconciler's last run (findings, each vault's inventory against the tokens the core holds) and the quotes waiting in `REQUIRES_RECONCILIATION`. It needs `Authorization: Bearer $ADMIN_API_KEY` (at least 16 characters); with no key set it refuses everyone.
