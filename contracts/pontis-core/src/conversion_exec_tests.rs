@@ -221,3 +221,37 @@ fn a_conversion_input_that_would_overflow_the_accounted_total_is_refused() {
     assert_eq!(last_event()["data"]["reason"], "INVENTORY_OVERFLOW");
     assert_eq!(pending_in(&c), (0, 0));
 }
+
+#[test]
+#[should_panic(expected = "insufficient inventory")]
+fn a_withdrawal_cannot_take_an_input_whose_payout_is_pending() {
+    let mut c = ready();
+    let _ = convert(&mut c, &quote_msg(|_| {}));
+    as_account(owner());
+    let _ = c.withdraw_inventory("tgold-a".into(), U128(AMOUNT_IN), owner());
+}
+
+#[test]
+fn a_withdrawal_while_a_payout_is_pending_takes_only_funded_inventory() {
+    let mut c = ready();
+    as_account(token_a());
+    assert_eq!(
+        unused(c.ft_on_transfer(owner(), U128(500), FUND_VAULT_MSG.into())),
+        0
+    );
+    let _ = convert(&mut c, &quote_msg(|_| {}));
+    assert_eq!(
+        (inventory(&c).0, pending_in(&c).0),
+        (500, AMOUNT_IN),
+        "funded inventory and the held input are accounted apart"
+    );
+    as_account(owner());
+    let _ = c.withdraw_inventory("tgold-a".into(), U128(500), owner());
+    assert_eq!((inventory(&c).0, pending_in(&c).0), (0, AMOUNT_IN));
+
+    // The payout then fails: the whole input is still refundable and inventory stays at zero.
+    as_callback(PromiseResult::Failed);
+    let refund = c.on_payout_resolved(NONCE.into(), Err(PromiseError::Failed));
+    assert_eq!(refund.0, AMOUNT_IN);
+    assert_eq!((inventory(&c).0, pending_in(&c).0), (0, 0));
+}
