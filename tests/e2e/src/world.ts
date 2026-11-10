@@ -84,6 +84,7 @@ export async function startWorld(): Promise<World> {
     const common = {
       DATABASE_URL: database.url,
       NEAR_RPC_URL: config.rpcUrl,
+      NEAR_NETWORK_ID: config.networkId,
       PONTIS_CORE_ACCOUNT_ID: config.coreId,
     };
     const processes: Managed[] = [
@@ -94,7 +95,6 @@ export async function startWorld(): Promise<World> {
           ...common,
           PORT: String(port),
           HOST: "127.0.0.1",
-          NEAR_NETWORK_ID: config.networkId,
           QUOTE_SIGNER_SECRET_KEY: signerKey,
           ADMIN_API_KEY: adminKey,
           REGISTRY_SYNC_INTERVAL_MS: "2000",

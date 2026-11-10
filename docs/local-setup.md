@@ -80,16 +80,19 @@ CI runs this same command in the `e2e` job on every pull request and push to `ma
 
 `https://rpc.testnet.near.org` is deprecated and answers `429`. The examples use FastNEAR's free testnet endpoint, `https://test.rpc.fastnear.com`. Check what an endpoint serves before pointing anything at it: `https://free.rpc.fastnear.com` is **mainnet**, and the scripts refuse to send a transaction when the node's chain does not match `NEAR_NETWORK_ID`.
 
+`NEAR_RPC_URL` has no default in the API and the indexer: they refuse to start without it. At startup both ask the node for its `status` before they touch the database, open a port or read a block, and exit with an error if the chain id does not match `NEAR_NETWORK_ID` (`testnet`, or a `test-chain...` id for `sandbox`), if the node cannot be reached, or if its answer has no chain id. On success they log the network id, chain id and the RPC URL reduced to scheme, host and port, so an API key in the URL never reaches a log or an error. The check runs once at startup; it does not watch for a node that later changes chain. The scripts default to the FastNEAR endpoint when `NEAR_RPC_URL` is unset on `testnet`.
+
 A free endpoint is rate limited. One idle deployment (the indexer reading a block and a chunk per second, the reconciler, quoting) stays under it; a busy run (`E2E_MODE=testnet`) can exceed it, and then the indexer backs off and settlements arrive late, not lost. For anything beyond a demo use a keyed endpoint or your own node.
 
 ## Troubleshooting
 
-| Symptom                                       | Cause                                                                                                 |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `Rate limits exceeded` or `429` in a log      | Public RPC limit: wait, or use a keyed endpoint (RPC endpoints above)                                 |
-| `Postgres is not reachable`                   | Container stopped or on another port: `docker start pontis-postgres`, or fix `DATABASE_URL`           |
-| `configured key ... is not a full-access key` | `DEPLOYER_PRIVATE_KEY` belongs to another key of the account; the message lists the right public keys |
-| `missing ... .wasm`                           | Build the contracts first (step 2)                                                                    |
-| Quotes are refused with `NOT_ELIGIBLE`        | The account is not on the allowlist (step 4.5)                                                        |
-| `indexerLagBlocks` null                       | The indexer has not run yet                                                                           |
-| `HistoryUnavailableError` in the indexer log  | See the [indexer operating notes](../apps/indexer/README.md)                                          |
+| Symptom                                                                       | Cause                                                                                                          |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `Rate limits exceeded` or `429` in a log                                      | Public RPC limit: wait, or use a keyed endpoint (RPC endpoints above)                                          |
+| `NEAR_NETWORK_ID is testnet but the RPC node serves the chain ...` at startup | `NEAR_RPC_URL` points at another network (for example mainnet): use the testnet endpoint (RPC endpoints above) |
+| `Postgres is not reachable`                                                   | Container stopped or on another port: `docker start pontis-postgres`, or fix `DATABASE_URL`                    |
+| `configured key ... is not a full-access key`                                 | `DEPLOYER_PRIVATE_KEY` belongs to another key of the account; the message lists the right public keys          |
+| `missing ... .wasm`                                                           | Build the contracts first (step 2)                                                                             |
+| Quotes are refused with `NOT_ELIGIBLE`                                        | The account is not on the allowlist (step 4.5)                                                                 |
+| `indexerLagBlocks` null                                                       | The indexer has not run yet                                                                                    |
+| `HistoryUnavailableError` in the indexer log                                  | See the [indexer operating notes](../apps/indexer/README.md)                                                   |

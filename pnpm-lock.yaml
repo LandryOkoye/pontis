@@ -206,6 +206,9 @@ importers:
       '@pontis/domain':
         specifier: workspace:*
         version: link:../packages/domain
+      '@pontis/near-client':
+        specifier: workspace:*
+        version: link:../packages/near-client
       near-api-js:
         specifier: ^7.4.0
         version: 7.4.0

@@ -1,9 +1,10 @@
-// Indexer process: migrate, then follow the chain until stopped.
+// Indexer process: verify the RPC network, migrate, then follow the chain until stopped.
 
 import { createDb, runMigrations } from "@pontis/db";
-import { RpcClient } from "@pontis/near-client";
+import { redactRpcUrl, RpcClient } from "@pontis/near-client";
 import { loadConfig } from "./config.ts";
 import { runIndexer, type Logger } from "./indexer.ts";
+import { verifyStartup } from "./startup.ts";
 import { NearChainSource } from "./near-source.ts";
 import { nearVaultChain } from "./reconcile/near-vault-chain.ts";
 import { Reconciler, runReconciler } from "./reconcile/reconciler.ts";
@@ -14,10 +15,13 @@ const log: Logger = {
   error: (message, fields) => console.error(JSON.stringify({ level: "error", message, ...fields })),
 };
 
+const rpc = new RpcClient({ url: config.NEAR_RPC_URL, timeoutMs: 20_000 });
+// Before the database is touched: a wrong RPC URL must stop the process.
+await verifyStartup(config, rpc, log.info);
+
 const { db, pool } = createDb(config.DATABASE_URL);
 await runMigrations(db);
 
-const rpc = new RpcClient({ url: config.NEAR_RPC_URL, timeoutMs: 20_000 });
 const source = new NearChainSource(rpc, config.PONTIS_CORE_ACCOUNT_ID, {
   concurrency: config.INDEXER_CHUNK_CONCURRENCY,
 });
@@ -29,7 +33,8 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 
 log.info("indexer started", {
   core: config.PONTIS_CORE_ACCOUNT_ID,
-  rpc: config.NEAR_RPC_URL,
+  network: config.NEAR_NETWORK_ID,
+  rpc: redactRpcUrl(config.NEAR_RPC_URL),
   startHeight: config.INDEXER_START_HEIGHT ?? "chain head",
 });
 const reconciling =

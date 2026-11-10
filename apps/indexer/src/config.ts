@@ -4,7 +4,8 @@ import { z } from "zod";
 
 const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
-  NEAR_RPC_URL: z.string().url().default("https://rpc.testnet.near.org"),
+  NEAR_NETWORK_ID: z.enum(["testnet", "sandbox"]).default("testnet"),
+  NEAR_RPC_URL: z.string({ error: "required; see docs/local-setup.md (RPC endpoints)" }).url(),
   PONTIS_CORE_ACCOUNT_ID: z.string().min(2),
   /** First block to index when there is no cursor yet; default is the current final block. */
   INDEXER_START_HEIGHT: z.coerce.number().int().min(0).optional(),
