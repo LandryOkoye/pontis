@@ -1,6 +1,7 @@
 use crate::conversion_tests::{quote_msg, ready};
 use crate::registry_tests::{token_a, token_b};
-use crate::tests::{alice, as_account, as_callback, last_event};
+use crate::tests::{alice, as_account, as_callback, last_event, owner};
+use crate::vault::FUND_VAULT_MSG;
 use crate::vault_tests::unused;
 use crate::*;
 use near_sdk::json_types::U128;
@@ -37,6 +38,10 @@ fn calls() -> Vec<(String, String, Value)> {
     out
 }
 
+/// The nonce of the vector quote.
+const NONCE: &str = "000102030405060708090a0b0c0d0e0f";
+
+/// Spendable inventory of (A, B).
 fn inventory(c: &Contract) -> (u128, u128) {
     (
         c.get_inventory("tgold-a".into()).0,
@@ -44,41 +49,41 @@ fn inventory(c: &Contract) -> (u128, u128) {
     )
 }
 
-fn record(c: &Contract) -> ConversionRecord {
-    let msg: ConversionMsg = serde_json::from_str(&quote_msg(|_| {})).unwrap();
-    let plan = c.validate_conversion(&token_a(), &alice(), U128(AMOUNT_IN), &quote_msg(|_| {}));
-    assert!(
-        plan.is_err(),
-        "the nonce is already used, so validation now refuses it"
-    );
-    ConversionRecord {
-        nonce: msg.quote.nonce,
-        user: alice(),
-        from_id: "tgold-a".into(),
-        to_id: "tgold-b".into(),
-        token_in: token_a(),
-        token_out: token_b(),
-        amount_in: U128(AMOUNT_IN),
-        amount_out_gross: U128(1_000_000_000),
-        fee: U128(1_000_000),
-        amount_out: U128(NET_OUT),
-        ratio: Ratio {
-            num: U128(1000),
-            den: U128(1),
-        },
-        fee_bps: 10,
-        compatibility_version: 2,
-        policy_version: 1,
+fn pending_in(c: &Contract) -> (u128, u128) {
+    (
+        c.get_pending_inbound("tgold-a".into()).0,
+        c.get_pending_inbound("tgold-b".into()).0,
+    )
+}
+
+fn resolve(c: &mut Contract, ok: bool) -> u128 {
+    if ok {
+        as_callback(PromiseResult::Successful(vec![]));
+        c.on_payout_resolved(NONCE.into(), Ok(())).0
+    } else {
+        as_callback(PromiseResult::Failed);
+        c.on_payout_resolved(NONCE.into(), Err(PromiseError::Failed))
+            .0
     }
 }
 
 #[test]
-fn a_valid_conversion_moves_inventory_marks_the_nonce_and_schedules_the_payout() {
+fn a_valid_conversion_holds_the_input_as_pending_reserves_the_output_and_schedules_the_payout() {
     let mut c = ready();
     let result = convert(&mut c, &quote_msg(|_| {}));
     assert!(matches!(result, PromiseOrValue::Promise(_)));
     drop(result); // a dropped promise is what schedules its receipts
-    assert_eq!(inventory(&c), (AMOUNT_IN, FUNDED_B - NET_OUT));
+    assert_eq!(
+        inventory(&c),
+        (0, FUNDED_B - NET_OUT),
+        "the input is not spendable yet; the output is reserved"
+    );
+    assert_eq!(pending_in(&c), (AMOUNT_IN, 0));
+    let pending = c.get_pending_conversion(NONCE.into()).unwrap();
+    assert_eq!(
+        (pending.amount_in.0, pending.amount_out.0),
+        (AMOUNT_IN, NET_OUT)
+    );
 
     let calls = calls();
     let payout = calls.iter().find(|(_, m, _)| m == "ft_transfer").unwrap();
@@ -94,6 +99,7 @@ fn a_valid_conversion_moves_inventory_marks_the_nonce_and_schedules_the_payout()
         .find(|(_, m, _)| m == "on_payout_resolved")
         .unwrap();
     assert_eq!(callback.0, "core.testnet");
+    assert_eq!(callback.2["nonce"], NONCE);
 }
 
 #[test]
@@ -105,8 +111,8 @@ fn a_quote_cannot_be_executed_twice() {
     assert_eq!(second, AMOUNT_IN, "the replay is refunded in full");
     assert_eq!(last_event()["data"]["reason"], "NONCE_USED");
     assert_eq!(
-        inventory(&c),
-        (AMOUNT_IN, FUNDED_B - NET_OUT),
+        (inventory(&c), pending_in(&c)),
+        ((0, FUNDED_B - NET_OUT), (AMOUNT_IN, 0)),
         "and moves nothing"
     );
 }
@@ -120,18 +126,17 @@ fn a_rejected_conversion_refunds_everything_and_changes_nothing() {
     let e = last_event();
     assert_eq!(e["event"], "conversion_rejected");
     assert_eq!(e["data"]["reason"], "QUOTE_EXPIRED");
-    assert_eq!(e["data"]["nonce"], "000102030405060708090a0b0c0d0e0f");
+    assert_eq!(e["data"]["nonce"], NONCE);
     assert_eq!(inventory(&c), before);
+    assert_eq!(pending_in(&c), (0, 0));
     assert!(calls().is_empty(), "no payout is scheduled for a rejection");
 }
 
 #[test]
-fn a_successful_payout_emits_the_full_breakdown_and_refunds_nothing() {
+fn a_successful_payout_commits_the_input_to_inventory_and_emits_the_full_breakdown() {
     let mut c = ready();
     let _ = convert(&mut c, &quote_msg(|_| {}));
-    let rec = record(&c);
-    as_callback(PromiseResult::Successful(vec![]));
-    assert_eq!(c.on_payout_resolved(rec, Ok(())).0, 0);
+    assert_eq!(resolve(&mut c, true), 0, "nothing is refunded");
     let e = last_event();
     assert_eq!(e["event"], "conversion_completed");
     let d = &e["data"];
@@ -148,21 +153,26 @@ fn a_successful_payout_emits_the_full_breakdown_and_refunds_nothing() {
         (Some(2), Some(1))
     );
     assert_eq!(inventory(&c), (AMOUNT_IN, FUNDED_B - NET_OUT));
+    assert_eq!(pending_in(&c), (0, 0));
+    assert!(c.get_pending_conversion(NONCE.into()).is_none());
 }
 
 #[test]
-fn a_failed_payout_restores_inventory_returns_the_input_and_keeps_the_nonce_used() {
+fn a_failed_payout_releases_the_output_keeps_the_input_out_of_inventory_and_returns_it() {
     let mut c = ready();
     let msg = quote_msg(|_| {});
     let _ = convert(&mut c, &msg);
-    let rec = record(&c);
-    as_callback(PromiseResult::Failed);
-    let refund = c.on_payout_resolved(rec, Err(PromiseError::Failed));
     assert_eq!(
-        refund.0, AMOUNT_IN,
+        resolve(&mut c, false),
+        AMOUNT_IN,
         "the whole input is returned to the token for refund"
     );
-    assert_eq!(inventory(&c), (0, FUNDED_B));
+    assert_eq!(
+        inventory(&c),
+        (0, FUNDED_B),
+        "the refunded input is never counted as inventory"
+    );
+    assert_eq!(pending_in(&c), (0, 0));
     let e = last_event();
     assert_eq!(e["event"], "conversion_failed");
     assert_eq!(e["data"]["reason"], "PAYOUT_FAILED");
@@ -170,4 +180,78 @@ fn a_failed_payout_restores_inventory_returns_the_input_and_keeps_the_nonce_used
     // A failed conversion needs a new quote: replaying the same one is refused.
     assert_eq!(unused(convert(&mut c, &msg)), AMOUNT_IN);
     assert_eq!(last_event()["data"]["reason"], "NONCE_USED");
+}
+
+#[test]
+#[should_panic(expected = "no pending conversion")]
+fn a_duplicate_callback_aborts_instead_of_settling_twice() {
+    let mut c = ready();
+    let _ = convert(&mut c, &quote_msg(|_| {}));
+    assert_eq!(resolve(&mut c, true), 0);
+    resolve(&mut c, true);
+}
+
+#[test]
+#[should_panic(expected = "no pending conversion")]
+fn a_callback_for_a_conversion_that_never_started_aborts() {
+    let mut c = ready();
+    resolve(&mut c, false);
+}
+
+#[test]
+#[should_panic(expected = "invalid nonce")]
+fn a_callback_with_a_malformed_nonce_aborts() {
+    let mut c = ready();
+    as_callback(PromiseResult::Successful(vec![]));
+    c.on_payout_resolved("not-a-nonce".into(), Ok(()));
+}
+
+#[test]
+fn a_conversion_input_that_would_overflow_the_accounted_total_is_refused() {
+    let mut c = ready();
+    // Fund A so that inventory + the incoming input cannot be represented.
+    as_account(token_a());
+    let funded = c.ft_on_transfer(
+        owner(),
+        U128(u128::MAX - AMOUNT_IN + 1),
+        FUND_VAULT_MSG.into(),
+    );
+    assert_eq!(unused(funded), 0);
+    assert_eq!(unused(convert(&mut c, &quote_msg(|_| {}))), AMOUNT_IN);
+    assert_eq!(last_event()["data"]["reason"], "INVENTORY_OVERFLOW");
+    assert_eq!(pending_in(&c), (0, 0));
+}
+
+#[test]
+#[should_panic(expected = "insufficient inventory")]
+fn a_withdrawal_cannot_take_an_input_whose_payout_is_pending() {
+    let mut c = ready();
+    let _ = convert(&mut c, &quote_msg(|_| {}));
+    as_account(owner());
+    let _ = c.withdraw_inventory("tgold-a".into(), U128(AMOUNT_IN), owner());
+}
+
+#[test]
+fn a_withdrawal_while_a_payout_is_pending_takes_only_funded_inventory() {
+    let mut c = ready();
+    as_account(token_a());
+    assert_eq!(
+        unused(c.ft_on_transfer(owner(), U128(500), FUND_VAULT_MSG.into())),
+        0
+    );
+    let _ = convert(&mut c, &quote_msg(|_| {}));
+    assert_eq!(
+        (inventory(&c).0, pending_in(&c).0),
+        (500, AMOUNT_IN),
+        "funded inventory and the held input are accounted apart"
+    );
+    as_account(owner());
+    let _ = c.withdraw_inventory("tgold-a".into(), U128(500), owner());
+    assert_eq!((inventory(&c).0, pending_in(&c).0), (0, AMOUNT_IN));
+
+    // The payout then fails: the whole input is still refundable and inventory stays at zero.
+    as_callback(PromiseResult::Failed);
+    let refund = c.on_payout_resolved(NONCE.into(), Err(PromiseError::Failed));
+    assert_eq!(refund.0, AMOUNT_IN);
+    assert_eq!((inventory(&c).0, pending_in(&c).0), (0, 0));
 }

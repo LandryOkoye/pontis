@@ -1,9 +1,10 @@
-// API process: migrate, start the HTTP server and the background registry sync, stop cleanly.
+// API process: verify the RPC network, migrate, start the HTTP server and the background registry sync, stop cleanly.
 
 import { CoreClient, RpcClient, RpcTxVerifier, TokenClient } from "@pontis/near-client";
 import { parseSecretKey } from "@pontis/quote-engine";
 import { buildApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
+import { verifyStartup } from "./startup.ts";
 import { createDb } from "@pontis/db";
 import { runMigrations } from "@pontis/db";
 import { syncRegistry } from "./sync/registry-sync.ts";
@@ -11,15 +12,23 @@ import { expireQuotes } from "./quotes/lifecycle.ts";
 import { startScheduler } from "./sync/scheduler.ts";
 
 const config = loadConfig();
+const rpc = new RpcClient({ url: config.NEAR_RPC_URL });
+// Before the database is touched or a port opened: a wrong RPC URL must stop the process.
+await verifyStartup(config, rpc, (message, fields) =>
+  console.log(JSON.stringify({ level: "info", message, ...fields })),
+);
 const { db, pool } = createDb(config.DATABASE_URL);
 await runMigrations(db);
 
-const rpc = new RpcClient({ url: config.NEAR_RPC_URL });
 const core = new CoreClient(rpc, config.PONTIS_CORE_ACCOUNT_ID);
 const key = parseSecretKey(config.QUOTE_SIGNER_SECRET_KEY);
 const app = buildApp({
   db,
   chainHeight: () => core.blockHeight(),
+  health: {
+    staleAfterMs: config.INDEXER_STALE_AFTER_MS,
+    maxLagBlocks: config.INDEXER_MAX_LAG_BLOCKS,
+  },
   quotes: { chain: core, key, coreId: config.PONTIS_CORE_ACCOUNT_ID },
   conversionChain: {
     isRegistered: async (tokenId, account) =>

@@ -35,4 +35,4 @@ const EXPLANATIONS: Record<RouteRefusal, string> = {
 export const explain = (refusal: RouteRefusal): string => EXPLANATIONS[refusal];
 
 export const PARITY_EXPLANATION =
-  "Approved direct equivalents for a narrow, recorded scope: converted at the approved unit ratio from a controlled test vault, same chain, atomic. Synthetic test assets only.";
+  "Approved direct equivalents for a narrow, recorded scope: converted at the approved unit ratio from a controlled test vault on the same chain. Settlement is asynchronous with a refund if the payout fails; it is not atomic. Synthetic test assets only.";

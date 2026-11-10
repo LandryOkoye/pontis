@@ -12,15 +12,16 @@ pnpm --filter @pontis/indexer start
 
 The indexer applies migrations on start, so it can run before or after the API.
 
-| Variable                    | Default                        | Meaning                                                                                   |
-| --------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
-| `DATABASE_URL`              | required                       | Postgres                                                                                  |
-| `PONTIS_CORE_ACCOUNT_ID`    | required                       | The core contract to follow                                                               |
-| `NEAR_RPC_URL`              | `https://rpc.testnet.near.org` | A node with `EXPERIMENTAL_light_client_proof`; use an archival node to catch up over days |
-| `INDEXER_START_HEIGHT`      | the chain head                 | First block when there is no cursor. Set it to the deployment block to backfill           |
-| `INDEXER_POLL_MS`           | `2000`                         | Pause between passes once caught up                                                       |
-| `INDEXER_RESCAN_BLOCKS`     | `30`                           | Blocks read again behind the cursor on start                                              |
-| `INDEXER_CHUNK_CONCURRENCY` | `4`                            | Parallel chunk reads; matters only without shard detection                                |
+| Variable                    | Default        | Meaning                                                                                                                             |
+| --------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`              | required       | Postgres                                                                                                                            |
+| `PONTIS_CORE_ACCOUNT_ID`    | required       | The core contract to follow                                                                                                         |
+| `NEAR_RPC_URL`              | required       | A node with `EXPERIMENTAL_light_client_proof`; use an archival node to catch up over days. Example: `https://test.rpc.fastnear.com` |
+| `NEAR_NETWORK_ID`           | `testnet`      | `testnet` or `sandbox`. The indexer refuses to start if the node serves another chain                                               |
+| `INDEXER_START_HEIGHT`      | the chain head | First block when there is no cursor. Set it to the deployment block to backfill                                                     |
+| `INDEXER_POLL_MS`           | `2000`         | Pause between passes once caught up                                                                                                 |
+| `INDEXER_RESCAN_BLOCKS`     | `30`           | Blocks read again behind the cursor on start                                                                                        |
+| `INDEXER_CHUNK_CONCURRENCY` | `4`            | Parallel chunk reads; matters only without shard detection                                                                          |
 
 ## What it writes
 
@@ -28,6 +29,7 @@ The indexer applies migrations on start, so it can run before or after the API.
 - `quotes.state` and `conversions`: `SETTLED` or `FAILED` from the conversion events; `REQUIRES_RECONCILIATION` (and an `audit_log` row) when the chain disagrees with the quote.
 - `conversions.tx_hash` / `settlement_events.tx_hash`: only after a reported hash is verified against the chain (see below); never copied from what the wallet reported.
 - `indexer_cursor`: the last block fully applied. `GET /v1/health` reports `indexerLagBlocks` from it.
+- `indexer_cursor`: the last block fully applied. Its `updated_at` is also the heartbeat: it is stamped when a block is applied and when a pass succeeds with nothing new, never by a failed pass. The API's `GET /v1/health` reads the lag and the heartbeat age from it and reports `never_run`, `running`, `lagging` or `stale` ([API health](../api/README.md#health)).
 
 ## Reported transaction hashes
 

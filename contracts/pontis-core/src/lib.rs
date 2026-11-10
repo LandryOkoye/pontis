@@ -43,6 +43,8 @@ enum StorageKey {
     Allowlist,
     Inventory,
     UsedNonces,
+    PendingConversions,
+    PendingInbound,
 }
 
 #[derive(PanicOnDefault)]
@@ -70,10 +72,19 @@ pub struct Contract {
     quote_signer: Option<PublicKey>,
     /// `protocol_fee_bps`, capped at 100.
     fee_bps: u16,
-    /// Vault inventory per representation ID, in smallest units (ADR 0008).
+    /// Spendable vault inventory per representation ID, in smallest units (ADR 0008). Never
+    /// includes an input whose conversion has not settled, and excludes amounts reserved for an
+    /// in-flight output or withdrawal.
     inventory: LookupMap<String, u128>,
     /// Quote nonces already executed or attempted to completion; never pruned (ADR 0006).
     used_nonces: LookupSet<[u8; 16]>,
+    /// Conversions whose payout has not resolved, by nonce (ADR 0007). Present from
+    /// `execute_conversion` until `on_payout_resolved` removes it, exactly once.
+    pending_conversions: LookupMap<[u8; 16], ConversionRecord>,
+    /// Input tokens held for pending conversions, per representation ID. Not spendable: they
+    /// move to `inventory` on a successful payout and stay out of it on a failed one so the
+    /// token's resolver can refund them to the sender.
+    pending_inbound: LookupMap<String, u128>,
 }
 
 #[near]
@@ -102,6 +113,8 @@ impl Contract {
             fee_bps: config::DEFAULT_FEE_BPS,
             inventory: LookupMap::new(StorageKey::Inventory),
             used_nonces: LookupSet::new(StorageKey::UsedNonces),
+            pending_conversions: LookupMap::new(StorageKey::PendingConversions),
+            pending_inbound: LookupMap::new(StorageKey::PendingInbound),
         }
     }
 }

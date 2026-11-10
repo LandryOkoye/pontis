@@ -27,6 +27,8 @@ describe("openapi.yaml", () => {
     expect(actual).toEqual(
       [
         "GET /v1/health",
+        "GET /v1/health/live",
+        "GET /v1/health/ready",
         "GET /v1/issuers",
         "GET /v1/issuers/{id}",
         "GET /v1/assets",
@@ -49,7 +51,14 @@ describe("openapi.yaml", () => {
     expect(withHeader.map((e) => e.path)).toEqual(["/v1/conversions", "/v1/admin/reconciliation"]);
   });
 
-  it("gives every endpoint a structured error response for failures", () => {
+  it("gives every endpoint a structured error response for failures, except declared failureResponses", () => {
+    const declared = new Set(
+      Object.values(ENDPOINTS).flatMap((e) =>
+        Object.keys("failureResponses" in e ? e.failureResponses : {}).map(
+          (status) => `${e.method} ${e.path} ${status}`,
+        ),
+      ),
+    );
     const doc = JSON.parse(JSON.stringify(buildOpenApiDocument()));
     for (const [path, item] of Object.entries<
       Record<string, { responses: Record<string, unknown> }>
@@ -58,6 +67,7 @@ describe("openapi.yaml", () => {
         const errors = Object.keys(op.responses).filter((s) => Number(s) >= 400);
         expect(errors.length, `${method} ${path}`).toBeGreaterThan(0);
         for (const s of errors) {
+          if (declared.has(`${method} ${path} ${s}`)) continue;
           expect(JSON.stringify(op.responses[s])).toContain("#/components/schemas/ApiError");
         }
       }

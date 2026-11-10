@@ -5,7 +5,7 @@ import type { Db } from "@pontis/db";
 import type { TxVerifier } from "@pontis/near-client";
 import { applyExecutions } from "./apply.ts";
 import type { ChainSource } from "./chain-source.ts";
-import { readCursor, rewindCursor, writeCursor } from "./cursor.ts";
+import { createCursor, readCursor, rewindCursor, touchCursor, writeCursor } from "./cursor.ts";
 import { backoffMs, sleep as realSleep } from "./retry.ts";
 import { verifyReportedHashes, type VerifyHashesResult } from "./verify-hashes.ts";
 
@@ -42,20 +42,19 @@ export interface Pass {
 
 export const DEFAULT_CONFIRMATIONS = 3;
 
-/** Reads every block between the cursor and the safe head, then returns. Throws on the first failure. */
+/**
+ * Reads every block between the cursor and the safe head, then returns. Throws on the first failure.
+ * A pass that succeeds with nothing new stamps the cursor's `updated_at` as a heartbeat (the API's
+ * health route reads it); a pass that throws does not, and neither does the rewind on start.
+ * Applying a block refreshes it as a side effect of advancing the cursor, in the same transaction.
+ */
 export async function indexOnce(options: IndexerOptions): Promise<Pass> {
   const { db, source } = options;
   const target = (await source.finalHeight()) - (options.confirmations ?? DEFAULT_CONFIRMATIONS);
   const cursor = await readCursor(db);
   const from = (cursor ?? (options.startHeight ?? target + 1) - 1) + 1;
-  const pass: Pass = {
-    from,
-    to: target,
-    stored: 0,
-    duplicates: 0,
-    hashes: { verified: 0, rejected: 0, inconclusive: 0 },
-  };
-  if (cursor === undefined) await writeCursor(db, from - 1);
+  const pass: Pass = { from, to: target, stored: 0, duplicates: 0 };
+  if (cursor === undefined) await createCursor(db, from - 1);
   for (let height = from; height <= target; height++) {
     const executions = await source.executionsAt(height);
     await db.transaction(async (tx) => {
@@ -71,6 +70,8 @@ export async function indexOnce(options: IndexerOptions): Promise<Pass> {
     coreId: options.coreId,
     log: options.log,
   });
+  // Only reached when every read above succeeded.
+  if (from > target) await touchCursor(db);
   return pass;
 }
 

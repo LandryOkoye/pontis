@@ -12,6 +12,7 @@ import {
   HealthSchema,
   IssuerSchema,
   IssuerSummarySchema,
+  LivenessSchema,
 } from "./registry-types.ts";
 import {
   CompareRoutesRequestSchema,
@@ -59,6 +60,10 @@ interface Endpoint {
   readonly headers?: z.ZodObject;
   readonly body?: z.ZodType;
   readonly description?: string;
+  /** Non-error-envelope responses for failure statuses, such as the readiness probe's 503. */
+  readonly failureResponses?: Readonly<
+    Record<number, { readonly description: string; readonly schema: z.ZodType }>
+  >;
 }
 
 const VALIDATION = { 400: ["VALIDATION_ERROR"] } as const;
@@ -69,11 +74,42 @@ export const ENDPOINTS = {
   getHealth: {
     method: "get",
     path: "/v1/health",
-    summary: "Service health",
+    summary: "Combined service health",
     tag: "Health",
     status: 200,
     response: HealthSchema,
     errors: { ...COMMON },
+    description:
+      "Always 200 while the process can answer; the body carries the verdict. `status` is `ok` only when the database and RPC answer and the indexer state is `running`; otherwise `degraded`. Use `/v1/health/ready` for a probe that fails on non-readiness.",
+  },
+  getHealthLive: {
+    method: "get",
+    path: "/v1/health/live",
+    summary: "Liveness",
+    tag: "Health",
+    status: 200,
+    response: LivenessSchema,
+    errors: { ...COMMON },
+    description:
+      "Answers 200 whenever the process is up. Touches no database, RPC or indexer state, so it is safe for restart probes.",
+  },
+  getHealthReady: {
+    method: "get",
+    path: "/v1/health/ready",
+    summary: "Readiness",
+    tag: "Health",
+    status: 200,
+    response: HealthSchema,
+    errors: { ...COMMON },
+    failureResponses: {
+      503: {
+        description:
+          "Not ready: the database or RPC is unreachable, or the indexer never ran or is stale. Same body as `/v1/health`.",
+        schema: HealthSchema,
+      },
+    },
+    description:
+      "200 when the database and RPC answer and the indexer is `running` or `lagging`; 503 otherwise. A lagging indexer is still ready, but `status` in the body is `degraded`.",
   },
   listIssuers: {
     method: "get",
@@ -288,6 +324,12 @@ export function buildRegistry(): OpenAPIRegistry {
           description: "Success",
           content: { "application/json": { schema: e.response } },
         },
+        ...Object.fromEntries(
+          Object.entries(e.failureResponses ?? {}).map(([status, r]) => [
+            status,
+            { description: r.description, content: { "application/json": { schema: r.schema } } },
+          ]),
+        ),
         ...errorResponses,
       },
     });

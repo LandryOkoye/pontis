@@ -25,5 +25,5 @@ The chain, not the database, says whether a conversion happened. The API moves a
 
 - One chunk read per block on testnet instead of ten; at one block per second the indexer makes two to three RPC calls per second while idle (a block, its chunk, and a poll of the head).
 - The indexer follows the chain roughly four blocks behind. A conversion shows as settled a few seconds after the transaction finalizes.
-- A receipt the node cannot prove stalls the indexer. The loop retries with growing pauses, logs every failure, and `GET /v1/health` shows the lag, so a stall is visible rather than silent.
+- A receipt the node cannot prove stalls the indexer. The loop retries with growing pauses, logs every failure, and `GET /v1/health` shows the lag and, through a heartbeat the indexer stamps on every successful pass, whether it is still running (`stale` when it is not), so a stall is visible rather than silent.
 - Running the indexer against a node with short retention needs it to stay close to the head: the sandbox keeps only minutes of blocks.

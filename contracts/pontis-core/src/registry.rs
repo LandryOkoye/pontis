@@ -26,6 +26,7 @@ impl Contract {
             "issuer already registered",
         );
         require_text(&issuer.name, "name");
+        assert_status_claim_available(issuer.verification_status);
         bound_optional_text(&issuer.jurisdiction, "jurisdiction");
         bound_optional_text(&issuer.contact, "contact");
         require_list(
@@ -75,6 +76,7 @@ impl Contract {
             "canonical asset already registered",
         );
         require_text(&asset.name, "name");
+        assert_status_claim_available(asset.verification_status);
         for (value, field) in [
             (&asset.category, "category"),
             (&asset.claim_description, "claim_description"),
@@ -142,11 +144,19 @@ impl Contract {
             "canonical asset not found",
         );
         check(self.issuers.contains_key(&r.issuer_id), "issuer not found");
+        let (issuer, asset) = (
+            self.issuers.get(&r.issuer_id),
+            self.canonical_assets.get(&r.canonical_asset_id),
+        );
+        if let (Some(issuer), Some(asset)) = (issuer, asset) {
+            assert_issuer_authorizes(issuer, asset, &r.account_id);
+        }
         check(
             !self.representation_by_account.contains_key(&r.account_id),
             "token account already registered",
         );
         require_text(&r.name, "name");
+        assert_status_claim_available(r.verification_status);
         require_text(&r.symbol, "symbol");
         check(r.decimals <= MAX_DECIMALS, "decimals must be at most 38");
         let unit_multiplier = Ratio::normalised(r.unit_multiplier.num, r.unit_multiplier.den);
@@ -498,7 +508,21 @@ pub(crate) fn page<'a, T: Clone + 'a>(
 
 // ---- completeness rules for activation (brief §19.1) ----
 
+/// Refuses the one status this MVP cannot back; shared by registration and activation.
+fn assert_status_claim_available(status: VerificationStatus) {
+    check(
+        status != VerificationStatus::IndependentlyVerified,
+        "independently_verified is not available: no authenticated verifier exists in this MVP",
+    );
+}
+
+/// What the contract can and cannot vouch for. Evidence is a URI, a SHA-256 string and a provenance
+/// label chosen by the registrar: the contract checks their syntax, never the content behind them,
+/// and nothing authenticates who produced it. So `IssuerAttested` and `ThirdPartyAttested` mean
+/// "the registrar recorded this claim", and `IndependentlyVerified` is refused outright because this
+/// MVP has no authenticated verifier that could back it (ADR 0009).
 fn assert_verification_backed(status: VerificationStatus, evidence: &[EvidenceRef]) {
+    assert_status_claim_available(status);
     check(
         !evidence.is_empty(),
         "at least one evidence reference is required",
@@ -506,6 +530,22 @@ fn assert_verification_backed(status: VerificationStatus, evidence: &[EvidenceRe
     check(
         status.supported_by(evidence),
         "verification_status claims more than the attached evidence supports",
+    );
+}
+
+/// An issuer's `authorized_categories` and `controlled_accounts` are enforced when a representation
+/// is registered and again when it is activated: the canonical asset's category must be one the
+/// issuer is authorized for, and, if the issuer lists controlled accounts, the token account must be
+/// one of them. An empty `controlled_accounts` declares no account constraint. Both lists are
+/// registrar-asserted: the contract cannot prove the issuer controls those accounts (ADR 0009).
+fn assert_issuer_authorizes(issuer: &Issuer, asset: &CanonicalAsset, account: &AccountId) {
+    check(
+        issuer.authorized_categories.contains(&asset.category),
+        "issuer is not authorized for the category of this canonical asset",
+    );
+    check(
+        issuer.controlled_accounts.is_empty() || issuer.controlled_accounts.contains(account),
+        "token account is not among the issuer's controlled accounts",
     );
 }
 
@@ -559,4 +599,9 @@ fn assert_representation_complete(
             .is_some_and(|a| a.status == Status::Active),
         "canonical asset must be active",
     );
+    if let (Some(issuer), Some(asset)) =
+        (issuers.get(&r.issuer_id), assets.get(&r.canonical_asset_id))
+    {
+        assert_issuer_authorizes(issuer, asset, &r.account_id);
+    }
 }

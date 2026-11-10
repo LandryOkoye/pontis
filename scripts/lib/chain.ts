@@ -1,5 +1,6 @@
 // Thin wrapper over near-api-js: one deployer account, JSON view and call helpers.
 
+import { assertNetwork, networkProblem, RpcClient } from "@pontis/near-client";
 import { Account, JsonRpcProvider, KeyPair } from "near-api-js";
 import type { ChainConfig } from "./config.ts";
 
@@ -26,35 +27,16 @@ export interface Chain {
   verifyNetwork(): Promise<void>;
 }
 
-/** Why an RPC node's chain does not match `NEAR_NETWORK_ID`, or `undefined` if it does. */
-export function networkProblem(networkId: string, chainId: string): string | undefined {
-  const matches =
-    networkId === "sandbox" ? chainId.startsWith("test-chain") : chainId === networkId;
-  if (matches) return undefined;
-  return `NEAR_NETWORK_ID is ${networkId} but the RPC node serves the chain "${chainId}". Refusing to send anything: check NEAR_RPC_URL (this project is testnet and sandbox only).`;
-}
-
-async function fetchChainId(rpcUrl: string): Promise<string> {
-  const response = await fetch(rpcUrl, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "status", params: [] }),
-  });
-  const body = (await response.json()) as { result?: { chain_id?: string } };
-  const chainId = body.result?.chain_id;
-  if (!chainId) throw new Error(`${rpcUrl} did not answer a status request with a chain id`);
-  return chainId;
-}
+export { networkProblem };
 
 export function connect(config: ChainConfig): Chain {
   const provider = new JsonRpcProvider({ url: config.rpcUrl });
   // Checked once, before the first transaction: a wrong RPC URL must never reach another network.
   let verified: Promise<void> | undefined;
   const verifyNetwork = () =>
-    (verified ??= fetchChainId(config.rpcUrl).then((chainId) => {
-      const problem = networkProblem(config.networkId, chainId);
-      if (problem) throw new Error(problem);
-    }));
+    (verified ??= assertNetwork(new RpcClient({ url: config.rpcUrl }), config.networkId).then(
+      () => undefined,
+    ));
   const account = new Account(
     config.deployerId,
     provider,

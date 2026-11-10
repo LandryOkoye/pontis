@@ -19,14 +19,41 @@ impl Env {
         amount_in: u128,
         ttl_ms: i64,
     ) -> anyhow::Result<String> {
+        self.signed_msg_for(user, true, amount_in, ttl_ms).await
+    }
+
+    /// Expected `(gross, fee, net)` for a B to A conversion: 1000 smallest B is 1 smallest A.
+    pub fn expected_b_to_a(amount_in: u128) -> (u128, u128, u128) {
+        let gross = amount_in / RATIO_A_TO_B;
+        let fee = (gross * FEE_BPS).div_ceil(10_000);
+        (gross, fee, gross - fee)
+    }
+
+    /// A signed `msg` converting `amount_in` for `user`: A to B when `a_to_b`, else B to A.
+    pub async fn signed_msg_for(
+        &self,
+        user: &Account,
+        a_to_b: bool,
+        amount_in: u128,
+        ttl_ms: i64,
+    ) -> anyhow::Result<String> {
+        let (token_in, token_out, from, to) = if a_to_b {
+            (&self.token_a, &self.token_b, "tgold-a", "tgold-b")
+        } else {
+            (&self.token_b, &self.token_a, "tgold-b", "tgold-a")
+        };
         let route: Value = self
             .core
             .view("get_route")
-            .args_json(json!({"from_id": "tgold-a", "to_id": "tgold-b"}))
+            .args_json(json!({"from_id": from, "to_id": to}))
             .await?
             .json()?;
         let terms = &route["terms"];
-        let (gross, fee, net) = Self::expected_a_to_b(amount_in);
+        let (gross, fee, net) = if a_to_b {
+            Self::expected_a_to_b(amount_in)
+        } else {
+            Self::expected_b_to_a(amount_in)
+        };
         let n = self.nonce.get();
         self.nonce.set(n + 1);
         let nonce = format!("{n:032x}");
@@ -39,12 +66,7 @@ impl Env {
         // Borsh by hand, deliberately independent of the contract code.
         let mut m = b"pontis-quote-v1".to_vec();
         m.push(1);
-        for id in [
-            self.core.id(),
-            user.id(),
-            self.token_a.id(),
-            self.token_b.id(),
-        ] {
+        for id in [self.core.id(), user.id(), token_in.id(), token_out.id()] {
             m.extend((id.as_str().len() as u32).to_le_bytes());
             m.extend(id.as_str().as_bytes());
         }
@@ -58,8 +80,8 @@ impl Env {
         m.extend(pv.to_le_bytes());
         let signature =
             base64::engine::general_purpose::STANDARD.encode(self.signer.sign(&m).to_bytes());
-        Ok(json!({"quote": {"version": 1, "contract": self.core.id(), "user": user.id(), "token_in": self.token_a.id(),
-            "token_out": self.token_b.id(), "amount_in": amount_in.to_string(), "amount_out_gross": gross.to_string(),
+        Ok(json!({"quote": {"version": 1, "contract": self.core.id(), "user": user.id(), "token_in": token_in.id(),
+            "token_out": token_out.id(), "amount_in": amount_in.to_string(), "amount_out_gross": gross.to_string(),
             "fee": fee.to_string(), "amount_out": net.to_string(), "fee_bps": FEE_BPS, "expires_at_ms": expires,
             "nonce": nonce, "compatibility_version": cv, "policy_version": pv}, "signature": signature}).to_string())
     }
