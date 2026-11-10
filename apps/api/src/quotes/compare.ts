@@ -7,6 +7,7 @@ import type { Db } from "@pontis/db";
 import { assetRepresentations } from "@pontis/db";
 import { notFound } from "../errors.ts";
 import type { QuoteChain } from "./chain.ts";
+import { payoutAmounts, vaultCovers } from "./payout.ts";
 import { PARITY_EXPLANATION, explain, refusalCode } from "./reasons.ts";
 
 export async function assertAssetsExist(db: Db, ids: string[]): Promise<void> {
@@ -47,10 +48,9 @@ export async function compareRoutes(
     compatibilityVersion: route.terms.compatibility_version,
   };
   if (req.amount !== undefined) {
-    const inventory = BigInt(await chain.getInventory(req.toId));
-    const wanted =
-      (BigInt(req.amount) * BigInt(route.terms.ratio.num)) / BigInt(route.terms.ratio.den);
-    if (inventory < wanted) {
+    // The same amounts and inventory rule as `createQuote`: the vault must cover the net payout.
+    const amounts = payoutAmounts(BigInt(req.amount), route.terms.ratio, await chain.getFeeBps());
+    if (!(await vaultCovers(chain, req.toId, amounts))) {
       return {
         routes: [
           {
