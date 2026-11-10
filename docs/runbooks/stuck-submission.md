@@ -11,7 +11,7 @@ A conversion the wallet reported as submitted has no outcome 10 minutes later. T
 
 1. Get the hash: `curl -s $API/v1/transactions/$CONVERSION_ID | jq '{state, txHash, failureReason}'`.
 2. Look the transaction up in a testnet explorer, or ask the RPC node, and read its outcome.
-3. Check the indexer: `curl -s $API/v1/health | jq .indexerLagBlocks` and the indexer's log for a repeating error. A large lag or a repeating error means the transaction may well have succeeded and the indexer is behind.
+3. Check the indexer: `curl -s $API/v1/health | jq .indexer` and the indexer's log for a repeating error. State `stale` or `never_run` (indexer stopped, crashed or failing every pass), `lagging`, or a repeating error means the transaction may well have succeeded and the indexer is behind.
 
 ## Do
 

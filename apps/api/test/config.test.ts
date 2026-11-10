@@ -16,6 +16,9 @@ describe("loadConfig", () => {
       NEAR_NETWORK_ID: "testnet",
       REGISTRY_SYNC_INTERVAL_MS: 15_000,
       QUOTE_SWEEP_INTERVAL_MS: 10_000,
+      INDEXER_STALE_AFTER_MS: 30_000,
+      INDEXER_MAX_LAG_BLOCKS: 50,
+      NEAR_RPC_URL: "https://rpc.testnet.near.org",
       NEAR_RPC_URL: "https://test.rpc.fastnear.com",
     });
   });
@@ -33,6 +36,15 @@ describe("loadConfig", () => {
     );
     expect(() => loadConfig({ ...base, QUOTE_SWEEP_INTERVAL_MS: "10" })).toThrow(
       /QUOTE_SWEEP_INTERVAL_MS/,
+    );
+  });
+
+  it("reads the indexer health thresholds and refuses a stale limit under one second", () => {
+    expect(
+      loadConfig({ ...base, INDEXER_STALE_AFTER_MS: "5000", INDEXER_MAX_LAG_BLOCKS: "0" }),
+    ).toMatchObject({ INDEXER_STALE_AFTER_MS: 5000, INDEXER_MAX_LAG_BLOCKS: 0 });
+    expect(() => loadConfig({ ...base, INDEXER_STALE_AFTER_MS: "10" })).toThrow(
+      /INDEXER_STALE_AFTER_MS/,
     );
   });
 

@@ -8,7 +8,7 @@ import type { ConversionChain } from "./conversions/chain.ts";
 import type { QuoteDeps } from "./quotes/service.ts";
 import { registerAdminRoutes } from "./routes/admin.ts";
 import { registerConversionRoutes } from "./routes/conversions.ts";
-import { registerHealthRoute } from "./routes/health.ts";
+import { registerHealthRoute, type HealthOptions } from "./routes/health.ts";
 import { registerQuoteRoutes } from "./routes/quotes.ts";
 import { registerSecurity, type SecurityOptions } from "./security/index.ts";
 
@@ -16,6 +16,8 @@ export interface AppDeps {
   db: Db;
   /** Latest chain height from the NEAR RPC; may reject. */
   chainHeight: () => Promise<number>;
+  /** Indexer staleness and lag thresholds and the clock for them; see `HealthOptions`. */
+  health?: HealthOptions;
   /** Chain reads, signing key and core account for quoting. */
   quotes: Omit<QuoteDeps, "db">;
   /** Token registration reads for the wallet plan. */
@@ -40,7 +42,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerSecurity(app, deps.security ?? { corsOrigins: [] });
   // Queued after the security plugins, so their hooks cover every route below.
   app.register(async (scope) => {
-    registerHealthRoute(scope, deps.db, deps.chainHeight);
+    registerHealthRoute(scope, deps.db, deps.chainHeight, deps.health);
     registerCatalogRoutes(scope, deps.db);
     registerQuoteRoutes(scope, { db: deps.db, ...deps.quotes });
     registerConversionRoutes(scope, {

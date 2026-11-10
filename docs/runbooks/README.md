@@ -14,7 +14,7 @@ First look, always:
 
 ```bash
 pnpm --filter @pontis/scripts ops status                                  # chain: paused, fee, signer, inventory, route
-curl -s $API/v1/health | jq                                               # database, chain height, indexer lag
+curl -s $API/v1/health | jq                                               # database, rpc, chain height, indexer state and lag
 curl -s -H "Authorization: Bearer $ADMIN_API_KEY" $API/v1/admin/reconciliation | jq   # findings and flagged quotes
 ```
 

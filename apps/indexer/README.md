@@ -27,7 +27,7 @@ The indexer applies migrations on start, so it can run before or after the API.
 
 - `settlement_events`: every `EVENT_JSON` log of every successful core receipt, unique by `(receipt_id, log_index)`. Events that name a quote's nonce are linked to its conversion.
 - `quotes.state` and `conversions`: `SETTLED` or `FAILED` from the conversion events; `REQUIRES_RECONCILIATION` (and an `audit_log` row) when the chain disagrees with the quote.
-- `indexer_cursor`: the last block fully applied. `GET /v1/health` reports `indexerLagBlocks` from it.
+- `indexer_cursor`: the last block fully applied. Its `updated_at` is also the heartbeat: it is stamped when a block is applied and when a pass succeeds with nothing new, never by a failed pass. The API's `GET /v1/health` reads the lag and the heartbeat age from it and reports `never_run`, `running`, `lagging` or `stale` ([API health](../api/README.md#health)).
 
 ## Reconciler
 
