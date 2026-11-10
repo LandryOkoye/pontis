@@ -142,7 +142,7 @@ export interface RouteDescriptor {
   readonly type: RouteType;
   readonly venue: "CONTROLLED_TEST_VAULT";
   readonly network: Network;
-  readonly settlement: "ATOMIC";
+  readonly settlement: "ASYNC_CALLBACK_WITH_REFUND";
 }
 
 export interface Quote {

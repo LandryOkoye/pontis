@@ -11,7 +11,7 @@ Two synthetic NEP-141 representations of one synthetic claim (`SYN-GOLD-OZ`) on 
 - registered with their issuers and evidence,
 - assessed as `DIRECT_EQUIVALENT` by an approved compatibility relationship,
 - quoted by the backend (ed25519-signed, 60 s expiry),
-- converted atomically from a controlled vault via `ft_transfer_call`,
+- converted from a controlled vault via `ft_transfer_call` (same-chain, callback-based settlement over several receipts with a refund if the payout fails; not atomic),
 - indexed and reconciled against contract events.
 
 This is a **parity conversion** of a synthetic test asset. It is not a bridge and not an exchange.
