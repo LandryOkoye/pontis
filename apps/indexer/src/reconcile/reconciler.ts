@@ -51,7 +51,7 @@ export class Reconciler {
           actor: "reconciler",
           action: "quote.requires_reconciliation",
           subject: quote.id,
-          detail: { kind: "STUCK_SUBMITTED", reason, txHash: conversion.txHash },
+          detail: { kind: "STUCK_SUBMITTED", reason, reportedTxHash: conversion.reportedTxHash },
         });
       });
     }
