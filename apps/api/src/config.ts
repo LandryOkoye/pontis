@@ -1,6 +1,7 @@
 // Environment configuration for the API process (BuildPlan B9). Testnet only.
 
 import { z } from "zod";
+import { DEFAULT_INDEXER_MAX_LAG_BLOCKS, DEFAULT_INDEXER_STALE_AFTER_MS } from "./routes/health.ts";
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -46,6 +47,10 @@ const EnvSchema = z.object({
     .transform((v) => v === "true"),
   /** 0 disables the background registry sync (use `pnpm sync` instead). */
   REGISTRY_SYNC_INTERVAL_MS: z.coerce.number().int().min(0).default(15_000),
+  /** Health: an indexer heartbeat older than this is `stale` (stopped or crashed). */
+  INDEXER_STALE_AFTER_MS: z.coerce.number().int().min(1000).default(DEFAULT_INDEXER_STALE_AFTER_MS),
+  /** Health: a running indexer more than this many blocks behind the chain is `lagging`. */
+  INDEXER_MAX_LAG_BLOCKS: z.coerce.number().int().min(0).default(DEFAULT_INDEXER_MAX_LAG_BLOCKS),
   /** How often unused quotes past their expiry are marked EXPIRED. */
   QUOTE_SWEEP_INTERVAL_MS: z.coerce.number().int().min(1000).default(10_000),
 });

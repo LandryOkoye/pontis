@@ -64,7 +64,7 @@ pnpm --filter @pontis/e2e e2e        # about three minutes after the first build
    pnpm --filter @pontis/indexer start
    ```
 
-4. **Check.** `curl localhost:3000/v1/health` should answer `ok` with a real `chainHeight`, and `indexerLagBlocks` should settle at a few blocks. `pnpm --filter @pontis/scripts ops status` prints the contract's state.
+4. **Check.** `curl localhost:3000/v1/health` should answer `ok` with a real `chainHeight`, `indexer.state` `running` and `indexerLagBlocks` settling at a few blocks. It reports `degraded` until the indexer has run, and again if the indexer stops ([health states](../apps/api/README.md#health)); `/v1/health/ready` is the same check as an HTTP status. `pnpm --filter @pontis/scripts ops status` prints the contract's state.
 
 5. **Let users in.** Eligibility is an on-chain allowlist:
 

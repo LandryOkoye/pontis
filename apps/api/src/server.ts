@@ -20,6 +20,10 @@ const key = parseSecretKey(config.QUOTE_SIGNER_SECRET_KEY);
 const app = buildApp({
   db,
   chainHeight: () => core.blockHeight(),
+  health: {
+    staleAfterMs: config.INDEXER_STALE_AFTER_MS,
+    maxLagBlocks: config.INDEXER_MAX_LAG_BLOCKS,
+  },
   quotes: { chain: core, key, coreId: config.PONTIS_CORE_ACCOUNT_ID },
   conversionChain: {
     isRegistered: async (tokenId, account) =>
