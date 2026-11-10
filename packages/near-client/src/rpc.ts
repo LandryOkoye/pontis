@@ -50,6 +50,11 @@ export class RpcClient {
     this.timeoutMs = options.timeoutMs ?? 10_000;
   }
 
+  /** The endpoint this client talks to. May carry credentials: redact before logging. */
+  get url(): string {
+    return this.options.url;
+  }
+
   async call(method: string, params: unknown): Promise<unknown> {
     const response = await this.fetchImpl(this.options.url, {
       method: "POST",
