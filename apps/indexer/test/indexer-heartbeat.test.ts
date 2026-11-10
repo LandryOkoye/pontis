@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { CURSOR_NAME, readCursor } from "../src/cursor.ts";
 import { indexOnce } from "../src/indexer.ts";
-import { FakeSource, silent } from "./fake-source.ts";
+import { FakeSource, noVerifier, silent } from "./fake-source.ts";
 import { useSeededDb } from "./harness.ts";
 
 const OLD = new Date("2026-01-01T00:00:00Z");
@@ -20,7 +20,15 @@ class FinalHeightDown extends FakeSource {
 describe("indexer heartbeat", () => {
   const h = useSeededDb();
   const run = (source: FakeSource) =>
-    indexOnce({ db: h.db, source, log: silent, confirmations: 2, startHeight: 100 });
+    indexOnce({
+      db: h.db,
+      source,
+      verifier: noVerifier,
+      coreId: "core.testnet",
+      log: silent,
+      confirmations: 2,
+      startHeight: 100,
+    });
   const row = async () =>
     (await h.db.select().from(indexerCursor).where(eq(indexerCursor.name, CURSOR_NAME)))[0]!;
   const age = (when: Date) =>

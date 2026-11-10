@@ -53,7 +53,13 @@ export async function indexOnce(options: IndexerOptions): Promise<Pass> {
   const target = (await source.finalHeight()) - (options.confirmations ?? DEFAULT_CONFIRMATIONS);
   const cursor = await readCursor(db);
   const from = (cursor ?? (options.startHeight ?? target + 1) - 1) + 1;
-  const pass: Pass = { from, to: target, stored: 0, duplicates: 0 };
+  const pass: Pass = {
+    from,
+    to: target,
+    stored: 0,
+    duplicates: 0,
+    hashes: { verified: 0, rejected: 0, inconclusive: 0 },
+  };
   if (cursor === undefined) await createCursor(db, from - 1);
   for (let height = from; height <= target; height++) {
     const executions = await source.executionsAt(height);
