@@ -39,9 +39,9 @@ impl Env {
             json!({"uri": format!("docs/asset-dossiers/{d}.md"), "sha256": SHA,
             "provenance": "issuer_provided", "description": "Self-attested synthetic dossier"})
         };
-        for id in ["issuer-a", "issuer-b"] {
+        for (id, token) in [("issuer-a", &self.token_a), ("issuer-b", &self.token_b)] {
             self.ok("register_issuer", json!({"issuer": {"id": id, "name": format!("Synthetic {id}"), "jurisdiction": null,
-                "authorized_categories": ["synthetic test claims"], "controlled_accounts": [], "contact": null,
+                "authorized_categories": ["Synthetic commodity claim"], "controlled_accounts": [token.id()], "contact": null,
                 "synthetic": true, "verification_status": "unverified"}})).await?;
             self.ok("add_evidence", json!({"subject_type": "issuer", "subject_id": id, "evidence": evidence("TGOLD-A")})).await?;
             self.ok("set_issuer_status", json!({"id": id, "status": "active"}))
