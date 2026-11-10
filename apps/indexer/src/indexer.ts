@@ -2,10 +2,12 @@
 // or a failed RPC call leaves the cursor at the last block whose events are all stored.
 
 import type { Db } from "@pontis/db";
+import type { TxVerifier } from "@pontis/near-client";
 import { applyExecutions } from "./apply.ts";
 import type { ChainSource } from "./chain-source.ts";
 import { createCursor, readCursor, rewindCursor, touchCursor, writeCursor } from "./cursor.ts";
 import { backoffMs, sleep as realSleep } from "./retry.ts";
+import { verifyReportedHashes, type VerifyHashesResult } from "./verify-hashes.ts";
 
 export interface Logger {
   info(message: string, fields?: Record<string, unknown>): void;
@@ -15,6 +17,10 @@ export interface Logger {
 export interface IndexerOptions {
   db: Db;
   source: ChainSource;
+  /** Checks the transaction hashes wallets reported for settled conversions. */
+  verifier: TxVerifier;
+  /** The core contract the conversion transfers must be sent to. */
+  coreId: string;
   log: Logger;
   /** First block to read when there is no cursor; default is the newest block that is safe to read. */
   startHeight?: number | undefined;
@@ -31,6 +37,7 @@ export interface Pass {
   to: number;
   stored: number;
   duplicates: number;
+  hashes: VerifyHashesResult;
 }
 
 export const DEFAULT_CONFIRMATIONS = 3;
@@ -46,7 +53,13 @@ export async function indexOnce(options: IndexerOptions): Promise<Pass> {
   const target = (await source.finalHeight()) - (options.confirmations ?? DEFAULT_CONFIRMATIONS);
   const cursor = await readCursor(db);
   const from = (cursor ?? (options.startHeight ?? target + 1) - 1) + 1;
-  const pass: Pass = { from, to: target, stored: 0, duplicates: 0 };
+  const pass: Pass = {
+    from,
+    to: target,
+    stored: 0,
+    duplicates: 0,
+    hashes: { verified: 0, rejected: 0, inconclusive: 0 },
+  };
   if (cursor === undefined) await createCursor(db, from - 1);
   for (let height = from; height <= target; height++) {
     const executions = await source.executionsAt(height);
@@ -57,6 +70,12 @@ export async function indexOnce(options: IndexerOptions): Promise<Pass> {
       await writeCursor(tx, height);
     });
   }
+  pass.hashes = await verifyReportedHashes({
+    db,
+    verifier: options.verifier,
+    coreId: options.coreId,
+    log: options.log,
+  });
   // Only reached when every read above succeeded.
   if (from > target) await touchCursor(db);
   return pass;
@@ -82,6 +101,8 @@ export async function runIndexer(options: RunOptions): Promise<void> {
       const pass = await indexOnce(options);
       failures = 0;
       if (pass.stored > 0 || pass.duplicates > 0) log.info("indexed", { ...pass });
+      else if (pass.hashes.verified + pass.hashes.rejected > 0)
+        log.info("hashes", { ...pass.hashes });
       await wait(pollMs);
     } catch (error) {
       const pause = backoffMs(failures++, pollMs, options.maxBackoffMs ?? 60_000);

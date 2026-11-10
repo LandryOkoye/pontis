@@ -1,6 +1,6 @@
 // API process: verify the RPC network, migrate, start the HTTP server and the background registry sync, stop cleanly.
 
-import { CoreClient, RpcClient, TokenClient } from "@pontis/near-client";
+import { CoreClient, RpcClient, RpcTxVerifier, TokenClient } from "@pontis/near-client";
 import { parseSecretKey } from "@pontis/quote-engine";
 import { buildApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
@@ -34,6 +34,7 @@ const app = buildApp({
     isRegistered: async (tokenId, account) =>
       (await new TokenClient(rpc, tokenId).storageBalanceOf(account)) !== null,
   },
+  txVerifier: new RpcTxVerifier(rpc),
   ...(config.ADMIN_API_KEY ? { adminApiKey: config.ADMIN_API_KEY } : {}),
   security: {
     corsOrigins: config.CORS_ORIGIN,

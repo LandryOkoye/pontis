@@ -252,6 +252,8 @@ export const transactionSettled: Transaction = {
   quote: buildQuote(1_000_000n, "SETTLED"),
   state: "SETTLED",
   txHash: "9ZkBqE3nVhJ2pJt8h4Y8yH5m3xKcM6W7kQ1sF2dRnA4T",
+  reportedTxHash: "9ZkBqE3nVhJ2pJt8h4Y8yH5m3xKcM6W7kQ1sF2dRnA4T",
+  txHashStatus: "VERIFIED",
   failureReason: null,
   events: [
     {

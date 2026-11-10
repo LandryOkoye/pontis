@@ -7,7 +7,7 @@ import { seedQuote } from "./seed.ts";
 const h = useSeededDb();
 
 describe("applyExecutions", () => {
-  it("settles a submitted quote and attributes the event, with the reported hash", async () => {
+  it("settles a submitted quote and attributes the event, leaving the reported hash unverified", async () => {
     const q = await seedQuote(h.db, "SUBMITTED", "HASH-1");
     const exec = execution([completed(q.nonce)]);
     expect(await h.apply(exec)).toEqual({ stored: 1, duplicates: 0 });
@@ -19,8 +19,14 @@ describe("applyExecutions", () => {
       .where(eq(settlementEvents.receiptId, exec.receiptId));
     expect([event?.conversionId, event?.txHash, event?.eventName]).toEqual([
       q.conversionId,
-      "HASH-1",
+      null,
       "conversion_completed",
+    ]);
+    const conversion = await h.conversion(q.conversionId);
+    expect([conversion?.reportedTxHash, conversion?.txHash, conversion?.txHashStatus]).toEqual([
+      "HASH-1",
+      null,
+      "REPORTED",
     ]);
   });
 

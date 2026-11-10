@@ -18,7 +18,6 @@ describe("loadConfig", () => {
       QUOTE_SWEEP_INTERVAL_MS: 10_000,
       INDEXER_STALE_AFTER_MS: 30_000,
       INDEXER_MAX_LAG_BLOCKS: 50,
-      NEAR_RPC_URL: "https://rpc.testnet.near.org",
       NEAR_RPC_URL: "https://test.rpc.fastnear.com",
     });
   });
