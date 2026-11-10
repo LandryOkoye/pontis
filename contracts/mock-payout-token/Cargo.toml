@@ -1,0 +1,13 @@
+[package]
+name = "mock-payout-token"
+version = "0.1.0"
+description = "TEST FIXTURE ONLY: a NEP-141 destination whose ft_transfer is held open until a test releases it (sandbox tests, never deployed)"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5.30.1"

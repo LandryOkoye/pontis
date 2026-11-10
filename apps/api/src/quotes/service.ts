@@ -3,7 +3,7 @@
 // quote is a signed offer bound to versions, not a reservation.
 
 import type { CreateQuoteRequest, Quote, RouteDescriptor } from "@pontis/api-types";
-import { computeAmounts, newNonce, signQuote, type QuoteKey } from "@pontis/quote-engine";
+import { newNonce, signQuote, type QuoteKey } from "@pontis/quote-engine";
 import { inArray } from "drizzle-orm";
 import type { Db } from "@pontis/db";
 import { assetRepresentations, quotes } from "@pontis/db";
@@ -11,6 +11,7 @@ import { AppError, notFound } from "../errors.ts";
 import type { QuoteChain } from "./chain.ts";
 import { assertAssetsExist } from "./compare.ts";
 import { quoteFromRow } from "./quote-mapper.ts";
+import { payoutAmounts, vaultCovers } from "./payout.ts";
 import { explain, refusalCode } from "./reasons.ts";
 
 export const QUOTE_TTL_MS = 60_000;
@@ -28,9 +29,9 @@ const ROUTE: RouteDescriptor = {
   type: "PARITY_CONVERSION",
   venue: "CONTROLLED_TEST_VAULT",
   network: "near-testnet",
-  settlement: "ATOMIC",
+  settlement: "ASYNC_CALLBACK_WITH_REFUND",
   description:
-    "Controlled test vault, same chain, atomic. Parity conversion of a synthetic test asset.",
+    "Controlled test vault, same chain. Settled asynchronously across several receipts with a refund if the payout fails; not an atomic transaction.",
 };
 
 const WARNINGS = [
@@ -63,16 +64,8 @@ export async function createQuote(deps: QuoteDeps, req: CreateQuoteRequest): Pro
     }
   }
   const feeBps = await chain.getFeeBps();
-  const ratio = { num: BigInt(route.terms.ratio.num), den: BigInt(route.terms.ratio.den) };
-  const amounts = computeAmounts(amountIn, ratio, feeBps);
-  if (!amounts) throw new AppError("VALIDATION_ERROR", 400, "amountIn is too large");
-  if (amounts.net === 0n)
-    throw new AppError(
-      "VALIDATION_ERROR",
-      400,
-      "amountIn is too small to convert to a non-zero output",
-    );
-  if (BigInt(await chain.getInventory(req.toId)) < amounts.net) {
+  const amounts = payoutAmounts(amountIn, route.terms.ratio, feeBps);
+  if (!(await vaultCovers(chain, req.toId, amounts))) {
     throw refuse(
       "INSUFFICIENT_INVENTORY",
       "The test vault does not hold enough of the destination asset.",

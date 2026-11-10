@@ -59,17 +59,55 @@ describe("compareRoutes", () => {
     expect(res.routes[0]?.explanation.length).toBeGreaterThan(20);
   });
 
-  it("refuses an amount the vault cannot cover, and accepts one it can", async () => {
+  // 1 unit at ratio 1000 is 1,000 gross; a 10 bps fee is 1 (rounded up), so the vault must pay 999.
+  it("checks inventory against the net payout after the fee, not the gross output", async () => {
     const executable: ChainRouteView = { executable: true, refusal: null, terms };
-    const low = await compareRoutes(t.db, chainWith(executable, "999"), { ...pair, amount: "1" });
-    expect(low.routes[0]).toMatchObject({
+    const verdict = async (inventory: string) =>
+      (await compareRoutes(t.db, chainWith(executable, inventory), { ...pair, amount: "1" }))
+        .routes[0];
+    expect(await verdict("999")).toMatchObject({ executable: true });
+    expect(await verdict("1000")).toMatchObject({ executable: true });
+    expect(await verdict("998")).toMatchObject({
       executable: false,
       reasonCode: "INSUFFICIENT_INVENTORY",
     });
+  });
+
+  it("rounds the fee up exactly as the contract does", async () => {
+    // gross 1,001 at 10 bps is 1.001, rounded up to 2: net 999. A floored fee would ask for 1,000.
+    const odd: ChainRouteView = {
+      executable: true,
+      refusal: null,
+      terms: { ...terms, ratio: { num: "1001", den: "1" } },
+    };
+    const verdict = async (inventory: string) =>
+      (await compareRoutes(t.db, chainWith(odd, inventory), { ...pair, amount: "1" })).routes[0]
+        ?.executable;
+    expect(await verdict("999")).toBe(true);
+    expect(await verdict("998")).toBe(false);
+  });
+
+  it("needs the whole gross output when the fee is zero", async () => {
+    const executable: ChainRouteView = { executable: true, refusal: null, terms };
+    const free = (inventory: string): QuoteChain => ({
+      ...chainWith(executable, inventory),
+      getFeeBps: async () => 0,
+    });
+    const verdict = async (inventory: string) =>
+      (await compareRoutes(t.db, free(inventory), { ...pair, amount: "1" })).routes[0]?.executable;
+    expect(await verdict("1000")).toBe(true);
+    expect(await verdict("999")).toBe(false);
+  });
+
+  it("refuses an amount whose output rounds to nothing, like quote creation does", async () => {
+    const down: ChainRouteView = {
+      executable: true,
+      refusal: null,
+      terms: { ...terms, ratio: { num: "1", den: "1000" } },
+    };
     expect(
-      (await compareRoutes(t.db, chainWith(executable, "1000"), { ...pair, amount: "1" })).routes[0]
-        ?.executable,
-    ).toBe(true);
+      await errorCodeOf(compareRoutes(t.db, chainWith(down), { ...pair, amount: "999" })),
+    ).toBe("VALIDATION_ERROR");
   });
 
   it("is a NOT_FOUND error for an asset the catalog does not know", async () => {

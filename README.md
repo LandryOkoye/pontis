@@ -11,7 +11,7 @@ Two synthetic NEP-141 representations of one synthetic claim (`SYN-GOLD-OZ`) on 
 - registered with their issuers and evidence,
 - assessed as `DIRECT_EQUIVALENT` by an approved compatibility relationship,
 - quoted by the backend (ed25519-signed, 60 s expiry),
-- converted atomically from a controlled vault via `ft_transfer_call`,
+- converted from a controlled vault via `ft_transfer_call` (same-chain, callback-based settlement over several receipts with a refund if the payout fails; not atomic),
 - indexed and reconciled against contract events.
 
 This is a **parity conversion** of a synthetic test asset. It is not a bridge and not an exchange.
@@ -68,7 +68,7 @@ pnpm rust:fmt                # cargo fmt --check  (also: rust:clippy, rust:test)
 pnpm build:contracts         # cargo-near build of every contract (cargo install cargo-near --locked)
 ```
 
-The Rust toolchain is pinned in `rust-toolchain.toml`. Each app has an `.env.example`; copy it to `.env` (never committed). CI (`.github/workflows/ci.yml`) runs the same commands. Setup steps are in [`docs/local-setup.md`](docs/local-setup.md).
+The Rust toolchain is pinned in `rust-toolchain.toml`. Each app has an `.env.example`; copy it to `.env` (never committed). CI (`.github/workflows/ci.yml`) runs the same commands, plus the contract sandbox tests and a full system end-to-end run (`pnpm --filter @pontis/e2e e2e` on a local sandbox, see [`tests/e2e`](tests/e2e/README.md)). Setup steps are in [`docs/local-setup.md`](docs/local-setup.md).
 
 ## Testnet deployment
 

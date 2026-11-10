@@ -14,7 +14,7 @@ pnpm --filter @pontis/api start          # migrates, starts on :3000, syncs the 
 
 ## Endpoints
 
-`POST /v1/routes/compare`, `POST /v1/quotes` (201, or 422 with a reason code), `GET /v1/quotes/{id}`, `POST /v1/conversions` (needs an `Idempotency-Key` header), `POST /v1/conversions/{id}/submitted`, `GET /v1/transactions/{id}`, `GET /v1/transactions?account=`, `GET /v1/health`, `/v1/issuers`, `/v1/issuers/{id}`, `/v1/assets`, `/v1/assets/{id}`, `/v1/assets/{id}/compatibility`. Paths and schemas come from `@pontis/api-types`, and each response is validated against its schema before it is sent. Errors are `{code, message, details?}`.
+`POST /v1/routes/compare`, `POST /v1/quotes` (201, or 422 with a reason code), `GET /v1/quotes/{id}`, `POST /v1/conversions` (needs an `Idempotency-Key` header), `POST /v1/conversions/{id}/submitted`, `GET /v1/transactions/{id}`, `GET /v1/transactions?account=`, `GET /v1/health`, `GET /v1/health/live`, `GET /v1/health/ready`, `/v1/issuers`, `/v1/issuers/{id}`, `/v1/assets`, `/v1/assets/{id}`, `/v1/assets/{id}/compatibility`. Paths and schemas come from `@pontis/api-types`, and each response is validated against its schema before it is sent. Errors are `{code, message, details?}`.
 
 ## Quotes
 
@@ -38,6 +38,51 @@ Settings are in `.env.example`; reasons are in [ADR 0013](../../docs/decisions/0
 
 An excess request gets `429` with `Retry-After`. Logs hold method and path only; every admin call is written to `audit_log`.
 
+### Health
+
+Three probes, each answering a different question. None of them needs a key.
+
+| Endpoint               | Question                     | Answers                                                                                                                                                                                       |
+| ---------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/health/live`  | Is the process up?           | Always `200 {"status":"ok"}`. Touches no database, RPC or indexer state. Use it for restart probes.                                                                                           |
+| `GET /v1/health/ready` | Can it do its job right now? | `200` when the database and RPC answer and the indexer is `running` or `lagging`; `503` when the database or RPC is down or the indexer is `never_run` or `stale`. Same body as `/v1/health`. |
+| `GET /v1/health`       | The combined view            | Always `200` while the process answers; the body carries the verdict. Keeps `status`, `chainHeight` and `indexerLagBlocks`, and adds `database`, `rpc` and `indexer`.                         |
+
+`/v1/health` stays `200` so existing callers (the web app, the e2e harness) that read the body keep working; use `/v1/health/ready` when a load balancer or monitor should react to the status code. A lagging indexer is still ready: quotes and catalog reads work and only settlement is late, and the body says `degraded` with the lag. A database outage, a chain RPC outage (no quoting) or an indexer that never ran or went silent is not ready.
+
+The body:
+
+```json
+{
+  "status": "ok",
+  "chainHeight": 200000000,
+  "indexerLagBlocks": 2,
+  "database": true,
+  "rpc": true,
+  "indexer": {
+    "state": "running",
+    "lagBlocks": 2,
+    "lastHeartbeatAt": "2026-11-07T18:00:00.000Z",
+    "heartbeatAgeMs": 1500
+  }
+}
+```
+
+- `status` is `ok` only when `database` and `rpc` are true and `indexer.state` is `running`. Anything else is `degraded`. A never-run or stale indexer can never give `ok`.
+- `database` is false when `select 1` or the cursor read fails. The indexer is then unknown: `indexer` is `null`.
+- `rpc` is false when the chain height cannot be read. `chainHeight` and the lag are then `null`, and a fresh indexer is reported `running` because its lag cannot be judged; `status` is still `degraded`.
+- `indexer.state`:
+  - `never_run`: the indexer has not written its cursor.
+  - `stale`: the last heartbeat is older than `INDEXER_STALE_AFTER_MS`. This covers a stopped process, a crashed one and one that fails every pass (for example its RPC is down); they cannot be told apart, because the indexer writes no stop marker. Look at the indexer's log. A first pass that creates the cursor and then fails also reads `stale`: the cursor starts with an epoch heartbeat.
+  - `lagging`: the heartbeat is fresh but the indexer is more than `INDEXER_MAX_LAG_BLOCKS` behind the chain.
+  - `running`: heartbeat fresh and within the lag limit.
+- The heartbeat is `indexer_cursor.updated_at`, set by the database clock. The indexer stamps it each time it applies a block and each time a pass succeeds with nothing new; a failed pass does not. The age is measured with the API's clock, so a large clock difference between the API host and the database shifts it (a negative age is shown as `0`).
+
+| Variable                 | Default | Meaning                                                                                                                                                                                               |
+| ------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INDEXER_STALE_AFTER_MS` | `30000` | Heartbeat age after which the indexer is `stale` (at least 1000). Keep it well above the indexer's poll and retry pauses (default poll 2 s, retries back off up to 60 s, so a long outage goes stale) |
+| `INDEXER_MAX_LAG_BLOCKS` | `50`    | Blocks behind the chain after which a live indexer is `lagging`                                                                                                                                       |
+
 ### Admin
 
 `GET /v1/admin/reconciliation` returns the reconciler's last run (findings, each vault's inventory against the tokens the core holds) and the quotes waiting in `REQUIRES_RECONCILIATION`. It needs `Authorization: Bearer $ADMIN_API_KEY` (at least 16 characters); with no key set it refuses everyone.
@@ -48,7 +93,7 @@ curl -s -H "Authorization: Bearer $ADMIN_API_KEY" $API/v1/admin/reconciliation
 
 ### Running with the indexer
 
-The API alone accepts quotes and records hashes. Run the indexer next to it so conversions settle without the wallet's help and `GET /v1/health` reports a real `indexerLagBlocks`:
+The API alone accepts quotes and records hashes. Run the indexer next to it so conversions settle without the wallet's help. Without it `GET /v1/health` reports `degraded` (`indexer.state` is `never_run`) and `/v1/health/ready` answers `503`:
 
 ```bash
 pnpm --filter @pontis/api start        # terminal 1

@@ -160,13 +160,35 @@ export const CompatibilitySchema = z
   })
   .meta({ id: "Compatibility" });
 
+export const IndexerHealthSchema = z
+  .object({
+    state: z
+      .enum(["never_run", "running", "lagging", "stale"])
+      .describe(
+        "`never_run`: no cursor row. `stale`: the last heartbeat is older than the API's INDEXER_STALE_AFTER_MS (stopped or crashed; the two cannot be told apart). `lagging`: heartbeat fresh but more than INDEXER_MAX_LAG_BLOCKS behind the chain. `running`: heartbeat fresh and within the lag limit.",
+      ),
+    lagBlocks: z.number().int().nonnegative().nullable(),
+    lastHeartbeatAt: Timestamp.nullable(),
+    heartbeatAgeMs: z.number().int().nonnegative().nullable(),
+  })
+  .meta({ id: "IndexerHealth" });
+
 export const HealthSchema = z
   .object({
-    status: z.enum(["ok", "degraded"]),
+    status: z
+      .enum(["ok", "degraded"])
+      .describe("`ok` only when the database and RPC answer and the indexer state is `running`."),
     chainHeight: z.number().int().nonnegative().nullable(),
     indexerLagBlocks: z.number().int().nonnegative().nullable(),
+    database: z.boolean().describe("The database answered. Required to serve anything."),
+    rpc: z.boolean().describe("The chain RPC answered. Required to quote."),
+    indexer: IndexerHealthSchema.nullable().describe(
+      "`null` when the database is unreachable, so the cursor could not be read.",
+    ),
   })
   .meta({ id: "Health" });
+
+export const LivenessSchema = z.object({ status: z.literal("ok") }).meta({ id: "Liveness" });
 
 export type Evidence = z.infer<typeof EvidenceSchema>;
 export type Issuer = z.infer<typeof IssuerSchema>;
@@ -176,3 +198,5 @@ export type AssetSummary = z.infer<typeof AssetSummarySchema>;
 export type Asset = z.infer<typeof AssetSchema>;
 export type Compatibility = z.infer<typeof CompatibilitySchema>;
 export type Health = z.infer<typeof HealthSchema>;
+export type IndexerHealth = z.infer<typeof IndexerHealthSchema>;
+export type Liveness = z.infer<typeof LivenessSchema>;
