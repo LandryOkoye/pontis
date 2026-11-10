@@ -35,3 +35,22 @@ Brief §16.1 forbids "verified" without stating what was checked, by whom, when 
 
 - The label survives every layer, so a screenshot of any screen is unambiguous.
 - Adding real evidence later does not need a data-model change.
+
+## Amendment (what the registry does and does not vouch for)
+
+The contract stores and checks registry data; it does not authenticate any of it. For the synthetic MVP that is acceptable, provided no field is presented as a guarantee it is not.
+
+| Field or status                                    | What the contract does                                                                                                  | What it does not do                                                                                                              |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Evidence `uri`, `sha256`                           | Checks length and that the hash is 64 lowercase hex characters; records who attached it and when                        | Fetch the URI, compare the hash with any content, or prove the evidence says anything true about an asset or an issuer           |
+| Evidence `provenance`                              | Stores the label a registrar supplied                                                                                   | Check who produced the evidence. `issuer_provided` and `third_party_attested` are claims recorded by the registrar               |
+| `verification_status` `issuer_attested`            | Requires at least one evidence reference                                                                                | Verify anything                                                                                                                  |
+| `verification_status` `third_party_attested`       | Requires evidence labelled `third_party_attested`                                                                       | Authenticate a third party. It means "a registrar recorded a third-party attestation", not that one was verified                 |
+| `verification_status` `independently_verified`     | **Refuses it** at registration and activation, and refuses evidence labelled `independently_verified`                   | There is no authenticated verifier, so the status is reserved for one. The enum value and label stay in the data model for later |
+| Issuer `authorized_categories`                     | **Enforced:** a representation can be registered and activated only if its canonical asset's category is in the list    | Prove the issuer is entitled to that category in any legal sense: the list is entered by a registrar                             |
+| Issuer `controlled_accounts`                       | **Enforced when non-empty:** a representation's token account must be in the list. An empty list declares no constraint | Prove the issuer controls those accounts. Nothing binds the account to the issuer; the registrar asserts it                      |
+| `synthetic`, `unverified` flags, `jurisdiction`... | Stored and returned                                                                                                     | Anything: informational labels (ADR 0009 rule 1)                                                                                 |
+
+Issuer authorization is checked on registration and again on activation. Neither list can change after registration (there are no update methods), so a mismatch means rejecting the record and registering a new one.
+
+**Production requirements, not built.** Real RWA onboarding needs at least: issuer and verifier attestations that are signed and checked on chain or by an accountable process; proof that an issuer controls the accounts it lists (for example a signed message or a function-call key challenge from each account); evidence content that is fetched and compared with its hash by someone other than the issuer; enforcement of an eligibility regime per representation; and separate roles for registering, attesting and approving so one operator cannot do all three. None of this exists here, and the MVP must not be described as if it did.

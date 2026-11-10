@@ -13,14 +13,18 @@ export const MULTIPLIER_B: Rational = rational(1n, 10n ** 9n);
 export const RATIO_A_TO_B: Rational = ratioBetween(MULTIPLIER_A, MULTIPLIER_B);
 
 const none = "None";
+/** The canonical asset's category, and the one category both synthetic issuers are authorized for. */
+const CATEGORY = "Synthetic commodity claim (test only)";
 
 export function buildSeed(ids: { tokenA: string; tokenB: string }, root: string = REPO_ROOT) {
-  const issuer = (id: string, name: string) => ({
+  // The contract enforces both lists when a representation is registered: the canonical asset's
+  // category must be listed, and the token account must be one the issuer controls.
+  const issuer = (id: string, name: string, tokenAccount: string) => ({
     id,
     name,
     jurisdiction: null,
-    authorized_categories: ["synthetic test claims"],
-    controlled_accounts: [] as string[],
+    authorized_categories: [CATEGORY],
+    controlled_accounts: [tokenAccount],
     contact: "Pontis project team (testnet only)",
     ...flags,
   });
@@ -50,11 +54,11 @@ export function buildSeed(ids: { tokenA: string; tokenB: string }, root: string 
   return {
     issuers: [
       {
-        ...issuer("synthetic-issuer-a", "Synthetic Issuer A"),
+        ...issuer("synthetic-issuer-a", "Synthetic Issuer A", ids.tokenA),
         evidence: dossierEvidence("TGOLD-A", root),
       },
       {
-        ...issuer("synthetic-issuer-b", "Synthetic Issuer B"),
+        ...issuer("synthetic-issuer-b", "Synthetic Issuer B", ids.tokenB),
         evidence: dossierEvidence("TGOLD-B", root),
       },
     ],
@@ -62,7 +66,7 @@ export function buildSeed(ids: { tokenA: string; tokenB: string }, root: string 
       asset: {
         id: "syn-gold-oz",
         name: "Synthetic Gold, one troy ounce",
-        category: "Synthetic commodity claim (test only)",
+        category: CATEGORY,
         claim_description: "A fictional claim to one troy ounce of fictional allocated gold.",
         unit_definition: "1 canonical unit = 1 fictional troy ounce",
         denomination: null,
