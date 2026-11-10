@@ -41,5 +41,6 @@ pub async fn assert_refunded(
     assert_eq!(env.balance(&env.token_a, env.core.id()).await?, 0);
     assert_eq!(env.inventory("tgold-a").await?, 0);
     assert_eq!(env.inventory("tgold-b").await?, 1_000 * ONE_B);
+    assert_eq!(env.pending_inbound("tgold-a").await?, 0);
     Ok(())
 }
