@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.ts";
 
@@ -5,6 +6,7 @@ const base = {
   DATABASE_URL: "postgres://x",
   PONTIS_CORE_ACCOUNT_ID: "core.testnet",
   QUOTE_SIGNER_SECRET_KEY: "ed25519:abc",
+  NEAR_RPC_URL: "https://test.rpc.fastnear.com",
 };
 
 describe("loadConfig", () => {
@@ -17,6 +19,7 @@ describe("loadConfig", () => {
       INDEXER_STALE_AFTER_MS: 30_000,
       INDEXER_MAX_LAG_BLOCKS: 50,
       NEAR_RPC_URL: "https://rpc.testnet.near.org",
+      NEAR_RPC_URL: "https://test.rpc.fastnear.com",
     });
   });
 
@@ -76,5 +79,22 @@ describe("loadConfig", () => {
       /CORS_ORIGIN/,
     );
     expect(() => loadConfig({ ...base, ADMIN_API_KEY: "short" })).toThrow(/ADMIN_API_KEY/);
+  });
+
+  it("requires NEAR_RPC_URL instead of defaulting to a public endpoint", () => {
+    const { NEAR_RPC_URL: _omitted, ...withoutRpc } = base;
+    expect(() => loadConfig(withoutRpc)).toThrow(
+      /NEAR_RPC_URL: required; see docs\/local-setup\.md \(RPC endpoints\)/,
+    );
+  });
+
+  it("parses the .env.example endpoint, which is the one docs/local-setup.md recommends", () => {
+    const example = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
+    const value = /^NEAR_RPC_URL=(.+)$/m.exec(example)?.[1];
+    expect(loadConfig({ ...base, NEAR_RPC_URL: value }).NEAR_RPC_URL).toBe(
+      "https://test.rpc.fastnear.com",
+    );
+    const docs = readFileSync(new URL("../../../docs/local-setup.md", import.meta.url), "utf8");
+    expect(docs).toContain(`\`${value}\``);
   });
 });

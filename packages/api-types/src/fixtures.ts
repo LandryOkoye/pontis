@@ -233,9 +233,9 @@ export function buildQuote(amountIn: bigint, state: Quote["state"] = "QUOTED"): 
       type: "PARITY_CONVERSION",
       venue: "CONTROLLED_TEST_VAULT",
       network: "near-testnet",
-      settlement: "ATOMIC",
+      settlement: "ASYNC_CALLBACK_WITH_REFUND",
       description:
-        "Controlled test vault, same chain, atomic. Parity conversion of a synthetic test asset.",
+        "Controlled test vault, same chain. Settled asynchronously across several receipts with a refund if the payout fails; not an atomic transaction.",
     },
     compatibilityVersion: 1,
     policyVersion: 1,

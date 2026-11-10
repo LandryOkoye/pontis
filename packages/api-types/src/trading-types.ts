@@ -18,7 +18,8 @@ export const RouteDescriptorSchema = z
     type: RouteTypeSchema,
     venue: z.literal("CONTROLLED_TEST_VAULT"),
     network: NetworkSchema,
-    settlement: z.literal("ATOMIC"),
+    /** Callback-based settlement over several receipts with a compensating refund; not atomic. */
+    settlement: z.literal("ASYNC_CALLBACK_WITH_REFUND"),
     description: z.string(),
   })
   .meta({ id: "RouteDescriptor" });

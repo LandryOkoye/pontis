@@ -9,7 +9,7 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().min(1),
   NEAR_NETWORK_ID: z.enum(["testnet", "sandbox"]).default("testnet"),
-  NEAR_RPC_URL: z.string().url().default("https://rpc.testnet.near.org"),
+  NEAR_RPC_URL: z.string({ error: "required; see docs/local-setup.md (RPC endpoints)" }).url(),
   PONTIS_CORE_ACCOUNT_ID: z.string().min(2),
   /** `ed25519:<base58>` quote-signer secret key. Testnet only; never commit it. */
   QUOTE_SIGNER_SECRET_KEY: z.string().startsWith("ed25519:"),

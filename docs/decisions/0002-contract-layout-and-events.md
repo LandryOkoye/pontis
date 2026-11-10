@@ -56,7 +56,7 @@ The indexer is idempotent on `(receipt_id, log_index)`. Event schemas live next 
 
 ## Consequences
 
-- Validation is atomic with execution; no race between check and payout.
+- Validation and the first state changes happen in one receipt (`ft_on_transfer`), so there is no race between the check and the inventory move. The payout that follows is a separate receipt with a callback, so the conversion as a whole is not atomic (see [0007](0007-conversion-via-ft-transfer-call.md)).
 - A single contract is a larger blast radius than separate contracts. Mitigated by role separation, pause controls and the capped testnet-only inventory.
 - Rejections emit `conversion_rejected` so reconciliation can account for refunded transfers that never became conversions.
 

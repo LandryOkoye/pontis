@@ -745,7 +745,7 @@ components:
         settlement:
           type: string
           enum:
-            - ATOMIC
+            - ASYNC_CALLBACK_WITH_REFUND
         description:
           type: string
       required:

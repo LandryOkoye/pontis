@@ -22,6 +22,13 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **Postgres is a local container.** No backup or restore drill. Registry state rebuilds from the chain; quotes, conversions and the audit log do not.
 - **Quote-signer key** is one ed25519 key in an environment variable. Rotating it invalidates outstanding quotes at once.
 
+## Registry: what is recorded, not verified
+
+- **Evidence is not authenticated.** The contract checks an evidence URI's length and that its SHA-256 is well-formed hex. It never fetches the content, compares the hash, or checks who produced it. The `provenance` label is chosen by the registrar. A hash or URI proves nothing about an asset's existence or legal status.
+- **`independently_verified` is refused.** No authenticated verifier exists, so the contract rejects that status and that evidence label. `issuer_attested` and `third_party_attested` mean a registrar recorded the claim, not that it was checked.
+- **Issuer metadata is enforced only as far as a registrar's entries go.** A representation needs an issuer whose `authorized_categories` include the canonical asset's category and, if `controlled_accounts` is non-empty, whose list includes the token account. An empty `controlled_accounts` means no constraint. The contract cannot prove the issuer controls those accounts or may issue that category.
+- **Real RWA onboarding needs more:** signed issuer and verifier attestations, proof of account control, evidence content checked by someone other than the issuer, eligibility enforcement per asset, and separate registrar, attester and approver roles. None is built ([ADR 0009](decisions/0009-synthetic-evidence-labelling.md)).
+
 ## Contract behaviour worth knowing
 
 - A quote lives 60 seconds. A transaction that lands after expiry is refused and refunded.
