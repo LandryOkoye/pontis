@@ -199,7 +199,19 @@ const relationship = (
 export const compatibilityFromA: Compatibility = relationship("tgold-b", RATIO_A_TO_B);
 export const compatibilityFromB: Compatibility = relationship("tgold-a", rational(1n, 1000n));
 
-export const health: Health = { status: "ok", chainHeight: 200_000_000, indexerLagBlocks: 2 };
+export const health: Health = {
+  status: "ok",
+  chainHeight: 200_000_000,
+  indexerLagBlocks: 2,
+  database: true,
+  rpc: true,
+  indexer: {
+    state: "running",
+    lagBlocks: 2,
+    lastHeartbeatAt: "2026-11-07T18:00:00.000Z",
+    heartbeatAgeMs: 1_500,
+  },
+};
 
 /** Quote converting 1 TGOLD-A (1_000_000 smallest units) to TGOLD-B. */
 export function buildQuote(amountIn: bigint, state: Quote["state"] = "QUOTED"): Quote {

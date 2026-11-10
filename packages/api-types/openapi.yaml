@@ -17,6 +17,7 @@ components:
           enum:
             - ok
             - degraded
+          description: "`ok` only when the database and RPC answer and the indexer state is `running`."
         chainHeight:
           type:
             - integer
@@ -27,10 +28,57 @@ components:
             - integer
             - "null"
           minimum: 0
+        database:
+          type: boolean
+          description: The database answered. Required to serve anything.
+        rpc:
+          type: boolean
+          description: The chain RPC answered. Required to quote.
+        indexer:
+          type:
+            - object
+            - "null"
+          properties:
+            state:
+              type: string
+              enum:
+                - never_run
+                - running
+                - lagging
+                - stale
+              description: "`never_run`: no cursor row. `stale`: the last heartbeat is older than the API's INDEXER_STALE_AFTER_MS (stopped or crashed; the two cannot be told apart). `lagging`: heartbeat fresh but more than INDEXER_MAX_LAG_BLOCKS behind the chain. `running`: heartbeat fresh and within the lag limit."
+            lagBlocks:
+              type:
+                - integer
+                - "null"
+              minimum: 0
+            lastHeartbeatAt:
+              $ref: "#/components/schemas/Timestamp"
+            heartbeatAgeMs:
+              type:
+                - integer
+                - "null"
+              minimum: 0
+          required:
+            - state
+            - lagBlocks
+            - lastHeartbeatAt
+            - heartbeatAgeMs
+          description: "`null` when the database is unreachable, so the cursor could not be read."
       required:
         - status
         - chainHeight
         - indexerLagBlocks
+        - database
+        - rpc
+        - indexer
+    Timestamp:
+      type:
+        - string
+        - "null"
+      format: date-time
+      description: ISO-8601 UTC timestamp.
+      example: 2026-11-07T18:00:00.000Z
     ApiError:
       type: object
       properties:
@@ -72,6 +120,15 @@ components:
         - UNAUTHORIZED
         - RATE_LIMITED
         - INTERNAL
+    Liveness:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+      required:
+        - status
     IssuerList:
       type: object
       properties:
@@ -169,13 +226,6 @@ components:
       pattern: ^[a-z0-9]+([_.-][a-z0-9]+)*$
       description: NEAR account ID.
       example: alice.testnet
-    Timestamp:
-      type:
-        - string
-        - "null"
-      format: date-time
-      description: ISO-8601 UTC timestamp.
-      example: 2026-11-07T18:00:00.000Z
     Evidence:
       type: object
       properties:
@@ -984,7 +1034,8 @@ paths:
   /v1/health:
     get:
       operationId: getHealth
-      summary: Service health
+      summary: Combined service health
+      description: Always 200 while the process can answer; the body carries the verdict. `status` is `ok` only when the database and RPC answer and the indexer state is `running`; otherwise `degraded`. Use `/v1/health/ready` for a probe that fails on non-readiness.
       tags:
         - Health
       responses:
@@ -1006,6 +1057,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v1/health/live:
+    get:
+      operationId: getHealthLive
+      summary: Liveness
+      description: Answers 200 whenever the process is up. Touches no database, RPC or indexer state, so it is safe for restart probes.
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Liveness"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/health/ready:
+    get:
+      operationId: getHealthReady
+      summary: Readiness
+      description: 200 when the database and RPC answer and the indexer is `running` or `lagging`; 503 otherwise. A lagging indexer is still ready, but `status` in the body is `degraded`.
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: "Not ready: the database or RPC is unreachable, or the indexer never ran or is stale. Same body as `/v1/health`."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
   /v1/issuers:
     get:
       operationId: listIssuers
