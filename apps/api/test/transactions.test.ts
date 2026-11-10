@@ -3,7 +3,7 @@ import { fixtureSource } from "@pontis/near-client/fixtures";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { acceptQuote } from "../src/conversions/accept.ts";
-import { reportSubmitted } from "../src/conversions/submit.ts";
+import { reportSubmitted, type SubmitDeps } from "../src/conversions/submit.ts";
 import { getTransaction, listTransactions } from "../src/conversions/transactions.ts";
 import { conversions, quotes, settlementEvents } from "@pontis/db";
 import { createQuote } from "../src/quotes/service.ts";
@@ -35,21 +35,36 @@ const accepted = async (account = "alice.testnet", key = crypto.randomUUID()) =>
   return { quote: q, conversionId: res.conversionId };
 };
 
+// A node that knows no transaction: reported hashes stay unverified.
+const deps = (): SubmitDeps => ({
+  db: t.db,
+  verifier: { getTransaction: async () => undefined },
+  coreId: "core.testnet",
+  log: { warn() {} },
+  now: NOW,
+});
+
 describe("reportSubmitted", () => {
-  it("records the hash, moves the quote to SUBMITTED and returns the transaction", async () => {
+  it("records the hash as reported, moves the quote to SUBMITTED and returns the transaction", async () => {
     const { conversionId } = await accepted();
-    const tx = TransactionSchema.parse(await reportSubmitted(t.db, conversionId, HASH, NOW));
-    expect([tx.state, tx.txHash, tx.submittedAt]).toEqual(["SUBMITTED", HASH, NOW.toISOString()]);
+    const tx = TransactionSchema.parse(await reportSubmitted(deps(), conversionId, HASH));
+    expect([tx.state, tx.txHash, tx.reportedTxHash, tx.txHashStatus, tx.submittedAt]).toEqual([
+      "SUBMITTED",
+      null,
+      HASH,
+      "REPORTED",
+      NOW.toISOString(),
+    ]);
     expect(tx.quote.state).toBe("SUBMITTED");
   });
 
   it("is idempotent for the same hash and a conflict for a different one", async () => {
     const { conversionId } = await accepted();
-    await reportSubmitted(t.db, conversionId, HASH, NOW);
-    expect((await reportSubmitted(t.db, conversionId, HASH, NOW)).txHash).toBe(HASH);
+    await reportSubmitted(deps(), conversionId, HASH);
+    expect((await reportSubmitted(deps(), conversionId, HASH)).reportedTxHash).toBe(HASH);
     expect(
       await errorCodeOf(
-        reportSubmitted(t.db, conversionId, "other-hash-other-hash-other-hash-xx", NOW),
+        reportSubmitted(deps(), conversionId, "other-hash-other-hash-other-hash-xx"),
       ),
     ).toBe("QUOTE_ALREADY_USED");
   });
@@ -57,23 +72,24 @@ describe("reportSubmitted", () => {
   it("refuses a hash reported after the quote expired, and an unknown conversion", async () => {
     const { conversionId, quote } = await accepted();
     const late = new Date(NOW.getTime() + 61_000);
-    expect(await errorCodeOf(reportSubmitted(t.db, conversionId, HASH, late))).toBe(
+    expect(await errorCodeOf(reportSubmitted({ ...deps(), now: late }, conversionId, HASH))).toBe(
       "QUOTE_EXPIRED",
     );
     expect((await t.db.select().from(quotes).where(eq(quotes.id, quote.id)))[0]?.state).toBe(
       "EXPIRED",
     );
     expect(
-      (await t.db.select().from(conversions).where(eq(conversions.id, conversionId)))[0]?.txHash,
+      (await t.db.select().from(conversions).where(eq(conversions.id, conversionId)))[0]
+        ?.reportedTxHash,
     ).toBeNull();
     expect(
-      await errorCodeOf(reportSubmitted(t.db, "00000000-0000-4000-8000-000000000000", HASH, NOW)),
+      await errorCodeOf(reportSubmitted(deps(), "00000000-0000-4000-8000-000000000000", HASH)),
     ).toBe("NOT_FOUND");
   });
 });
 
 describe("a hash reported after the indexer settled the conversion", () => {
-  it("is recorded on the conversion and on its events, without changing the settled state", async () => {
+  it("is recorded as reported, without changing the settled state or showing as verified", async () => {
     const { conversionId, quote } = await accepted();
     await t.db.update(quotes).set({ state: "SETTLED" }).where(eq(quotes.id, quote.id));
     await t.db.insert(settlementEvents).values({
@@ -86,15 +102,16 @@ describe("a hash reported after the indexer settled the conversion", () => {
       data: {},
       conversionId,
     });
-    const tx = TransactionSchema.parse(await reportSubmitted(t.db, conversionId, HASH, NOW));
-    expect([tx.state, tx.txHash, tx.events.map((e) => e.txHash)]).toEqual([
+    const tx = TransactionSchema.parse(await reportSubmitted(deps(), conversionId, HASH));
+    expect([tx.state, tx.txHash, tx.reportedTxHash, tx.events.map((e) => e.txHash)]).toEqual([
       "SETTLED",
+      null,
       HASH,
-      [HASH],
+      [null],
     ]);
     expect(
       await errorCodeOf(
-        reportSubmitted(t.db, conversionId, "other-hash-other-hash-other-hash-xx", NOW),
+        reportSubmitted(deps(), conversionId, "other-hash-other-hash-other-hash-xx"),
       ),
     ).toBe("QUOTE_ALREADY_USED");
   });

@@ -75,7 +75,9 @@ describe("conversion routes", () => {
     expect(sub.statusCode).toBe(200);
     expect(ENDPOINTS.markConversionSubmitted.response.parse(sub.json())).toMatchObject({
       state: "SUBMITTED",
-      txHash: HASH,
+      txHash: null,
+      reportedTxHash: HASH,
+      txHashStatus: "REPORTED",
     });
     const one = await app.inject({ method: "GET", url: `/v1/transactions/${plan.conversionId}` });
     expect(ENDPOINTS.getTransaction.response.parse(one.json()).id).toBe(plan.conversionId);
