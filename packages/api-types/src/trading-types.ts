@@ -10,6 +10,7 @@ import {
   RouteTypeSchema,
   Timestamp,
   TxHash,
+  TxHashStatusSchema,
   Uuid,
 } from "./common.ts";
 
@@ -133,7 +134,7 @@ export const SettlementEventSchema = z
     logIndex: z.number().int().nonnegative(),
     blockHeight: z.number().int().nonnegative(),
     blockTimestamp: Timestamp,
-    /** The transaction that began the receipt, once known (reported by the wallet); null before that. */
+    /** The transaction that began the receipt; set only once that transaction is verified against the chain. */
     txHash: TxHash.nullable(),
     data: z.unknown(),
   })
@@ -145,7 +146,11 @@ export const TransactionSchema = z
     id: Uuid,
     quote: QuoteSchema,
     state: QuoteStateSchema,
+    /** The verified transaction hash: null until the chain confirms the transaction belongs to this conversion. Safe to link to an explorer. */
     txHash: TxHash.nullable(),
+    /** What the wallet reported. Unverified: never present it as the settlement transaction. */
+    reportedTxHash: TxHash.nullable(),
+    txHashStatus: TxHashStatusSchema,
     failureReason: z.string().nullable(),
     events: z.array(SettlementEventSchema),
     createdAt: Timestamp,

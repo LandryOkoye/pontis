@@ -852,6 +852,10 @@ components:
           $ref: "#/components/schemas/QuoteState"
         txHash:
           $ref: "#/components/schemas/TxHash"
+        reportedTxHash:
+          $ref: "#/components/schemas/TxHash"
+        txHashStatus:
+          $ref: "#/components/schemas/TxHashStatus"
         failureReason:
           type:
             - string
@@ -871,6 +875,8 @@ components:
         - quote
         - state
         - txHash
+        - reportedTxHash
+        - txHashStatus
         - failureReason
         - events
         - createdAt
@@ -884,6 +890,14 @@ components:
       maxLength: 64
       description: NEAR transaction hash (base58).
       example: 9ZkBqE3nVhJ2pJt8h4Y8yH5m3xKcM6W7kQ1sF2dRnA4T
+    TxHashStatus:
+      type: string
+      enum:
+        - NONE
+        - REPORTED
+        - VERIFIED
+        - REJECTED
+      description: "NONE: no hash reported. REPORTED: sent by the wallet, not confirmed on chain. VERIFIED: the chain shows it is this conversion's transaction. REJECTED: the chain shows it is not."
     SettlementEvent:
       type: object
       properties:
@@ -1486,7 +1500,7 @@ paths:
     post:
       operationId: markConversionSubmitted
       summary: Report the submitted transaction hash
-      description: Moves the quote to `SUBMITTED`. Repeating with the same hash is a no-op; a different hash is a conflict.
+      description: "Moves the quote to `SUBMITTED`. The hash is checked against the chain: a transaction that exists but is not this conversion's (other signer, receiver, method, amount or quote nonce) is refused with `422` and nothing is stored. A hash the node does not know yet, or an unreachable node, is stored as `reportedTxHash` with `txHashStatus` `REPORTED`; `txHash` stays null until the transaction is verified. Repeating a reported hash re-checks it; a different hash is a conflict."
       tags:
         - Conversions
       parameters:
@@ -1529,6 +1543,12 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "410":
           description: "Gone. Codes: QUOTE_EXPIRED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: "Request understood but refused. Codes: VALIDATION_ERROR."
           content:
             application/json:
               schema:

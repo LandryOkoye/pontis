@@ -10,6 +10,7 @@ import type {
   ChainPolicy,
   ChainRepresentation,
 } from "./schemas.ts";
+import type { ExpectedConversionTx, TxFacts } from "./transaction-check.ts";
 
 const T0 = 1_794_074_400_000; // 2026-11-07T17:20:00Z
 const OWNER = "owner.pontis.testnet";
@@ -155,5 +156,32 @@ export function fixtureSource(overrides: Partial<RegistrySource> = {}): Registry
     getPolicy: async (id) => policies.find((p) => p.representation_id === id) ?? null,
     getInventory: async (id) => inventories[id] ?? "0",
     ...overrides,
+  };
+}
+
+/** Facts of the transaction `expected` describes, as the chain would report it; override to break one. */
+export function conversionTxFacts(
+  expected: ExpectedConversionTx,
+  over: Partial<TxFacts> = {},
+): TxFacts {
+  return {
+    signerId: expected.signerId,
+    receiverId: expected.tokenIn,
+    actions: [
+      {
+        kind: "FunctionCall",
+        methodName: "ft_transfer_call",
+        args: {
+          receiver_id: expected.coreId,
+          amount: expected.amountIn,
+          msg: JSON.stringify({
+            quote: { user: expected.signerId, nonce: expected.nonce },
+            signature: "c2ln",
+          }),
+        },
+      },
+    ],
+    receiptIds: ["receipt-a", ...expected.settlementReceiptIds],
+    ...over,
   };
 }

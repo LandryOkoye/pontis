@@ -37,3 +37,20 @@ export function parseEvents(logs: readonly string[]): CoreEvent[] {
   });
   return events;
 }
+
+/**
+ * Whether the event ends the transaction of the conversion it names, so its receipt can tie a
+ * reported hash to that conversion. A `NONCE_USED` rejection belongs to a replay of the nonce, not
+ * to the transaction that used it. Keep in step with `isAnchoringEvent` in @pontis/db.
+ */
+export function anchorsTxHash(event: CoreEvent): boolean {
+  switch (event.name) {
+    case "conversion_completed":
+    case "conversion_failed":
+      return true;
+    case "conversion_rejected":
+      return event.data.reason !== "NONCE_USED";
+    default:
+      return false;
+  }
+}

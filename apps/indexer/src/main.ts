@@ -1,7 +1,7 @@
 // Indexer process: verify the RPC network, migrate, then follow the chain until stopped.
 
 import { createDb, runMigrations } from "@pontis/db";
-import { redactRpcUrl, RpcClient } from "@pontis/near-client";
+import { RpcClient, RpcTxVerifier, redactRpcUrl } from "@pontis/near-client";
 import { loadConfig } from "./config.ts";
 import { runIndexer, type Logger } from "./indexer.ts";
 import { verifyStartup } from "./startup.ts";
@@ -55,6 +55,8 @@ const reconciling =
 await runIndexer({
   db,
   source,
+  verifier: new RpcTxVerifier(rpc),
+  coreId: config.PONTIS_CORE_ACCOUNT_ID,
   log,
   startHeight: config.INDEXER_START_HEIGHT,
   pollMs: config.INDEXER_POLL_MS,

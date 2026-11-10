@@ -2,6 +2,7 @@
 // (BuildPlan §8). The backend never signs for users: it returns the unsigned wallet plan.
 
 import { ENDPOINTS } from "@pontis/api-types";
+import type { TxVerifier } from "@pontis/near-client";
 import type { FastifyInstance } from "fastify";
 import { acceptQuote, type AcceptDeps } from "../conversions/accept.ts";
 import { reportSubmitted } from "../conversions/submit.ts";
@@ -10,7 +11,11 @@ import { notFound } from "../errors.ts";
 
 const route = (path: string) => path.replace(/\{(\w+)\}/g, ":$1");
 
-export function registerConversionRoutes(app: FastifyInstance, deps: AcceptDeps): void {
+export interface ConversionRouteDeps extends AcceptDeps {
+  verifier: TxVerifier;
+}
+
+export function registerConversionRoutes(app: FastifyInstance, deps: ConversionRouteDeps): void {
   const e = ENDPOINTS;
   app.post(e.createConversion.path, async (req, reply) => {
     const { "idempotency-key": key } = e.createConversion.headers.parse(req.headers);
@@ -22,7 +27,17 @@ export function registerConversionRoutes(app: FastifyInstance, deps: AcceptDeps)
     const { id } = e.markConversionSubmitted.params.parse(req.params);
     const { txHash } = e.markConversionSubmitted.body.parse(req.body);
     return e.markConversionSubmitted.response.parse(
-      await reportSubmitted(deps.db, id, txHash, deps.now?.()),
+      await reportSubmitted(
+        {
+          db: deps.db,
+          verifier: deps.verifier,
+          coreId: deps.coreId,
+          log: req.log,
+          ...(deps.now ? { now: deps.now() } : {}),
+        },
+        id,
+        txHash,
+      ),
     );
   });
   app.get(route(e.getTransaction.path), async (req) => {

@@ -211,3 +211,40 @@ describe("reconciliation report", () => {
     ).toBe(false);
   });
 });
+
+describe("transaction hashes", () => {
+  const unverified = {
+    ...fx.transactionSettled,
+    txHash: null,
+    reportedTxHash: fx.transactionSettled.txHash,
+    txHashStatus: "REPORTED",
+  };
+
+  it("keeps the verified hash apart from the reported one", () => {
+    expect(TransactionSchema.parse(fx.transactionSettled)).toMatchObject({
+      txHash: fx.transactionSettled.reportedTxHash,
+      txHashStatus: "VERIFIED",
+    });
+    expect(TransactionSchema.parse(unverified)).toMatchObject({
+      txHash: null,
+      txHashStatus: "REPORTED",
+    });
+    expect(
+      TransactionSchema.parse({ ...unverified, reportedTxHash: null, txHashStatus: "NONE" }),
+    ).toBeTruthy();
+  });
+
+  it("requires the reported hash and its status, and knows only four statuses", () => {
+    const { reportedTxHash: _r, ...withoutReported } = unverified;
+    expect(TransactionSchema.safeParse(withoutReported).success).toBe(false);
+    const { txHashStatus: _s, ...withoutStatus } = unverified;
+    expect(TransactionSchema.safeParse(withoutStatus).success).toBe(false);
+    expect(TransactionSchema.safeParse({ ...unverified, txHashStatus: "TRUSTED" }).success).toBe(
+      false,
+    );
+    for (const status of ["NONE", "REPORTED", "VERIFIED", "REJECTED"])
+      expect(TransactionSchema.safeParse({ ...unverified, txHashStatus: status }).success).toBe(
+        true,
+      );
+  });
+});

@@ -239,10 +239,11 @@ export const ENDPOINTS = {
       404: ["NOT_FOUND"],
       409: ["QUOTE_ALREADY_USED"],
       410: ["QUOTE_EXPIRED"],
+      422: ["VALIDATION_ERROR"],
       ...COMMON,
     },
     description:
-      "Moves the quote to `SUBMITTED`. Repeating with the same hash is a no-op; a different hash is a conflict.",
+      "Moves the quote to `SUBMITTED`. The hash is checked against the chain: a transaction that exists but is not this conversion's (other signer, receiver, method, amount or quote nonce) is refused with `422` and nothing is stored. A hash the node does not know yet, or an unreachable node, is stored as `reportedTxHash` with `txHashStatus` `REPORTED`; `txHash` stays null until the transaction is verified. Repeating a reported hash re-checks it; a different hash is a conflict.",
   },
   getTransaction: {
     method: "get",

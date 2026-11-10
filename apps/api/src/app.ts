@@ -1,6 +1,7 @@
 import type { Writable } from "node:stream";
 import Fastify, { type FastifyInstance } from "fastify";
 import type { Db } from "@pontis/db";
+import type { TxVerifier } from "@pontis/near-client";
 import { errorHandler, notFoundHandler } from "./errors.ts";
 import { loggerOptions } from "./logging.ts";
 import { registerCatalogRoutes } from "./routes/catalog.ts";
@@ -22,6 +23,8 @@ export interface AppDeps {
   quotes: Omit<QuoteDeps, "db">;
   /** Token registration reads for the wallet plan. */
   conversionChain: ConversionChain;
+  /** Checks reported transaction hashes against the chain before they are shown as verified. */
+  txVerifier: TxVerifier;
   /** Bearer key for the admin endpoints; without one they refuse everyone. */
   adminApiKey?: string;
   /** CORS origins and rate limits; see `registerSecurity`. */
@@ -48,6 +51,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     registerConversionRoutes(scope, {
       db: deps.db,
       chain: deps.conversionChain,
+      verifier: deps.txVerifier,
       coreId: deps.quotes.coreId,
       ...(deps.quotes.now ? { now: deps.quotes.now } : {}),
     });

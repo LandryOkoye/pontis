@@ -32,6 +32,7 @@ export function testAppDeps(db: Db, over: Partial<AppDeps> = {}): AppDeps {
     chainHeight: async () => 1,
     quotes: { chain, key, coreId: "core.testnet" },
     conversionChain: { isRegistered: async () => true },
+    txVerifier: { getTransaction: async () => undefined },
     ...over,
   };
 }

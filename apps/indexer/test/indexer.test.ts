@@ -2,7 +2,7 @@ import { settlementEvents } from "@pontis/db";
 import { describe, expect, it } from "vitest";
 import { readCursor } from "../src/cursor.ts";
 import { indexOnce } from "../src/indexer.ts";
-import { FakeSource, silent } from "./fake-source.ts";
+import { FakeSource, noVerifier, silent } from "./fake-source.ts";
 import { execution, useSeededDb } from "./harness.ts";
 
 const h = useSeededDb();
@@ -10,6 +10,8 @@ const fee = (bps: number) => execution([["fee_updated", { fee_bps: bps, by: "own
 const options = (source: FakeSource, over: { startHeight?: number } = {}) => ({
   db: h.db,
   source,
+  verifier: noVerifier,
+  coreId: "core.testnet",
   log: silent,
   confirmations: 2,
   ...over,
@@ -45,7 +47,14 @@ describe("indexOnce on a fresh database", () => {
   it("starts at the chain head instead of replaying history", async () => {
     const source = new FakeSource(500);
     source.put(10, fee(9));
-    const pass = await indexOnce({ db: fresh.db, source, log: silent, confirmations: 2 });
+    const pass = await indexOnce({
+      db: fresh.db,
+      source,
+      verifier: noVerifier,
+      coreId: "core.testnet",
+      log: silent,
+      confirmations: 2,
+    });
     expect(pass.stored).toBe(0);
     expect(source.reads).toEqual([]);
     expect(await readCursor(fresh.db)).toBe(498);
