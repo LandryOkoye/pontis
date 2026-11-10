@@ -27,11 +27,15 @@ export async function reconciliation(
   await step(
     "vault inventory equals the tokens the core holds for both representations",
     async () => {
+      // The stored report can be several seconds old. A run that read the vault while the refund of
+      // the previous step's rejected transfer was still in flight sees tokens the core holds but has
+      // not yet accounted for, so use a run that began (and so read inventory and balance) after now.
+      const since = Date.now();
       const run = await waitFor(
-        "a reconciler run",
+        "a reconciler run that started after this step",
         async () => {
           const r = await report(world);
-          return r.ranAt !== null && r.vaults.length === 2 && r;
+          return r.ranAt !== null && Date.parse(r.ranAt) >= since && r.vaults.length === 2 && r;
         },
         { timeoutMs: 60_000 },
       );
