@@ -38,7 +38,7 @@ Out of scope for the MVP: cross-chain bridges, market-priced exchange, dark pool
 ```text
 apps/api/            Fastify REST API
 apps/indexer/        NEAR event indexer and reconciler
-apps/web/            React frontend (separate branch and pull request)
+apps/web/            React frontend (not in main yet; no pull request open)
 contracts/           Rust: synthetic-token (NEP-141) and pontis-core
 packages/            domain, api-types, db, near-client, quote-engine
 scripts/             deploy, seed, allowlist, ops (operator commands), check-commit-size
