@@ -73,6 +73,14 @@ export class CoreClient implements RegistrySource {
     return amount.parse(raw);
   }
 
+  /** Input tokens held for conversions whose payout has not resolved; not spendable inventory. */
+  async getPendingInbound(representationId: string): Promise<string> {
+    const raw = await this.rpc.view(this.accountId, "get_pending_inbound", {
+      representation_id: representationId,
+    });
+    return amount.parse(raw);
+  }
+
   /** The parity-route gate for `from` to `to`: terms if executable, else the refusal reason. */
   async getRoute(fromId: string, toId: string): Promise<ChainRouteView> {
     const raw = await this.rpc.view(this.accountId, "get_route", { from_id: fromId, to_id: toId });
