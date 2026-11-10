@@ -67,6 +67,14 @@ describe("CoreClient", () => {
     await expect(bad.getInventory("tgold-a")).rejects.toThrow();
   });
 
+  it("reads the input held for in-flight conversions and rejects a non-string amount", async () => {
+    const { rpc, calls } = fakeRpc(() => "250");
+    expect(await new CoreClient(rpc, "core.testnet").getPendingInbound("tgold-a")).toBe("250");
+    expect(calls[0]).toMatchObject({ method: "get_pending_inbound" });
+    const bad = new CoreClient(fakeRpc(() => 250).rpc, "core.testnet");
+    await expect(bad.getPendingInbound("tgold-a")).rejects.toThrow();
+  });
+
   it("reads the chain height", async () => {
     expect(await new CoreClient(fakeRpc(() => null).rpc, "core.testnet").blockHeight()).toBe(42);
   });

@@ -40,3 +40,7 @@ It debits inventory first and restores it if the transfer fails.
 ## Done when
 
 Quotes in the starved direction work again, and the reconciler shows inventory equal to the held tokens (or only the known untracked surplus).
+
+## Inventory while conversions are in flight
+
+`get_inventory` is spendable inventory: it does not include the input of a conversion whose payout is still pending, and it does not include the output reserved for that payout. `ops status` shows spendable inventory and the pending input separately, and the reconciler compares their sum, which is what should match the tokens the core holds. A conversion normally resolves within seconds, so a withdrawal attempted in that window can take only the spendable part and fails with `insufficient inventory` if it asks for more. Wait for the conversion to resolve and retry; do not treat the refusal as a shortfall.

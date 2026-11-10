@@ -24,3 +24,10 @@ The indexer settles conversions from events, and the vault is meant to hold at l
 - A stuck or inconsistent conversion becomes visible within about a minute plus the stuck threshold, not when a user complains.
 - Nothing is repaired automatically except a flagged quote whose matching event arrives, so the reconciler cannot make a wrong state worse.
 - The vault check needs the representation list in the database, so it follows the registry sync, and a vault on a representation the sync has not seen is not checked.
+
+## Amendment (pending input)
+
+- **Accounted amount.** The vault check compares `get_inventory + get_pending_inbound` with the token's `ft_balance_of(pontis-core)`. `get_inventory` is spendable inventory only; the input of a conversion whose payout has not resolved is held in `get_pending_inbound` and is in the token balance too ([ADR 0008](0008-vault-inventory-and-funding.md) amendment). Comparing inventory alone would report every in-flight conversion as an untracked balance.
+- **Read order.** Inventory is read first, then the pending counter, then the balance. A conversion that settles between the first two reads moves tokens from pending to inventory, so the sum can only look smaller than the truth: at worst a transient `VAULT_UNTRACKED_BALANCE` warning, never a false `VAULT_INSOLVENT`. The two-sighting rule still applies.
+- **The `inventory` reading in the admin report is the accounted amount** (spendable plus held input), not spendable inventory alone.
+- **Redeploy needed.** An older `pontis-core` without `get_pending_inbound` makes the reconciler's view call fail; deploy the matching contract first.
