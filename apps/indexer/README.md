@@ -26,7 +26,12 @@ The indexer applies migrations on start, so it can run before or after the API.
 
 - `settlement_events`: every `EVENT_JSON` log of every successful core receipt, unique by `(receipt_id, log_index)`. Events that name a quote's nonce are linked to its conversion.
 - `quotes.state` and `conversions`: `SETTLED` or `FAILED` from the conversion events; `REQUIRES_RECONCILIATION` (and an `audit_log` row) when the chain disagrees with the quote.
+- `conversions.tx_hash` / `settlement_events.tx_hash`: only after a reported hash is verified against the chain (see below); never copied from what the wallet reported.
 - `indexer_cursor`: the last block fully applied. `GET /v1/health` reports `indexerLagBlocks` from it.
+
+## Reported transaction hashes
+
+After each pass the indexer verifies the hashes wallets reported for conversions that now have an outcome event. It asks `NEAR_RPC_URL` for the transaction and checks signer, receiver, `ft_transfer_call` arguments, quote nonce and that the transaction produced one of the outcome receipts. `VERIFIED` fills `conversions.tx_hash` and the events' `tx_hash`; a contradiction sets `REJECTED` and writes an `audit_log` row (`conversion.tx_hash_rejected`); an unknown hash or an unreachable node leaves `REPORTED` and is logged and retried about once a minute. Without a report a conversion settles with no verified hash.
 
 ## Reconciler
 
@@ -48,7 +53,7 @@ Every `RECONCILE_INTERVAL_MS` (60 s; 0 turns it off) the reconciler compares the
 | `indexerLagBlocks` grows, log repeats one error | The node cannot serve one block or proof. Failures retry with pauses up to 60 s; read the logged error. A different RPC node usually fixes it.                                                          |
 | `HistoryUnavailableError`                       | The cursor is older than the node's retention (the sandbox keeps minutes, public testnet days). Use an archival node, or `delete from indexer_cursor` and set `INDEXER_START_HEIGHT` to accept the gap. |
 | Quote is `REQUIRES_RECONCILIATION`              | The chain executed a quote the API had not accepted or had expired, or amounts differ. `audit_log` has the reason and receipt. The reconciler (B13) resolves it.                                        |
-| A conversion has no `txHash` on its events      | The wallet has not reported it. `POST /v1/conversions/{id}/submitted` fills it in at any time.                                                                                                          |
+| A conversion has no `txHash`                    | No report yet (`POST /v1/conversions/{id}/submitted` works any time), or `txHashStatus` is `REPORTED` (node did not know it; see log) or `REJECTED` (not its transaction).                              |
 
 Stop with `SIGINT` or `SIGTERM`; it finishes the block in progress.
 

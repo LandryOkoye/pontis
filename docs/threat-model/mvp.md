@@ -106,10 +106,12 @@ Rules: no key is stored in git; `.env*` and `.near-credentials` are ignored; the
 - Nonce set and relationship history are unpruned.
 - No external audit, no formal verification, no production monitoring or backups.
 - Testnet RPC and explorer availability are outside our control.
+- A transaction hash reported by a wallet is checked against the configured RPC node before the API shows it as `txHash` (signer, token, `ft_transfer_call` arguments, quote nonce, settlement receipt). The node is trusted and no light-client proof is checked; a conversion nobody reports has no hash.
 
 ## 6. Verification plan
 
 - Contract negative tests for T2–T4, T7–T8, T12, T14 (BuildPlan B6–B8).
+- Hash verification tests cover forged, foreign and unrelated hashes, an unreachable node, and both orders of report and settlement (`apps/api/test/submit-verification.test.ts`, `apps/indexer/test/verify-hashes.test.ts`, `packages/near-client/test/transaction*.test.ts`).
 - B14 tests cover T20, T38 and T39: rate limits per class and client, CORS and headers, log scrubbing and the admin audit trail (`apps/api/test`).
 - B13 tests cover T35 to T37: vault mismatches with the two-sighting rule, stuck and inconsistent settlements, and admin key checks (`apps/indexer/test/reconciler-*.test.ts`, `apps/api/test/admin*.test.ts`).
 - B12 tests cover T32 to T34: failed receipts ignored, mismatched completions, duplicates, restart and lost history (`apps/indexer/test`).
