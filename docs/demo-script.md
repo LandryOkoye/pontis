@@ -55,7 +55,7 @@ Sign and send the actions from the wallet (the web app does this with the wallet
 
 ```bash
 ID=$(jq -r .conversionId /tmp/plan.json)
-watch -n 2 "curl -s $API/v1/transactions/$ID | jq '{state, txHash, events: [.events[].eventName]}'"
+watch -n 2 "curl -s $API/v1/transactions/$ID | jq '{state, txHash, txHashStatus, events: [.events[].eventName]}'"
 ```
 
 The state moves to `SETTLED` a few seconds after the transaction finalizes, with a `conversion_completed` event. The wallet does not have to report anything: the indexer reads the chain. Check the amounts against the quote, and `curl -s "$API/v1/transactions?account=$USER"` for the history.

@@ -1,4 +1,4 @@
-// History: a hash reported after settlement is kept, and the account's history lists the conversion.
+// History: a hash reported after settlement is verified and kept, and the account's history lists the conversion.
 
 import { ENDPOINTS } from "@pontis/api-types";
 import { parse } from "../api.ts";
@@ -9,7 +9,7 @@ import type { Settled } from "./settled.ts";
 export async function history(world: World, settled: Settled): Promise<void> {
   const { api } = world;
   await step(
-    "a hash reported after settlement is kept on the conversion and its events",
+    "a hash reported after settlement is verified against the chain and kept on the conversion and its events",
     async () => {
       const tx = parse(
         await api.post(`/v1/conversions/${settled.conversionId}/submitted`, {
@@ -18,6 +18,8 @@ export async function history(world: World, settled: Settled): Promise<void> {
         ENDPOINTS.markConversionSubmitted.response,
       );
       assert.equal(tx.state, "SETTLED");
+      assert.equal(tx.reportedTxHash, settled.txHash);
+      assert.equal(tx.txHashStatus, "VERIFIED");
       assert.equal(tx.txHash, settled.txHash);
       assert.ok(tx.events.every((e) => e.txHash === settled.txHash));
       const history = parse(

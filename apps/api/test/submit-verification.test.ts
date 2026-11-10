@@ -1,5 +1,5 @@
 import { TransactionSchema } from "@pontis/api-types";
-import { quotes } from "@pontis/db";
+import { auditLog, quotes } from "@pontis/db";
 import { createTestDb, type TestDb } from "@pontis/db/testing";
 import type { ExpectedConversionTx, TxFacts, TxVerifier } from "@pontis/near-client";
 import { conversionTxFacts, fixtureSource } from "@pontis/near-client/fixtures";
@@ -7,12 +7,15 @@ import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { reportSubmitted } from "../src/conversions/submit.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
+import { errorCodeOf } from "./helpers.ts";
 import {
   HASH,
   NOW,
+  OTHER,
   acceptConversion,
   expectedFor as expectedForDb,
   knows,
+  settledByChain,
   storedConversion,
   submitDeps,
   unknownTx,
@@ -115,5 +118,50 @@ describe("reportSubmitted verifies the reported hash", () => {
     const facts = conversionTxFacts(await expectedFor(conversionId));
     const tx = await reportSubmitted(deps(knows(facts)), conversionId, HASH);
     expect([tx.txHash, tx.txHashStatus]).toEqual([HASH, "VERIFIED"]);
+  });
+
+  it("rejects a reported hash that turns out to be someone else's", async () => {
+    const { conversionId } = await accepted();
+    await reportSubmitted(deps(unknownTx), conversionId, HASH);
+    const facts = conversionTxFacts(await expectedFor(conversionId), {
+      signerId: "mallory.testnet",
+    });
+    expect(await errorCodeOf(reportSubmitted(deps(knows(facts)), conversionId, HASH))).toBe(
+      "VALIDATION_ERROR",
+    );
+    const row = await stored(conversionId);
+    expect([row?.reportedTxHash, row?.txHash, row?.txHashStatus]).toEqual([HASH, null, "REJECTED"]);
+    expect(
+      (await t.db.select().from(auditLog).where(eq(auditLog.subject, conversionId)))[0]?.action,
+    ).toBe("conversion.tx_hash_rejected");
+  });
+});
+
+describe("a hash reported after the indexer settled the conversion", () => {
+  const settle = () => settledByChain(t.db);
+
+  it("is verified against the settlement receipts and attributed to the events", async () => {
+    const { conversionId } = await settle();
+    const facts = conversionTxFacts(await expectedFor(conversionId));
+    const tx = TransactionSchema.parse(
+      await reportSubmitted(deps(knows(facts)), conversionId, HASH),
+    );
+    expect([tx.state, tx.txHash, tx.events.map((e) => e.txHash)]).toEqual([
+      "SETTLED",
+      HASH,
+      [HASH],
+    ]);
+    expect(await errorCodeOf(reportSubmitted(deps(unknownTx), conversionId, OTHER))).toBe(
+      "QUOTE_ALREADY_USED",
+    );
+  });
+
+  it("refuses a transaction of this wallet and quote that did not produce the settlement receipt", async () => {
+    const { conversionId } = await settle();
+    const facts = conversionTxFacts(await expectedFor(conversionId), { receiptIds: ["elsewhere"] });
+    expect(await errorCodeOf(reportSubmitted(deps(knows(facts)), conversionId, HASH))).toBe(
+      "VALIDATION_ERROR",
+    );
+    expect((await stored(conversionId))?.txHashStatus).toBe("NONE");
   });
 });

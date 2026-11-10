@@ -90,6 +90,40 @@ describe("conversion routes", () => {
     ).toBeGreaterThanOrEqual(1);
   });
 
+  it("answers 422 VALIDATION_ERROR for a transaction of another wallet and stores nothing", async () => {
+    const strict = buildApp(
+      testAppDeps(t.db, {
+        txVerifier: {
+          getTransaction: async () => ({
+            signerId: "mallory.testnet",
+            receiverId: "tgold-a.testnet",
+            actions: [],
+            receiptIds: [],
+          }),
+        },
+      }),
+    );
+    const q = await newQuote();
+    const plan = (await convert(q.id, "route-key-0004")).json() as { conversionId: string };
+    const res = await strict.inject({
+      method: "POST",
+      url: `/v1/conversions/${plan.conversionId}/submitted`,
+      payload: { txHash: HASH },
+    });
+    await strict.close();
+    expect([res.statusCode, ApiErrorSchema.parse(res.json()).code]).toEqual([
+      422,
+      "VALIDATION_ERROR",
+    ]);
+    const one = await app.inject({ method: "GET", url: `/v1/transactions/${plan.conversionId}` });
+    expect(ENDPOINTS.getTransaction.response.parse(one.json())).toMatchObject({
+      state: "ACCEPTED",
+      txHash: null,
+      reportedTxHash: null,
+      txHashStatus: "NONE",
+    });
+  });
+
   it("rejects a bad hash, a missing account and an unknown transaction with structured errors", async () => {
     const bad = await app.inject({
       method: "POST",

@@ -68,7 +68,10 @@ curl -s $API/v1/quotes -H 'content-type: application/json' \
   -d '{"fromId":"tgold-a","toId":"tgold-b","amountIn":"1000000","accountId":"alice.testnet"}'
 # 3. Accept it: the response lists the unsigned actions for the wallet to sign
 curl -s $API/v1/conversions -H 'content-type: application/json' -H "Idempotency-Key: $(uuidgen)" -d '{"quoteId":"<quote id>"}'
-# 4. After the wallet sends the transaction, report its hash
+# 4. After the wallet sends the transaction, report its hash. The API checks it against the chain:
+#    another wallet's or another quote's transaction is 422; a hash the node does not know yet is kept
+#    as `reportedTxHash` (`txHashStatus: REPORTED`) and `txHash` stays null until it is verified.
+#    Link to an explorer only when `txHash` is set.
 curl -s $API/v1/conversions/<conversion id>/submitted -H 'content-type: application/json' -d '{"txHash":"<hash>"}'
 curl -s "$API/v1/transactions?account=alice.testnet"
 ```
