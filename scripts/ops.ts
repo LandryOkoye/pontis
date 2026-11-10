@@ -84,8 +84,11 @@ async function status(chain: Chain): Promise<void> {
   console.log(`quote signer: ${String(await view(coreId, "get_quote_signer"))}`);
   for (const rep of REPRESENTATIONS) {
     const inventory = await view<string>(coreId, "get_inventory", { representation_id: rep });
+    const pending = await view<string>(coreId, "get_pending_inbound", { representation_id: rep });
     const held = await view<string>(tokenOf(chain, rep), "ft_balance_of", { account_id: coreId });
-    console.log(`${rep}: inventory ${String(inventory)}, held by the core ${String(held)}`);
+    console.log(
+      `${rep}: spendable inventory ${String(inventory)}, pending input ${String(pending)}, held by the core ${String(held)}`,
+    );
   }
   const route = await view<{ executable: boolean; refusal: string | null }>(coreId, "get_route", {
     from_id: "tgold-a",

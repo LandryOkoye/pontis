@@ -44,6 +44,8 @@ One command starts a sandbox, deploys and seeds the contracts, starts the API an
 pnpm --filter @pontis/e2e e2e        # about three minutes after the first build; logs go to a temp directory, printed on failure
 ```
 
+CI runs this same command in the `e2e` job on every pull request and push to `main`, on a sandbox with a `postgres:16` service; it never uses a public Testnet RPC. If that job fails, download its `e2e-logs` artifact (the API, indexer and sandbox logs) from the workflow run. To reproduce locally, build with `scripts/build-contracts.sh slim` first, as the job does.
+
 ## 4. Run the services by hand against Testnet
 
 1. **Deploy and seed** (needs about 20 NEAR on the deployer; see [deployments](architecture/deployments.md)):

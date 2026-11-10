@@ -25,9 +25,12 @@ impl Env {
         Ok(())
     }
 
-    /// Mints to the owner and funds the vault through `ft_transfer_call` with `fund_vault`.
+    /// Mints to the owner and funds the vault through `ft_transfer_call` with `fund_vault`. The
+    /// payout fixture keeps no balances, so there is nothing to mint for it.
     pub async fn fund_vault(&self, token: &Contract, amount: u128) -> anyhow::Result<()> {
-        self.mint(token, self.owner.id(), amount).await?;
+        if !(self.fixture_b && token.id() == self.token_b.id()) {
+            self.mint(token, self.owner.id(), amount).await?;
+        }
         self.owner.call(token.id(), "ft_transfer_call")
             .args_json(json!({"receiver_id": self.core.id(), "amount": amount.to_string(), "msg": "fund_vault"}))
             .deposit(yocto(1)).max_gas().transact().await?.into_result()?;
