@@ -21,6 +21,7 @@ import type { NavChart, PriceChart, SupplyChart, VolumeChart } from "./chart-typ
 import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
 import type { CompareResponse, SearchResult } from "./discovery-types.ts";
 import type { AssetIssuerView, AssetMetadata } from "./detail-types.ts";
+import type { RouteGuardsResponse } from "./guard-types.ts";
 import type { IssuerLeaderboard, Status } from "./status-types.ts";
 import type { AdminMetrics, Metric, ProtocolMetrics } from "./metrics-types.ts";
 import type {
@@ -651,6 +652,47 @@ export const status: Status = {
   reserves: null,
   bridge: null,
   incidents: [],
+};
+
+/** The guard breakdown for 1 TGOLD-A: both reference prices are the simulator's, and say so. */
+export const routeGuards: RouteGuardsResponse = {
+  fromId: "tgold-a",
+  toId: "tgold-b",
+  amount: "1000000",
+  executable: true,
+  guarded: true,
+  degraded: false,
+  feeBps: 14,
+  skewBps: 4,
+  checks: [
+    { name: "route", passed: true, detail: "executable" },
+    { name: "guard", passed: true, detail: "configured" },
+    { name: "price_freshness", passed: true, detail: "tgold-a: 4000 ms old, limit 60000 ms" },
+    { name: "price_freshness", passed: true, detail: "tgold-b: 4000 ms old, limit 60000 ms" },
+    { name: "circuit_breaker", passed: true, detail: "no violations" },
+    { name: "amount_limits", passed: true, detail: "within limits" },
+    { name: "vault_inventory", passed: true, detail: "needs 999000000, holds 5000000000" },
+  ],
+  prices: [
+    {
+      representationId: "tgold-a",
+      price: "100",
+      currency: "USD",
+      asOf: "2026-11-07T17:59:56.000Z",
+      ageMs: 4_000,
+      source: "simulated_feed",
+      simulated: true,
+    },
+    {
+      representationId: "tgold-b",
+      price: "10",
+      currency: "USD",
+      asOf: "2026-11-07T17:59:56.000Z",
+      ageMs: 4_000,
+      source: "simulated_feed",
+      simulated: true,
+    },
+  ],
 };
 
 const metricsAsOf = "2026-11-11T12:00:00.000Z";

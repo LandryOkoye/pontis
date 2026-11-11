@@ -9,6 +9,7 @@ For the person operating a Pontis deployment on testnet. Each runbook gives the 
 | A conversion never settles                                   | [Stuck submission](stuck-submission.md)      |
 | Quotes say `INSUFFICIENT_INVENTORY`, or the reconciler warns | [Vault low](vault-low.md)                    |
 | Something is wrong and conversions must stop                 | [Pause procedure](pause.md)                  |
+| Quotes say `PRICE_*` or the circuit breaker tripped          | [Price guards](price-guards.md)              |
 
 First look, always:
 

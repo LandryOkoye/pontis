@@ -52,6 +52,7 @@ describe("openapi.yaml", () => {
         "GET /v1/market/categories",
         "GET /v1/market/chains",
         "POST /v1/routes/compare",
+        "GET /v1/routes/{fromId}/{toId}/guards",
         "POST /v1/quotes",
         "GET /v1/quotes/{id}",
         "POST /v1/conversions",

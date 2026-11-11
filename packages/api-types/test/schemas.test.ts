@@ -41,6 +41,7 @@ import {
   ReconciliationFindingSchema,
   ReconciliationReportSchema,
   SubmittedRequestSchema,
+  RouteGuardsResponseSchema,
   TransactionSchema,
 } from "./helpers.ts";
 import * as fx from "../src/fixtures.ts";
@@ -75,6 +76,8 @@ describe("fixtures round-trip through the schemas", () => {
     ["search", SearchResultSchema, fx.searchResult],
     ["issuer leaderboard", IssuerLeaderboardSchema, fx.issuerLeaderboard],
     ["status", StatusSchema, fx.status],
+    ["route guards", RouteGuardsResponseSchema, fx.routeGuards],
+
     ["protocol metrics", ProtocolMetricsSchema, fx.protocolMetrics],
     ["admin metrics", AdminMetricsSchema, fx.adminMetrics],
   ] as const)("%s", (_name, schema, value) => {

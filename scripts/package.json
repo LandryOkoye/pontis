@@ -14,12 +14,16 @@
     "ops": "tsx --env-file-if-exists=.env ops.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "guards": "tsx --env-file-if-exists=.env guards.ts"
   },
   "dependencies": {
     "@pontis/db": "workspace:*",
+    "@pontis/dev-keys": "workspace:*",
     "@pontis/domain": "workspace:*",
+    "@pontis/market-data": "workspace:*",
     "@pontis/near-client": "workspace:*",
+    "@pontis/quote-engine": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "near-api-js": "^7.4.0"
   },

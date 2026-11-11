@@ -99,6 +99,45 @@ describe("CoreClient quote-time views", () => {
     await expect(unknown.getRoute("a", "b")).rejects.toThrow();
   });
 
+  it("reads the guard breakdown with the amount, and refuses a shape the contract never sends", async () => {
+    const view = {
+      executable: true,
+      checks: [{ name: "route", passed: true, detail: "executable" }],
+      fee_bps: 14,
+      skew_bps: 4,
+      degraded: false,
+    };
+    const { rpc, calls } = fakeRpc(() => view);
+    const core = new CoreClient(rpc, "core.testnet");
+    expect(await core.getRouteGuards("tgold-a", "tgold-b", "5000000")).toEqual(view);
+    expect(calls[0]).toEqual({
+      contractId: "core.testnet",
+      method: "get_route_guards",
+      args: { from_id: "tgold-a", to_id: "tgold-b", amount_in: "5000000" },
+    });
+    await core.getRouteGuards("tgold-a", "tgold-b");
+    expect(calls[1]?.args.amount_in).toBeNull();
+    const bad = new CoreClient(fakeRpc(() => ({ ...view, fee_bps: -1 })).rpc, "core.testnet");
+    await expect(bad.getRouteGuards("a", "b")).rejects.toThrow();
+  });
+
+  it("reads the stored price with its honesty label, null before any, and refuses a malformed one", async () => {
+    const stored = {
+      price: "10000000000",
+      currency: "USD",
+      as_of_ms: 1_790_000_000_000,
+      submitted_ms: 1_790_000_001_000,
+      simulated: true,
+      source: "simulated_feed",
+      publisher_key: "ed25519:FgcwodK7aTtn3DgvqwPuSseKgTPcMpGmK6zdf7Ri9KXm",
+    };
+    const price = (value: unknown) => new CoreClient(fakeRpc(() => value).rpc, "core.testnet");
+    expect(await price(stored).getPrice("tgold-a")).toEqual(stored);
+    expect(await price(null).getPrice("tgold-a")).toBeNull();
+    await expect(price({ ...stored, price: "1.5" }).getPrice("tgold-a")).rejects.toThrow();
+    await expect(price({ ...stored, simulated: undefined }).getPrice("tgold-a")).rejects.toThrow();
+  });
+
   it("passes the account to is_allowed and validates fee and signer", async () => {
     const { rpc, calls } = fakeRpc(({ method }) =>
       method === "is_allowed" ? true : method === "get_fee_bps" ? 10 : null,

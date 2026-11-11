@@ -281,12 +281,21 @@ importers:
       '@pontis/db':
         specifier: workspace:*
         version: link:../packages/db
+      '@pontis/dev-keys':
+        specifier: workspace:*
+        version: link:../packages/dev-keys
       '@pontis/domain':
         specifier: workspace:*
         version: link:../packages/domain
+      '@pontis/market-data':
+        specifier: workspace:*
+        version: link:../packages/market-data
       '@pontis/near-client':
         specifier: workspace:*
         version: link:../packages/near-client
+      '@pontis/quote-engine':
+        specifier: workspace:*
+        version: link:../packages/quote-engine
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
@@ -294,9 +303,6 @@ importers:
         specifier: ^7.4.0
         version: 7.4.0
     devDependencies:
-      '@pontis/market-data':
-        specifier: workspace:*
-        version: link:../packages/market-data
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5

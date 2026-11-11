@@ -14,9 +14,27 @@ export async function errorCodeOf(promise: Promise<unknown>): Promise<string | u
   return undefined;
 }
 
+/** A chain with no guard on any pair: the MVP behaviour. The guard view mirrors what the contract returns then. */
+export function unguarded(base: Omit<QuoteChain, "getRouteGuards" | "getPrice">): QuoteChain {
+  return {
+    ...base,
+    getRouteGuards: async (_from, _to, amountIn) => ({
+      executable: true,
+      checks: [
+        { name: "route", passed: true, detail: "executable" },
+        { name: "guard", passed: false, detail: "unguarded" },
+      ],
+      fee_bps: amountIn === undefined ? null : await base.getFeeBps(),
+      skew_bps: amountIn === undefined ? null : 0,
+      degraded: false,
+    }),
+    getPrice: async () => null,
+  };
+}
+
 /** App dependencies with a fake chain that approves the MVP pair: tests override what they probe. */
 export function testAppDeps(db: Db, over: Partial<AppDeps> = {}): AppDeps {
-  const chain: QuoteChain = {
+  const chain: QuoteChain = unguarded({
     getRoute: async () => ({
       executable: true,
       refusal: null,
@@ -25,7 +43,7 @@ export function testAppDeps(db: Db, over: Partial<AppDeps> = {}): AppDeps {
     isAllowed: async () => true,
     getInventory: async () => "1000000000000",
     getFeeBps: async () => 10,
-  };
+  });
   const key = keyFromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1));
   return {
     db,

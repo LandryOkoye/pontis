@@ -142,6 +142,10 @@ export const ROUTE_REFUSALS = [
   "relationship_not_approved",
   "relationship_suspended",
   "not_direct_equivalent",
+  "price_deviation",
+  "price_stale",
+  "price_missing",
+  "price_unavailable",
 ] as const;
 export type RouteRefusal = (typeof ROUTE_REFUSALS)[number];
 
@@ -158,3 +162,35 @@ export const ChainRouteViewSchema = z.object({
     .nullable(),
 });
 export type ChainRouteView = z.infer<typeof ChainRouteViewSchema>;
+
+/** The latest accepted price of a representation (`get_price`, ADR 0016 section 1). */
+export const ChainPriceSchema = z.object({
+  /** Price of one whole token at 8 decimals, as a decimal string of the integer. */
+  price: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  currency: z.string(),
+  as_of_ms: timestampMs,
+  submitted_ms: timestampMs,
+  simulated: z.boolean(),
+  source: z.string(),
+  publisher_key: z.string(),
+});
+export type ChainPrice = z.infer<typeof ChainPriceSchema>;
+
+/** One line of `get_route_guards`: what was checked and the verdict (ADR 0016 section 6). */
+export const GuardCheckSchema = z.object({
+  name: z.string(),
+  passed: z.boolean(),
+  detail: z.string(),
+});
+
+export const ChainRouteGuardsSchema = z.object({
+  executable: z.boolean(),
+  checks: z.array(GuardCheckSchema),
+  /** The fee the contract charges for the amount asked about, skew included; null without an amount. */
+  fee_bps: z.number().int().min(0).max(10_000).nullable(),
+  skew_bps: z.number().int().min(0).max(10_000).nullable(),
+  /** A stale or missing price is tolerated at a wider fee. */
+  degraded: z.boolean(),
+});
+export type GuardCheck = z.infer<typeof GuardCheckSchema>;
+export type ChainRouteGuards = z.infer<typeof ChainRouteGuardsSchema>;

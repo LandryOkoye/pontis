@@ -12,7 +12,7 @@ import type { QuoteChain } from "./chain.ts";
 import { assertAssetsExist } from "./compare.ts";
 import { quoteFromRow } from "./quote-mapper.ts";
 import { payoutAmounts, vaultCovers } from "./payout.ts";
-import { explain, refusalCode } from "./reasons.ts";
+import { explain, guardRefusal, refusalCode } from "./reasons.ts";
 
 export const QUOTE_TTL_MS = 60_000;
 
@@ -63,7 +63,12 @@ export async function createQuote(deps: QuoteDeps, req: CreateQuoteRequest): Pro
       throw refuse("NOT_ELIGIBLE", `${req.accountId} is not on the allowlist for ${id}.`);
     }
   }
-  const feeBps = await chain.getFeeBps();
+  // The contract's own verdict on this amount: limits, prices and the fee it will charge, skew
+  // included. A quote copies that fee, so execution cannot disagree with it (FEE_CHANGED).
+  const guards = await chain.getRouteGuards(req.fromId, req.toId, amountIn.toString());
+  const refusal = guardRefusal(guards.checks);
+  if (refusal) throw refuse(refusal.code, refusal.message);
+  const feeBps = guards.fee_bps ?? (await chain.getFeeBps());
   const amounts = payoutAmounts(amountIn, route.terms.ratio, feeBps);
   if (!(await vaultCovers(chain, req.toId, amounts))) {
     throw refuse(

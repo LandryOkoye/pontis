@@ -1,6 +1,6 @@
 import { fixtureSource } from "@pontis/near-client/fixtures";
 import type { ChainRouteView } from "@pontis/near-client";
-import { errorCodeOf } from "./helpers.ts";
+import { errorCodeOf, unguarded } from "./helpers.ts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { compareRoutes } from "../src/quotes/compare.ts";
 import type { QuoteChain } from "../src/quotes/chain.ts";
@@ -17,12 +17,13 @@ afterAll(async () => {
 });
 
 const terms = { ratio: { num: "1000", den: "1" }, compatibility_version: 2, policy_version: 1 };
-const chainWith = (route: ChainRouteView, inventory = "1000000000000"): QuoteChain => ({
-  getRoute: async () => route,
-  isAllowed: async () => true,
-  getInventory: async () => inventory,
-  getFeeBps: async () => 10,
-});
+const chainWith = (route: ChainRouteView, inventory = "1000000000000", feeBps = 10): QuoteChain =>
+  unguarded({
+    getRoute: async () => route,
+    isAllowed: async () => true,
+    getInventory: async () => inventory,
+    getFeeBps: async () => feeBps,
+  });
 const pair = { fromId: "tgold-a", toId: "tgold-b" };
 
 describe("compareRoutes", () => {
@@ -89,10 +90,7 @@ describe("compareRoutes", () => {
 
   it("needs the whole gross output when the fee is zero", async () => {
     const executable: ChainRouteView = { executable: true, refusal: null, terms };
-    const free = (inventory: string): QuoteChain => ({
-      ...chainWith(executable, inventory),
-      getFeeBps: async () => 0,
-    });
+    const free = (inventory: string): QuoteChain => chainWith(executable, inventory, 0);
     const verdict = async (inventory: string) =>
       (await compareRoutes(t.db, free(inventory), { ...pair, amount: "1" })).routes[0]?.executable;
     expect(await verdict("1000")).toBe(true);

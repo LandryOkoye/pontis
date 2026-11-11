@@ -4,6 +4,7 @@ export * from "./common.ts";
 export * from "./detail-types.ts";
 export * from "./discovery-types.ts";
 export * from "./endpoints.ts";
+export * from "./guard-types.ts";
 export * from "./market-types.ts";
 export * from "./metrics-types.ts";
 export * from "./overview-types.ts";
