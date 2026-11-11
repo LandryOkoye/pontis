@@ -1434,6 +1434,152 @@ components:
         - fee
         - source
         - simulated
+    CompareResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompareItem"
+        pairs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParityPair"
+      required:
+        - data
+        - items
+        - pairs
+    CompareItem:
+      type: object
+      properties:
+        id:
+          type: string
+        symbol:
+          type: string
+        name:
+          type: string
+        canonicalAssetId:
+          type: string
+        issuer:
+          $ref: "#/components/schemas/IssuerSummary"
+        status:
+          $ref: "#/components/schemas/RecordStatus"
+        verificationStatus:
+          $ref: "#/components/schemas/VerificationStatus"
+        chains:
+          type: array
+          items:
+            type: string
+        convertible:
+          type: boolean
+        bridgeable:
+          type: boolean
+        market:
+          $ref: "#/components/schemas/MarketSnapshot"
+        navPerToken:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        premiumToNavBps:
+          type:
+            - integer
+            - "null"
+      required:
+        - id
+        - symbol
+        - name
+        - canonicalAssetId
+        - issuer
+        - status
+        - verificationStatus
+        - chains
+        - convertible
+        - bridgeable
+        - market
+        - navPerToken
+        - premiumToNavBps
+    ParityPair:
+      type: object
+      properties:
+        fromId:
+          type: string
+        toId:
+          type: string
+        parityRatio:
+          $ref: "#/components/schemas/PriceString"
+        impliedRatio:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        deviationBps:
+          type:
+            - integer
+            - "null"
+        simulated:
+          type:
+            - boolean
+            - "null"
+      required:
+        - fromId
+        - toId
+        - parityRatio
+        - impliedRatio
+        - deviationBps
+        - simulated
+    SearchResult:
+      type: object
+      properties:
+        q:
+          type: string
+        assets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              symbol:
+                type: string
+              name:
+                type: string
+              canonicalAssetName:
+                type: string
+              issuer:
+                $ref: "#/components/schemas/IssuerSummary"
+            required:
+              - id
+              - symbol
+              - name
+              - canonicalAssetName
+              - issuer
+        issuers:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssuerSummary"
+        chains:
+          type: array
+          items:
+            type: object
+            properties:
+              chain:
+                type: string
+              assetCount:
+                type: integer
+                minimum: 0
+            required:
+              - chain
+              - assetCount
+      required:
+        - q
+        - assets
+        - issuers
+        - chains
     CompareRoutesResponse:
       type: object
       properties:
@@ -2849,6 +2995,97 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "404":
           description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/compare:
+    get:
+      operationId: compareAssets
+      summary: Compare representations side by side
+      description: Two to six asset IDs. Each item carries price, NAV and premium to NAV; `pairs` gives, for assets that share a canonical claim, the parity ratio from the registry's unit definitions, the implied market ratio and the deviation between them. All figures are from the data class selected by `data` and say whether they are simulated.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[a-z0-9-]+(,[a-z0-9-]+){1,5}$
+          required: true
+          name: ids
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompareResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/search:
+    get:
+      operationId: search
+      summary: Search assets, issuers and chains
+      description: All words must match. Assets rank by exact symbol, then symbol prefix, then ID. At most 10 assets, 5 issuers and 5 chains.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          required: true
+          name: q
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
           content:
             application/json:
               schema:

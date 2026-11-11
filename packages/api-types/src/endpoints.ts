@@ -49,6 +49,12 @@ import {
   MoversQuerySchema,
   OverviewQuerySchema,
 } from "./overview-types.ts";
+import {
+  CompareQuerySchema,
+  CompareResponseSchema,
+  SearchQuerySchema,
+  SearchResultSchema,
+} from "./discovery-types.ts";
 
 export const IssuerListSchema = z
   .object({ items: z.array(IssuerSummarySchema) })
@@ -344,6 +350,30 @@ export const ENDPOINTS = {
     errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
     description:
       "Newest first. Real rows are settled conversions on the testnet; simulated rows come from the demo simulator and say so. Cursors are opaque.",
+  },
+  compareAssets: {
+    method: "get",
+    path: "/v1/compare",
+    summary: "Compare representations side by side",
+    tag: "Market",
+    status: 200,
+    response: CompareResponseSchema,
+    query: CompareQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Two to six asset IDs. Each item carries price, NAV and premium to NAV; `pairs` gives, for assets that share a canonical claim, the parity ratio from the registry's unit definitions, the implied market ratio and the deviation between them. All figures are from the data class selected by `data` and say whether they are simulated.",
+  },
+  search: {
+    method: "get",
+    path: "/v1/search",
+    summary: "Search assets, issuers and chains",
+    tag: "Market",
+    status: 200,
+    response: SearchResultSchema,
+    query: SearchQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "All words must match. Assets rank by exact symbol, then symbol prefix, then ID. At most 10 assets, 5 issuers and 5 chains.",
   },
   compareRoutes: {
     method: "post",

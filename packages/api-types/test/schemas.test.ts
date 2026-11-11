@@ -8,6 +8,9 @@ import {
   AssetListSchema,
   AssetMetadataSchema,
   CategoryListSchema,
+  CompareQuerySchema,
+  CompareResponseSchema,
+  SearchResultSchema,
   ChainListSchema,
   MarketMoversSchema,
   MarketOverviewSchema,
@@ -62,6 +65,8 @@ describe("fixtures round-trip through the schemas", () => {
     ["asset chains", AssetChainListSchema, fx.assetChainList],
     ["asset documents", AssetDocumentListSchema, fx.assetDocumentList],
     ["asset activity", ActivityListSchema, fx.activityList],
+    ["compare", CompareResponseSchema, fx.compareResponse],
+    ["search", SearchResultSchema, fx.searchResult],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));
@@ -308,5 +313,13 @@ describe("market strings and queries", () => {
     expect(ListAssetsQuerySchema.safeParse({ limit: "101" }).success).toBe(false);
     expect(ListAssetsQuerySchema.safeParse({ sort: "rank" }).success).toBe(false);
     expect(ListAssetsQuerySchema.safeParse({ data: "fake" }).success).toBe(false);
+  });
+
+  it("accepts two to six comma-separated asset IDs to compare, and nothing else", () => {
+    expect(CompareQuerySchema.parse({ ids: "a-1,b-2" }).data).toBe("all");
+    expect(CompareQuerySchema.safeParse({ ids: "a,b,c,d,e,f" }).success).toBe(true);
+    for (const ids of ["a", "a,b,c,d,e,f,g", "a,,b", "A,b", "a b"]) {
+      expect(CompareQuerySchema.safeParse({ ids }).success, ids).toBe(false);
+    }
   });
 });

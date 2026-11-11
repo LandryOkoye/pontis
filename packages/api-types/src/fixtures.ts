@@ -19,6 +19,7 @@ import type {
 } from "./registry-types.ts";
 import type { NavChart, PriceChart, SupplyChart, VolumeChart } from "./chart-types.ts";
 import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
+import type { CompareResponse, SearchResult } from "./discovery-types.ts";
 import type { AssetIssuerView, AssetMetadata } from "./detail-types.ts";
 import type {
   CategoryList,
@@ -562,4 +563,54 @@ export const activityList = {
     },
   ],
   nextCursor: null,
+};
+
+export const compareResponse: CompareResponse = {
+  data: "all",
+  items: [directoryItemA, directoryItemB].map((i) => ({
+    id: i.id,
+    symbol: i.symbol,
+    name: i.name,
+    canonicalAssetId: i.canonicalAssetId,
+    issuer: i.issuer,
+    status: i.status,
+    verificationStatus: i.verificationStatus,
+    chains: i.chains,
+    convertible: i.convertible,
+    bridgeable: i.bridgeable,
+    market: i.market,
+    navPerToken: null,
+    premiumToNavBps: null,
+  })),
+  pairs: [
+    {
+      fromId: "tgold-a",
+      toId: "tgold-b",
+      parityRatio: "10",
+      impliedRatio: "10.00497222",
+      deviationBps: 4,
+      simulated: true,
+    },
+    {
+      fromId: "tgold-b",
+      toId: "tgold-a",
+      parityRatio: "0.1",
+      impliedRatio: "0.09995031",
+      deviationBps: -4,
+      simulated: true,
+    },
+  ],
+};
+
+export const searchResult: SearchResult = {
+  q: "gold",
+  assets: [tgoldASummary, tgoldBSummary].map((a) => ({
+    id: a.id,
+    symbol: a.symbol,
+    name: a.name,
+    canonicalAssetName: a.canonicalAssetName,
+    issuer: a.issuer,
+  })),
+  issuers: [],
+  chains: [],
 };
