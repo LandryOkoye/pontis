@@ -68,6 +68,15 @@ The contract side of [ADR 0017](decisions/0017-corporate-actions-and-multiplier-
 - **The overdue finding is a warning, raised on the next reconciler run after 10 minutes, once per action.** It does not say which operator should act.
 - **NAV strikes carry the feed's `simulated_feed` label.** The operator command signs the simulator's NAV (or `--nav`) with the dev publisher key; no real fund data exists.
 
+## Custody, reserves and redemption (API, phase 4)
+
+- **Every custodian, reserve figure and issuer is simulated.** A reserve attestation is a signed claim by a fictional custodian whose key the registrar recorded; no asset is custodied, backed, audited or redeemable for value, and the contract keeps refusing `independently_verified`. The API labels every response `simulated` with its `sources` and a `notice`, and a report URI is shown but never fetched or checked.
+- **The history of redemptions is rebuilt from the chain record, not from events.** `GET /v1/redemptions/{id}` has a `timeline` made from the record's own times, so a step that a later step overtook (a rejection followed by a reclaim) has no time, and every `txHash` is null until the indexer's event mirror is read. The listing needs `user` or `representationId` because the chain lists by account or by asset; `status` filters within a page.
+- **Reserve history is capped by the chain.** The contract keeps the last 500 attestations per asset; older ones exist only in events and in the indexer's tables, and the API does not serve them yet.
+- **The reserve relay does not pre-verify the signature.** It forwards to the contract, which does; a forged call is refused on chain and costs the relayer its gas ([threat T60](threat-model/mvp.md), [runbook](runbooks/reserve-relay.md)). There is no relayer in fixtures mode, and one is needed in the real server only for this endpoint.
+- **Reliability is a derived score on simulated counters.** The contract keeps counts and latency sums; the API computes the rates and averages. A demo issuer's figures say nothing about a real one.
+- **Session endpoints are not here.** Preparing a redemption, the reclaim intent, the issuer queue and issuer mint requests need the NEP-413 session and come later; until then a client builds the `ft_transfer_call` itself from the terms and their `termsHash`.
+
 ## Demo catalogue: trust states are narrative
 
 The demo seed (`seed-catalogue`) registers four simulated issuers in four states. Read them as labels a registrar set, not as results of any process ([dossiers](asset-dossiers/README.md)).

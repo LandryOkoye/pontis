@@ -33,6 +33,18 @@ Phase 0 deliverable (brief §18.3): an explicit list of what the testnet MVP fak
 | Legal                   | None; testnet and synthetic only                                                                                                                                                   | Jurisdiction- and asset-specific legal review                                               |
 | Corporate actions, NAV  | Registrar-entered actions; NAV strikes signed by the simulator key, labelled `simulated`                                                                                           | Verified action feeds, fund-administrator-signed NAV, issuer-applied events                 |
 
+## Custody, reserves and redemption (phase 4 API)
+
+The machinery is real contract logic; the parties and the numbers are fiction. Every row is labelled `simulated` in the API.
+
+| Area               | What the API shows                                                                                                                                                    | What production would need                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Custodian          | A registrar-entered record with a test key (`synthetic: true`, never above what the registrar recorded). The simulated custodian signs reserve figures with a dev key | A real custodian, legal agreements, a signing key under its own control |
+| Reserve figures    | Signed numbers a simulator makes up, with `source: "simulated_custodian"`. The report URI and hash point at nothing the API fetches or checks                         | A report the custodian publishes, checked by an independent attester    |
+| Redemption         | The state machine and the escrow are real; the issuer back-office is a test account. Fee and net are figures the simulator honours off-chain; no value moves          | Fiat or custody settlement, KYC on the payout, a legal redemption right |
+| Issuer reliability | Counters kept by the contract, a score derived from them, labelled `simulated_issuer`                                                                                 | Real issuer track record over time, disputes, third-party review        |
+| Reserve relayer    | A dedicated testnet account (`PONTIS_RELAYER_*`) that pays for relayed attestations; no custodian or user key                                                         | A funded, monitored relayer or the custodian submitting directly        |
+
 ## Demo catalogue (seed-catalogue, seed-profiles)
 
 The catalogue adds fiction on top of the MVP seed. Each row is a label or a story, not behaviour.
