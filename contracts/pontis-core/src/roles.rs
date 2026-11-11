@@ -44,6 +44,9 @@ impl Contract {
             self.role_set_mut(role).remove(&account_id),
             "account does not hold this role",
         );
+        if role.is_attester() {
+            self.drop_signer_keys(role, &account_id);
+        }
         CoreEvent::RoleRevoked {
             role,
             account_id,
