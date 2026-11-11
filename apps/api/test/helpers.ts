@@ -120,6 +120,17 @@ export function emptyCustodyChain(): CustodyRepository {
     getRedemption: async () => null,
     getRedemptionsByUser: async () => none,
     getRedemptionsByRepresentation: async () => none,
+    getIssuer: async () => null,
+    getRepresentation: async () => null,
+    getMintRequest: async () => null,
+    getMintRequests: async () => none,
+    getMintHeadroom: async () => ({
+      headroom_units: "0",
+      circulating_units: "0",
+      attested_units: "0",
+      state: "unmonitored",
+      mint_paused: false,
+    }),
     getIssuerReliability: async (issuerId) => ({
       issuer_id: issuerId,
       requested: 0,
