@@ -1867,7 +1867,7 @@ components:
           type: integer
           minimum: 0
         source:
-          $ref: "#/components/schemas/DataSource"
+          type: string
         simulated:
           type: boolean
       required:

@@ -58,6 +58,11 @@ const HANDLERS: Partial<Record<OperationId, Handler>> = {
   search: () => fx.searchResult,
   getIssuerLeaderboard: () => fx.issuerLeaderboard,
   getStatus: () => fx.status,
+  getRouteGuards: (p) => ({
+    ...fx.routeGuards,
+    fromId: p.fromId as string,
+    toId: p.toId as string,
+  }),
   createQuote: () => fx.quote,
   getQuote: () => fx.quote,
   getTransaction: () => fx.transactionSettled,

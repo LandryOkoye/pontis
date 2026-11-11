@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 import { AmountString, RefusalCodeSchema, Timestamp } from "./common.ts";
-import { DataSourceSchema, PriceString } from "./market-types.ts";
+import { PriceString } from "./market-types.ts";
 
 export const GuardCheckSchema = z
   .object({
@@ -25,7 +25,8 @@ export const ReferencePriceSchema = z
     asOf: Timestamp,
     /** Milliseconds between the price time and this response. */
     ageMs: z.number().int().nonnegative(),
-    source: DataSourceSchema,
+    /** The label the publisher signed, such as `simulated_feed`; shown as stored. */
+    source: z.string(),
     /** True for every price the demo publishes. Show it. */
     simulated: z.boolean(),
   })
