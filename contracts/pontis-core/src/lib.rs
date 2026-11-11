@@ -358,6 +358,10 @@ mod quote_tests;
 #[cfg(test)]
 mod registry_tests;
 #[cfg(test)]
+mod reserve_status_tests;
+#[cfg(test)]
+mod reserve_tests;
+#[cfg(test)]
 mod roles_sep_tests;
 #[cfg(test)]
 mod route_tests;
