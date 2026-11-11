@@ -7,6 +7,8 @@ import { join } from "node:path";
 import { section } from "../steps.ts";
 import type { World } from "../world.ts";
 import { breachScenario } from "./custody-breach.ts";
+import { reclaimScenario } from "./custody-reclaim.ts";
+import { settleScenario } from "./custody-settle.ts";
 import { redemptionScenario } from "./custody-redemption.ts";
 import { redemptionKit } from "./custody-redemption-kit.ts";
 import { mintScenario } from "./custody-mint.ts";
@@ -21,4 +23,6 @@ export async function custody(world: World): Promise<void> {
   await breachScenario(world, kit);
   const redemptions = await redemptionKit(world, kit);
   await redemptionScenario(world, kit, redemptions);
+  await settleScenario(world, kit, redemptions);
+  await reclaimScenario(world, kit, redemptions);
 }
