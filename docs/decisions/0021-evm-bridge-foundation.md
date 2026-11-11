@@ -27,6 +27,12 @@ consumed once. Integration with Chain Signatures follows the documented derive, 
 format and relay steps. Current official research and the unavailable custom-asset Omni Bridge
 surface are recorded in [`docs/research/phase6-near-evm-bridge.md`](../research/phase6-near-evm-bridge.md).
 
+For the local fallback path, `BridgeAttestationVerifier` checks M-of-N ECDSA attestations with a
+domain-separated payload bound to the destination chain, verifier and token contracts, route,
+source chain/bridge, operation ID, recipient, amount and expiry. It rejects duplicate signers and
+marks each operation ID consumed before minting. This is an explicit attester trust model; these
+signatures do not prove source finality and cannot be represented as a trustless bridge.
+
 ## Consequences
 
 - Local tests can exercise EVM transfer permissioning, caps, pause and burn events without external

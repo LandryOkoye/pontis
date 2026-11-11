@@ -15,6 +15,7 @@ contract PermissionedBridgeToken {
     error InsufficientAllowance();
     error CapExceeded();
     error InvalidCap();
+    error InvalidAmount();
     error EmptyNearRecipient();
 
     string public name;
@@ -104,6 +105,7 @@ contract PermissionedBridgeToken {
     }
 
     function setCap(uint256 cap_) external onlyIssuer {
+        if (cap_ == 0) revert InvalidCap();
         if (cap_ < totalSupply) revert CapExceeded();
         cap = cap_;
         emit CapUpdated(cap_);
@@ -155,12 +157,11 @@ contract PermissionedBridgeToken {
     /// @notice Burns a representation and exposes the unique event a relayer attests to NEAR.
     function bridgeOut(string calldata recipientNear, uint256 amount) external whenTransferOpen returns (uint64 nonce) {
         if (bytes(recipientNear).length == 0) revert EmptyNearRecipient();
+        if (amount == 0) revert InvalidAmount();
         _requireEligible(msg.sender);
         _burn(msg.sender, amount);
         nonce = nextBridgeNonce;
-        unchecked {
-            nextBridgeNonce = nonce + 1;
-        }
+        nextBridgeNonce = nonce + 1;
         emit BridgeOut(nonce, msg.sender, recipientNear, amount);
     }
 
