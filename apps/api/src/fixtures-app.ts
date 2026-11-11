@@ -103,6 +103,16 @@ export const UNAVAILABLE_IN_FIXTURES: readonly OperationId[] = [
   "authVerify",
   "authLogout",
   "authMe",
+  "prepareRedemption",
+  "reclaimRedemptionIntent",
+  "listIssuerRedemptions",
+  "acceptRedemption",
+  "rejectRedemption",
+  "fulfilRedemption",
+  "listIssuerMintRequests",
+  "createIssuerMintRequest",
+  "executeIssuerMintRequest",
+  "getReserveMonitor",
 ];
 
 export function buildFixturesApp(security: SecurityOptions = { corsOrigins: [] }): FastifyInstance {

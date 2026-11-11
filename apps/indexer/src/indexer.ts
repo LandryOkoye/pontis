@@ -85,7 +85,7 @@ export async function indexOnce(options: IndexerOptions): Promise<Pass> {
   });
   if (options.mirror) {
     const done = await refreshMirrors({ db, chain: options.mirror, log: options.log });
-    pass.refreshed = done.custodians + done.issuers + done.reserveStatuses;
+    pass.refreshed = done.custodians + done.issuers + done.reserveStatuses + done.mintRequests;
   }
   // Only reached when every read above succeeded.
   if (from > target) await touchCursor(db);

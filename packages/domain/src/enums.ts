@@ -166,6 +166,10 @@ export const ERROR_CODES = [
   "INTERNAL",
   /** Signed in, but the account holds no role the endpoint accepts (ADR 0019). Appended. */
   "FORBIDDEN",
+  /** The record is not in a state the requested step needs, such as a reclaim before the escrow is reclaimable (ADR 0020 section 10). */
+  "STATE_CONFLICT",
+  /** The chain would refuse a mint now: above the attested headroom, paused by the reserve action, or no reserve policy. */
+  "MINT_REFUSED",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 

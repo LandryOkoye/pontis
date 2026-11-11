@@ -122,6 +122,7 @@ describe("reserve views", () => {
       circulating_units: "3",
       attested_units: "8",
       state: "ok",
+      mint_paused: false,
     };
     expect(await client(headroom).core.getMintHeadroom("tgold-a")).toEqual(headroom);
     const request = {

@@ -26,6 +26,7 @@ describe("mirror event payloads", () => {
       fx.mintRequested(),
       fx.redemptionTermsSet(),
       fx.redemptionRequested(),
+      fx.redemptionRefused(),
       fx.redemptionAccepted(),
       fx.redemptionRejected(),
       fx.redemptionFulfilled(),
@@ -53,8 +54,7 @@ describe("mirror event payloads", () => {
 
   it("ignores events that are not custody, reserve, mint, redemption or signer-key events", () => {
     expect(parse(["conversion_completed", { nonce: "n" }])).toEqual({ kind: "other" });
-    // Refusals are stored with the raw events and never touch the mirror.
-    expect(parse(["redemption_refused", { reason: "BELOW_MIN" }])).toEqual({ kind: "other" });
+    expect(parse(["redemption_terms_requested", { id: 1 }])).toEqual({ kind: "other" });
   });
 
   it("reports a known event whose payload does not match instead of guessing", () => {
@@ -62,6 +62,9 @@ describe("mirror event payloads", () => {
     expect(bad).toMatchObject({ kind: "invalid", name: "reserve_attested" });
     expect(bad.kind === "invalid" && bad.problem).toContain("reserved_units");
     expect(parse(fx.redemptionExpired({ miss: "never" })).kind).toBe("invalid");
+    // A refusal reason the contract does not have is a contract and indexer out of step.
+    expect(parse(fx.redemptionRefused({ reason: "TOO_SMALL" })).kind).toBe("invalid");
+    expect(parse(fx.redemptionRefused({ reason: "WINDOW_CLOSED" })).kind).toBe("event");
     expect(parse(fx.signerKeyAdded({ role: "registrar" })).kind).toBe("invalid");
   });
 

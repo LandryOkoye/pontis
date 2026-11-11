@@ -32,4 +32,6 @@ export const ERROR_CODES_FOR_TEST = [
   "RATE_LIMITED",
   "INTERNAL",
   "FORBIDDEN",
+  "STATE_CONFLICT",
+  "MINT_REFUSED",
 ] as const;

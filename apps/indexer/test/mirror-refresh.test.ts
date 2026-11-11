@@ -1,11 +1,12 @@
 // Completing mirror rows from chain views after events marked them, through the indexing loop.
 
-import { custodians, issuerReliability, reserveStatus } from "@pontis/db";
+import { custodians, issuerReliability, mintRequests, reserveStatus } from "@pontis/db";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type {
   ChainCustodian,
   ChainIssuerReliability,
+  ChainMintRequest,
   ChainReserveStatus,
   MirrorChain,
 } from "../src/chain-views.ts";
@@ -23,8 +24,15 @@ class FakeMirrorChain implements MirrorChain {
   custodianRecords = new Map<string, ChainCustodian>();
   reliability = new Map<string, ChainIssuerReliability>();
   statuses = new Map<string, ChainReserveStatus>();
+  mints = new Map<number, ChainMintRequest>();
   failing = false;
   reads: string[] = [];
+
+  async mintRequest(id: number) {
+    this.reads.push(`mint:${id}`);
+    if (this.failing) throw new Error("rpc down");
+    return this.mints.get(id) ?? null;
+  }
 
   async custodian(id: string) {
     this.reads.push(`custodian:${id}`);
@@ -87,7 +95,7 @@ describe("mirror refresh", () => {
     chain.statuses.set("a", reserveStatusFixture({ sources: ["simulated_custodian"] }));
 
     const result = await refreshMirrors({ db: h.db, chain, log: silent, now: () => NOW });
-    expect(result).toEqual({ custodians: 1, issuers: 1, reserveStatuses: 1 });
+    expect(result).toEqual({ custodians: 1, issuers: 1, reserveStatuses: 1, mintRequests: 0 });
 
     const [c] = await h.db.select().from(custodians);
     expect(c).toMatchObject({
@@ -120,7 +128,7 @@ describe("mirror refresh", () => {
   it("reads nothing for rows that are current", async () => {
     const chain = new FakeMirrorChain();
     const result = await refreshMirrors({ db: h.db, chain, log: silent, now: () => NOW });
-    expect(result).toEqual({ custodians: 0, issuers: 0, reserveStatuses: 0 });
+    expect(result).toEqual({ custodians: 0, issuers: 0, reserveStatuses: 0, mintRequests: 0 });
     expect(chain.reads).toEqual([]);
   });
 
@@ -144,7 +152,7 @@ describe("mirror refresh", () => {
       log: silent,
       now: () => new Date(NOW.getTime() + 60_000),
     });
-    expect(result).toEqual({ custodians: 0, issuers: 1, reserveStatuses: 1 });
+    expect(result).toEqual({ custodians: 0, issuers: 1, reserveStatuses: 1, mintRequests: 0 });
     expect((await h.db.select().from(issuerReliability))[0]?.accepted).toBe(4);
   });
 
@@ -169,6 +177,105 @@ describe("mirror refresh", () => {
       name: null,
       attesterKey: "ed25519:custodian-key",
     });
+  });
+});
+
+const mintOnChain = (over: Partial<ChainMintRequest> = {}): ChainMintRequest => ({
+  id: 1,
+  representation_id: "a",
+  recipient: "alice.testnet",
+  amount: "5000000",
+  reference: "sub-0001",
+  status: "requested",
+  requested_by: "issuer-bo.testnet",
+  requested_ms: fx.T0 + 10_000,
+  resolved_ms: null,
+  failure: null,
+  ...over,
+});
+const mintRow = async (id: number) =>
+  (await h.db.select().from(mintRequests).where(eq(mintRequests.id, id)))[0];
+
+describe("mint requests", () => {
+  it("sees `minting`, which execute_mint emits no event for, then the terminal state", async () => {
+    await h.apply(execution([fx.mintRequested({ id: 1 })]));
+    const chain = new FakeMirrorChain();
+    chain.mints.set(1, mintOnChain({ status: "minting" }));
+    const first = await refreshMirrors({ db: h.db, chain, log: silent, now: () => NOW });
+    expect(first.mintRequests).toBe(1);
+    expect(await mintRow(1)).toMatchObject({ status: "minting", resolvedAt: null });
+
+    chain.mints.set(1, mintOnChain({ status: "minted", resolved_ms: fx.T0 + 20_000 }));
+    await refreshMirrors({ db: h.db, chain, log: silent, now: () => NOW });
+    const done = await mintRow(1);
+    expect(done).toMatchObject({ status: "minted", failure: null });
+    expect(done?.resolvedAt?.getTime()).toBe(fx.T0 + 20_000);
+  });
+
+  it("closes a request from the chain when the completion event was missed, with the failure reason", async () => {
+    await h.apply(execution([fx.mintRequested({ id: 2 })]));
+    const chain = new FakeMirrorChain();
+    chain.mints.set(
+      2,
+      mintOnChain({
+        id: 2,
+        status: "failed",
+        resolved_ms: fx.T0 + 30_000,
+        failure: "token mint failed",
+      }),
+    );
+    await refreshMirrors({ db: h.db, chain, log: silent, now: () => NOW });
+    expect(await mintRow(2)).toMatchObject({ status: "failed", failure: "token mint failed" });
+  });
+
+  it("does not touch a request whose status already matches, and never rereads a finished one", async () => {
+    await h.apply(execution([fx.mintRequested({ id: 3 })]));
+    const chain = new FakeMirrorChain();
+    chain.mints.set(3, mintOnChain({ id: 3 }));
+    expect(
+      (await refreshMirrors({ db: h.db, chain, log: silent, now: () => NOW })).mintRequests,
+    ).toBe(0);
+    chain.mints.set(3, mintOnChain({ id: 3, status: "cancelled", resolved_ms: fx.T0 + 40_000 }));
+    await refreshMirrors({ db: h.db, chain, log: silent, now: () => NOW });
+    chain.reads = [];
+    await refreshMirrors({ db: h.db, chain, log: silent, now: () => NOW });
+    expect(chain.reads.filter((r) => r === "mint:3")).toEqual([]);
+  });
+
+  it("keeps the row and logs when the chain cannot be read", async () => {
+    await h.apply(execution([fx.mintRequested({ id: 4 })]));
+    const chain = new FakeMirrorChain();
+    chain.failing = true;
+    const log = { ...silent, errors: [] as string[] };
+    await refreshMirrors({ db: h.db, chain, log, now: () => NOW });
+    expect(log.errors).toContain("mint request refresh failed; will retry");
+    expect((await mintRow(4))?.status).toBe("requested");
+  });
+
+  it("is applied by the same event later: a mint_completed after the refresh changes nothing", async () => {
+    await h.apply(execution([fx.mintRequested({ id: 5 })]));
+    const chain = new FakeMirrorChain();
+    chain.mints.set(5, mintOnChain({ id: 5, status: "minted", resolved_ms: fx.T0 + 50_000 }));
+    await refreshMirrors({ db: h.db, chain, log: silent, now: () => NOW });
+    await h.apply(
+      execution([
+        [
+          "mint_completed",
+          {
+            id: 5,
+            representation_id: "a",
+            recipient: "alice.testnet",
+            amount: "5000000",
+            circulating_units: "5000000",
+            headroom_units: "0",
+            timestamp_ms: fx.T0 + 50_000,
+          },
+        ],
+      ]),
+    );
+    const row = await mintRow(5);
+    expect(row?.status).toBe("minted");
+    expect(row?.resolvedAt?.getTime()).toBe(fx.T0 + 50_000);
   });
 });
 

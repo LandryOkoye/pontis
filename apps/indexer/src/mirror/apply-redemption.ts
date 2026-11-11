@@ -5,12 +5,14 @@ import {
   issuerReliability,
   mintRequests,
   redemptionEvents,
+  redemptionPayoutInstructions,
+  redemptionRefusals,
   redemptionTerms,
   redemptions,
   type DbTx,
   type RedemptionEventKind,
 } from "@pontis/db";
-import { eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import type { MirrorEvent } from "./events.ts";
 import { date, type Where } from "./where.ts";
 
@@ -46,6 +48,37 @@ async function timeline(
     .from(redemptions)
     .where(eq(redemptions.id, redemptionId));
   if (row) await markIssuerStale(w.tx, row.issuerId);
+}
+
+/**
+ * Ties the oldest prepared, still unlinked payout instruction of this user and hash to the
+ * redemption the chain just created. The ciphertext is not read: only the hash and the account
+ * match. Nothing is linked when the user redeemed without preparing (the instruction is then not
+ * stored by this API).
+ */
+async function linkPayoutInstruction(
+  w: Where,
+  redemptionId: number,
+  accountId: string,
+  payoutInstructionHash: string,
+): Promise<void> {
+  const [prepared] = await w.tx
+    .select({ id: redemptionPayoutInstructions.id })
+    .from(redemptionPayoutInstructions)
+    .where(
+      and(
+        eq(redemptionPayoutInstructions.accountId, accountId),
+        eq(redemptionPayoutInstructions.payoutInstructionHash, payoutInstructionHash),
+        isNull(redemptionPayoutInstructions.redemptionId),
+      ),
+    )
+    .orderBy(asc(redemptionPayoutInstructions.createdAt))
+    .limit(1);
+  if (prepared)
+    await w.tx
+      .update(redemptionPayoutInstructions)
+      .set({ redemptionId })
+      .where(eq(redemptionPayoutInstructions.id, prepared.id));
 }
 
 async function setRedemption(
@@ -146,7 +179,26 @@ export async function applyMintOrRedemption(w: Where, event: MirrorEvent): Promi
         })
         .onConflictDoNothing();
       await markIssuerStale(tx, d.issuer_id);
+      await linkPayoutInstruction(w, d.id, d.user, d.payout_instruction_hash);
       await timeline(w, d.id, "requested", d.timestamp_ms, d);
+      return;
+    }
+    case "redemption_refused": {
+      // The escrow came straight back and no redemption exists; the row is the user's explanation.
+      const d = event.data;
+      await tx
+        .insert(redemptionRefusals)
+        .values({
+          receiptId: w.receiptId,
+          logIndex: w.logIndex,
+          blockHeight: w.blockHeight,
+          reason: d.reason,
+          senderId: d.sender_id,
+          token: d.token,
+          amount: d.amount,
+          at: date(d.timestamp_ms),
+        })
+        .onConflictDoNothing();
       return;
     }
     case "redemption_accepted": {

@@ -164,4 +164,5 @@ Rules: no key is stored in git; `.env*` and `.near-credentials` are ignored; the
 - Indexer tests for T18; reconciler injected-mismatch tests for T19 (B12–B13).
 - API authorization and rate-limit tests for T20 (B14).
 - Sign-in tests cover T50 to T53 (nonce single use and expiry, wrong key, wrong callback URL, token hashing, role cache and sensitive re-read, break-glass audit): `apps/api/test/auth-signin.test.ts`, `admin-rbac.test.ts`, `rate-limit.test.ts`; the NEP-413 bytes are pinned by `test-vectors/nep413.json` (`packages/quote-engine`).
+- Session endpoint tests cover T100 to T105 (the stored instruction is never returned or audited, hash vector computed in Python, refusal matrix, 403 for every non-back-office account, stale-state conflicts): `apps/api/test/session-*.test.ts`, `payout.test.ts`; the indexer link and refusal mirror: `apps/indexer/test/mirror-redemption.test.ts`.
 - This document is revisited at the end of B8 and again before B15.
