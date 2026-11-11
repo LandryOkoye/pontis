@@ -33,7 +33,10 @@ Implements [ADR 0017](../decisions/0017-corporate-actions-and-multiplier-epochs.
 
 ## Verification
 
-See the commit list and results in the hand-off note; the sandbox scenario is `contracts/integration-tests/tests/actions.rs`.
+- `scripts/rust-ci.sh fmt`, `clippy` (workspace, `-D warnings`) and `test` pass: 323 `pontis-core` unit and property tests and 35 for the other crates.
+- Shared vector: `test-vectors/multiplier-epochs.json` (effective-multiplier lookup, exact-factor rule with overflow refusals, quotient mismatch) is computed with unbounded Python integers and reproduced by Rust (`epochs_tests.rs`). There is no TypeScript mirror.
+- Sandbox (`contracts/integration-tests/tests/actions.rs`, real wasm, the clock moved with `fast_forward`): a 2:1 split of a claim with two wrappers closes the pair in the freeze window (`corporate_action_freeze`, conversion refused as `CORPORATE_ACTION_FREEZE`); after the effective time with one wrapper applied the pair stays shut (`corporate_action_pending`); a wrong factor is refused and changes nothing; once both apply the pair routes at the same ratio with a new version and a quote signed before is refused with `COMPATIBILITY_CHANGED`. A NAV fund converts only inside an open strike window and the next strike opens the next one. `no_conversion` and delisted assets are refused (`NOT_CONVERTIBLE`, `LIFECYCLE_BLOCKED`), delisting needs a second account, and an unconfigured asset converts as in the MVP.
+- The existing sandbox suite (conversion, failures, gas, guards, pending inventory, smoke; two test threads) still passes. A host panic shows as a wasm trap in the sandbox, so refusal wording is asserted in unit tests.
 
 ## Open risks
 
