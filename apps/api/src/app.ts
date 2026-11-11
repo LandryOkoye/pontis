@@ -6,6 +6,7 @@ import { errorHandler, notFoundHandler } from "./errors.ts";
 import { loggerOptions } from "./logging.ts";
 import { registerPublicCaching } from "./routes/caching.ts";
 import { registerCatalogRoutes } from "./routes/catalog.ts";
+import { registerMarketRoutes } from "./routes/market.ts";
 import type { ConversionChain } from "./conversions/chain.ts";
 import type { QuoteDeps } from "./quotes/service.ts";
 import { registerAdminRoutes } from "./routes/admin.ts";
@@ -51,6 +52,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     registerHealthRoute(scope, deps.db, deps.chainHeight, deps.health);
     registerPublicCaching(scope);
     registerCatalogRoutes(scope, deps.db);
+    registerMarketRoutes(scope, { db: deps.db, ...(deps.now ? { now: deps.now } : {}) });
     registerQuoteRoutes(scope, { db: deps.db, ...deps.quotes });
     registerConversionRoutes(scope, {
       db: deps.db,
