@@ -157,6 +157,8 @@ export const ChainRedemptionSchema = z.object({
   reject_reason: z.string().nullable(),
   miss: z.enum(REDEMPTION_MISSES).nullable(),
   settlement_days: z.number().int().min(1).max(30),
+  /** True while the token call of a fulfilment (burn) or a reclaim (return) is in flight (ADR 0020 amendments). */
+  settling: z.boolean(),
 });
 
 /** `get_escrow_ledger`: `held = escrowed_in - burned - returned`, and `held == open_amount` (ADR 0020 section 7). */
