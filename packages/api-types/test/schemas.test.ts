@@ -14,7 +14,11 @@ import {
   IssuerSchema,
   ListTransactionsQuerySchema,
   ListAssetsQuerySchema,
+  NavChartSchema,
+  PriceChartSchema,
   PriceString,
+  SupplyChartSchema,
+  VolumeChartSchema,
   QuoteSchema,
   ReconciliationFindingSchema,
   ReconciliationReportSchema,
@@ -36,6 +40,10 @@ describe("fixtures round-trip through the schemas", () => {
     ["settled transaction", TransactionSchema, fx.transactionSettled],
     ["health", HealthSchema, fx.health],
     ["asset directory", AssetListSchema, fx.assetDirectory],
+    ["price chart", PriceChartSchema, fx.priceChart],
+    ["NAV chart", NavChartSchema, fx.navChart],
+    ["supply chart", SupplyChartSchema, fx.supplyChart],
+    ["volume chart", VolumeChartSchema, fx.volumeChart],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));

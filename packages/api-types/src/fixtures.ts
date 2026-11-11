@@ -17,6 +17,7 @@ import type {
   Issuer,
   IssuerSummary,
 } from "./registry-types.ts";
+import type { NavChart, PriceChart, SupplyChart, VolumeChart } from "./chart-types.ts";
 import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
 import type { Quote, Transaction } from "./trading-types.ts";
 
@@ -274,6 +275,10 @@ export const transactionSettled: Transaction = {
 
 // ---- market data (ADR 0015): every figure is simulated and says so ----
 
+const FROM = "2026-11-11T09:00:00.000Z";
+const TO = "2026-11-11T12:00:00.000Z";
+const hours = ["2026-11-11T09:00:00.000Z", "2026-11-11T10:00:00.000Z", "2026-11-11T11:00:00.000Z"];
+
 const marketA: MarketSnapshot = {
   price: "2681.42585338",
   currency: "USD",
@@ -328,4 +333,82 @@ export const assetDirectory = {
   items: [directoryItemA, directoryItemB],
   nextCursor: null,
   total: 2,
+};
+
+const envelope = {
+  representationId: "tgold-a",
+  interval: "1h" as const,
+  from: FROM,
+  to: TO,
+  source: ["simulated_feed" as const],
+  simulated: true,
+};
+
+export const priceChart: PriceChart = {
+  ...envelope,
+  filledPoints: 1,
+  points: [
+    {
+      t: hours[0] as string,
+      simulated: true,
+      open: "2660.1",
+      high: "2672",
+      low: "2655.5",
+      close: "2671.9",
+      volumeBase: "5000000",
+      volumeQuote: "13359.5",
+      trades: 2,
+      filled: false,
+    },
+    {
+      t: hours[1] as string,
+      simulated: true,
+      open: "2671.9",
+      high: "2679",
+      low: "2664",
+      close: "2668.4",
+      volumeBase: "0",
+      volumeQuote: "0",
+      trades: 0,
+      filled: false,
+    },
+    {
+      t: hours[2] as string,
+      simulated: true,
+      open: "2668.4",
+      high: "2668.4",
+      low: "2668.4",
+      close: "2668.4",
+      volumeBase: "0",
+      volumeQuote: "0",
+      trades: 0,
+      filled: true,
+    },
+  ],
+};
+
+export const navChart: NavChart = {
+  ...envelope,
+  representationId: "tustb-h",
+  filledPoints: 0,
+  points: hours.map((t, i) => ({ t, simulated: true, nav: `1.0164${i}`, filled: false })),
+};
+
+export const supplyChart: SupplyChart = {
+  ...envelope,
+  filledPoints: 2,
+  points: hours.map((t, i) => ({ t, simulated: true, supply: "12400000000", filled: i > 0 })),
+};
+
+export const volumeChart: VolumeChart = {
+  ...envelope,
+  filledPoints: 0,
+  points: priceChart.points.map((p) => ({
+    t: p.t,
+    simulated: true,
+    volumeBase: p.volumeBase,
+    volumeQuote: p.volumeQuote,
+    trades: p.trades,
+    filled: false,
+  })),
 };

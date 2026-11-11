@@ -495,6 +495,228 @@ components:
         - all
       default: all
       description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+    PriceChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/PricePoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    PricePoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        open:
+          $ref: "#/components/schemas/PriceString"
+        high:
+          $ref: "#/components/schemas/PriceString"
+        low:
+          $ref: "#/components/schemas/PriceString"
+        close:
+          $ref: "#/components/schemas/PriceString"
+        volumeBase:
+          $ref: "#/components/schemas/AmountString"
+        volumeQuote:
+          $ref: "#/components/schemas/PriceString"
+        trades:
+          type: integer
+          minimum: 0
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - open
+        - high
+        - low
+        - close
+        - volumeBase
+        - volumeQuote
+        - trades
+        - filled
+    NavChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/NavPoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    NavPoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        nav:
+          $ref: "#/components/schemas/PriceString"
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - nav
+        - filled
+    SupplyChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplyPoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    SupplyPoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        supply:
+          $ref: "#/components/schemas/AmountString"
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - supply
+        - filled
+    VolumeChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/VolumePoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    VolumePoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        volumeBase:
+          $ref: "#/components/schemas/AmountString"
+        volumeQuote:
+          $ref: "#/components/schemas/PriceString"
+        trades:
+          type: integer
+          minimum: 0
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - volumeBase
+        - volumeQuote
+        - trades
+        - filled
     Asset:
       type: object
       properties:
@@ -1454,6 +1676,273 @@ paths:
                 $ref: "#/components/schemas/AssetList"
         "400":
           description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/price:
+    get:
+      operationId: getAssetPriceChart
+      summary: OHLCV candles
+      description: "Candles in `[from, to)`, ascending. `from` defaults to a window of at most 500 buckets before `to`, `to` to now; a range of more than 5000 buckets is refused. A bucket without an observation repeats the previous close and has `filled: true`. Volume of parity conversions is units moved, not a market measure."
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/nav:
+    get:
+      operationId: getAssetNavChart
+      summary: NAV per token
+      description: "The last NAV before the end of each bucket, carried forward; `filled: true` when the bucket has no print of its own. Buckets before the first print are omitted, so an asset without a NAV has empty `points`. For `data=all` the real series is used when one exists, otherwise the simulated one."
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NavChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/supply:
+    get:
+      operationId: getAssetSupplyChart
+      summary: Circulating supply
+      description: "Supply summed over chains: the last snapshot before the end of each bucket, carried forward, `filled: true` when the bucket has none of its own. Smallest units. Series selection for `data=all` is as for NAV."
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplyChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/volume:
+    get:
+      operationId: getAssetVolumeChart
+      summary: Traded volume
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VolumeChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
           content:
             application/json:
               schema:

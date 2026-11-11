@@ -26,6 +26,13 @@ import {
   TransactionSchema,
 } from "./trading-types.ts";
 import { AssetListSchema, ListAssetsQuerySchema } from "./market-types.ts";
+import {
+  ChartQuerySchema,
+  NavChartSchema,
+  PriceChartSchema,
+  SupplyChartSchema,
+  VolumeChartSchema,
+} from "./chart-types.ts";
 
 export const IssuerListSchema = z
   .object({ items: z.array(IssuerSummarySchema) })
@@ -50,6 +57,7 @@ interface Endpoint {
     | "Health"
     | "Registry"
     | "Market"
+    | "Charts"
     | "Routes"
     | "Quotes"
     | "Conversions"
@@ -145,6 +153,56 @@ export const ENDPOINTS = {
     errors: { ...VALIDATION, ...COMMON },
     description:
       "One row per representation with its canonical claim name, issuer summary, filter facts, latest market figures and a 7 day sparkline. `market` is null when the asset has no price. Every market figure carries `simulated` and `sources`; `data` selects real rows, simulated rows, or real where they exist (`all`). Sorting by a figure that is null for some assets puts those last. Cursors are opaque and valid only for the same query.",
+  },
+  getAssetPriceChart: {
+    method: "get",
+    path: "/v1/assets/{id}/charts/price",
+    summary: "OHLCV candles",
+    tag: "Charts",
+    status: 200,
+    response: PriceChartSchema,
+    params: IdParam,
+    query: ChartQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Candles in `[from, to)`, ascending. `from` defaults to a window of at most 500 buckets before `to`, `to` to now; a range of more than 5000 buckets is refused. A bucket without an observation repeats the previous close and has `filled: true`. Volume of parity conversions is units moved, not a market measure.",
+  },
+  getAssetNavChart: {
+    method: "get",
+    path: "/v1/assets/{id}/charts/nav",
+    summary: "NAV per token",
+    tag: "Charts",
+    status: 200,
+    response: NavChartSchema,
+    params: IdParam,
+    query: ChartQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "The last NAV before the end of each bucket, carried forward; `filled: true` when the bucket has no print of its own. Buckets before the first print are omitted, so an asset without a NAV has empty `points`. For `data=all` the real series is used when one exists, otherwise the simulated one.",
+  },
+  getAssetSupplyChart: {
+    method: "get",
+    path: "/v1/assets/{id}/charts/supply",
+    summary: "Circulating supply",
+    tag: "Charts",
+    status: 200,
+    response: SupplyChartSchema,
+    params: IdParam,
+    query: ChartQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Supply summed over chains: the last snapshot before the end of each bucket, carried forward, `filled: true` when the bucket has none of its own. Smallest units. Series selection for `data=all` is as for NAV.",
+  },
+  getAssetVolumeChart: {
+    method: "get",
+    path: "/v1/assets/{id}/charts/volume",
+    summary: "Traded volume",
+    tag: "Charts",
+    status: 200,
+    response: VolumeChartSchema,
+    params: IdParam,
+    query: ChartQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
   },
   getAsset: {
     method: "get",
