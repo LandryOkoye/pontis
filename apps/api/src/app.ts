@@ -20,6 +20,7 @@ import { registerAuthRoutes } from "./routes/auth.ts";
 import { registerConversionRoutes } from "./routes/conversions.ts";
 import { registerHealthRoute, type HealthOptions } from "./routes/health.ts";
 import { registerQuoteRoutes } from "./routes/quotes.ts";
+import { registerIssuerRoutes } from "./routes/issuer.ts";
 import { registerRedemptionRoutes } from "./routes/redemptions.ts";
 import { registerSecurity, type SecurityOptions } from "./security/index.ts";
 
@@ -103,6 +104,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       ...(deps.now ? { now: deps.now } : {}),
     };
     registerRedemptionRoutes(scope, sessionRoutes);
+    registerIssuerRoutes(scope, sessionRoutes);
     registerAdminRoutes(scope, authContext);
     registerMetricsRoutes(scope, {
       db: deps.db,
