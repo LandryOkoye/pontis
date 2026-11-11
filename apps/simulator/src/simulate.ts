@@ -69,9 +69,14 @@ export async function loadSimulation(db: Db) {
 }
 
 /** Writes everything in `[fromMs, toMs)` and rebuilds the market tables over the same range. */
-export async function simulateWindow(db: Db, fromMs: number, toMs: number): Promise<WindowResult> {
+export async function simulateWindow(
+  db: Db,
+  fromMs: number,
+  toMs: number,
+  contract: string,
+): Promise<WindowResult> {
   const { reps, skipped, feed } = await loadSimulation(db);
-  const { prices, navs } = await writePrices(db, feed, reps, fromMs, toMs);
+  const { prices, navs } = await writePrices(db, feed, reps, fromMs, toMs, contract);
   const supply = await writeSupply(db, reps, fromMs, toMs);
   const trades = await writeTrades(db, reps, fromMs, toMs);
   await rebuildMarket(db, fromMs, toMs);
@@ -79,16 +84,21 @@ export async function simulateWindow(db: Db, fromMs: number, toMs: number): Prom
 }
 
 /** Writes `days` days of history ending now. Safe to repeat. */
-export function backfill(db: Db, nowMs: number, days: number): Promise<WindowResult> {
-  return simulateWindow(db, nowMs - days * DAY_MS, nowMs);
+export function backfill(
+  db: Db,
+  nowMs: number,
+  days: number,
+  contract: string,
+): Promise<WindowResult> {
+  return simulateWindow(db, nowMs - days * DAY_MS, nowMs, contract);
 }
 
 /** Continues from the newest simulated price; falls back to a 24 hour backfill on an empty database. */
-export async function tick(db: Db, nowMs: number): Promise<WindowResult> {
+export async function tick(db: Db, nowMs: number, contract: string): Promise<WindowResult> {
   const [latest] = await db
     .select({ ts: max(pricePoints.ts) })
     .from(pricePoints)
     .where(and(eq(pricePoints.simulated, true)));
   const from = latest?.ts ? latest.ts.getTime() + 1 : nowMs - DAY_MS;
-  return simulateWindow(db, from, nowMs);
+  return simulateWindow(db, from, nowMs, contract);
 }

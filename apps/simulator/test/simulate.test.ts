@@ -15,6 +15,7 @@ import { seedRegistry } from "./registry.ts";
 
 const NOW = Date.UTC(2026, 10, 11, 12, 0, 0);
 const DAY = 86_400_000;
+const CORE = "core.testnet";
 
 let t: TestDb;
 beforeAll(async () => {
@@ -32,7 +33,7 @@ afterAll(async () => {
 
 describe("backfill", () => {
   it("writes only simulated, signed rows for represented claims and leaves the rest alone", async () => {
-    const result = await backfill(t.db, NOW, 2);
+    const result = await backfill(t.db, NOW, 2, CORE);
     expect(result.skipped).toEqual(["mystery"]);
     expect(result.prices).toBe(3 * ((2 * DAY) / STEP_MS));
 
@@ -49,6 +50,7 @@ describe("backfill", () => {
       source: row.source,
       simulated: row.simulated,
     };
+    expect(row.attestation!.contract).toBe(CORE);
     expect(verifyPoint(row.attestation!, point)).toBe(true);
     expect(verifyPoint(row.attestation!, { ...point, price: point.price + 1n })).toBe(false);
 
@@ -78,7 +80,7 @@ describe("backfill", () => {
     expect(stats.every((s) => s.simulated)).toBe(true);
     expect((await t.db.select().from(candles)).every((c) => c.simulated)).toBe(true);
 
-    const again = await backfill(t.db, NOW, 2);
+    const again = await backfill(t.db, NOW, 2, CORE);
     expect([again.prices, again.navs, again.supply, again.trades]).toEqual([0, 0, 0, 0]);
   });
 });
@@ -86,9 +88,9 @@ describe("backfill", () => {
 describe("tick", () => {
   it("continues from the newest price without a gap or a duplicate", async () => {
     const later = NOW + 30 * 60_000;
-    const result = await tick(t.db, later);
+    const result = await tick(t.db, later, CORE);
     // Six new five-minute points per represented representation.
     expect(result.prices).toBe(3 * 6);
-    expect((await tick(t.db, later)).prices).toBe(0);
+    expect((await tick(t.db, later, CORE)).prices).toBe(0);
   });
 });

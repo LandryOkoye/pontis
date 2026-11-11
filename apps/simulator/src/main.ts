@@ -22,12 +22,14 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => 
 
 try {
   if (command === "backfill") {
-    log("backfill", { ...(await backfill(db, Date.now(), config.SIM_BACKFILL_DAYS)) });
+    log("backfill", {
+      ...(await backfill(db, Date.now(), config.SIM_BACKFILL_DAYS, config.PONTIS_CORE_ACCOUNT_ID)),
+    });
   } else {
     log("run started", { tickMs: config.SIM_TICK_MS });
     while (!controller.signal.aborted) {
       try {
-        log("tick", { ...(await tick(db, Date.now())) });
+        log("tick", { ...(await tick(db, Date.now(), config.PONTIS_CORE_ACCOUNT_ID)) });
       } catch (error) {
         console.error(
           JSON.stringify({ level: "error", message: "tick failed", error: String(error) }),

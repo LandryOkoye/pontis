@@ -103,7 +103,7 @@ Only `tustb-h` and `tustb-o` have an approved relationship (`DIRECT_EQUIVALENT`,
 
 ## 5. Optional: a simulated market, or no chain at all
 
-The charts, directory figures and market overview need price data, and a testnet has none. [`apps/simulator`](../apps/simulator/README.md) writes labelled, fake prices, NAV, supply and trade flow for the registered assets (it reads the registry mirror, so run the API sync first):
+The charts, directory figures and market overview need price data, and a testnet has none. [`apps/simulator`](../apps/simulator/README.md) writes labelled, fake prices, NAV, supply and trade flow for the registered assets (it reads the registry mirror, so run the API sync first, and it needs `PONTIS_CORE_ACCOUNT_ID` in its `.env`: it signs each price for that contract):
 
 ```bash
 pnpm --filter @pontis/simulator start backfill     # 90 days of history, about 90 seconds, safe to repeat

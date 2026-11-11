@@ -25,6 +25,7 @@ export async function writePrices(
   reps: readonly SimRep[],
   fromMs: number,
   toMs: number,
+  contract: string,
 ): Promise<{ prices: number; navs: number }> {
   const key = devKey("price-publisher");
   let prices = 0;
@@ -37,7 +38,7 @@ export async function writePrices(
       currency: p.currency,
       source: p.source,
       simulated: p.simulated,
-      attestation: signPoint(key, p),
+      attestation: signPoint(key, p, contract),
     }));
     prices += await insertBatches(
       points,

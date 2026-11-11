@@ -1,6 +1,17 @@
+import { readFileSync } from "node:fs";
 import { keyFromSeed } from "@pontis/quote-engine";
 import { describe, expect, it } from "vitest";
-import { Prng, seedFrom, signPoint, verifyPoint, type FeedPoint } from "../src/index.ts";
+import {
+  Prng,
+  attestationMessage,
+  seedFrom,
+  signPoint,
+  submitPriceArgs,
+  verifyPoint,
+  type FeedPoint,
+} from "../src/index.ts";
+
+const CONTRACT = "core.testnet";
 
 describe("Prng", () => {
   it("repeats for a seed and differs for another", () => {
@@ -45,7 +56,7 @@ describe("price attestations", () => {
   };
 
   it("verifies the exact point and refuses any changed field, key or domain", () => {
-    const attestation = signPoint(key, point);
+    const attestation = signPoint(key, point, CONTRACT);
     expect(verifyPoint(attestation, point)).toBe(true);
     expect(verifyPoint(attestation, { ...point, price: point.price + 1n })).toBe(false);
     expect(verifyPoint(attestation, { ...point, asOfMs: point.asOfMs + 1 })).toBe(false);
@@ -54,6 +65,45 @@ describe("price attestations", () => {
     const other = keyFromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 90));
     expect(verifyPoint({ ...attestation, publisherKey: other.publicKey }, point)).toBe(false);
     expect(verifyPoint({ ...attestation, domain: "pontis-quote-v1" }, point)).toBe(false);
+    expect(verifyPoint({ ...attestation, domain: "pontis-price-v1" }, point)).toBe(false);
+    expect(verifyPoint({ ...attestation, contract: "other.testnet" }, point)).toBe(false);
+    expect(verifyPoint({ ...attestation, version: 2 }, point)).toBe(false);
     expect(verifyPoint({ ...attestation, publisherKey: "nonsense" }, point)).toBe(false);
+  });
+});
+
+describe("price attestation vector (shared with the contract)", () => {
+  const vector = JSON.parse(
+    readFileSync(new URL("../../../test-vectors/price-attestation.json", import.meta.url), "utf8"),
+  );
+  const a = vector.attestation;
+  const point: FeedPoint = {
+    representationId: a.representation_id,
+    price: BigInt(a.price),
+    currency: a.currency,
+    asOfMs: a.as_of_ms,
+    source: a.source,
+    simulated: a.simulated,
+  };
+  const key = keyFromSeed(Buffer.from(vector.seed_hex, "hex"));
+
+  it("builds the same signed bytes and the same signature as the contract's test", () => {
+    expect(key.publicKey).toBe(vector.public_key);
+    expect(attestationMessage(point, a.contract).toString("hex")).toBe(vector.message_hex);
+    expect(signPoint(key, point, a.contract).signature).toBe(vector.signature_base64);
+  });
+
+  it("sends exactly what `submit_price` takes, with the price as a decimal string", () => {
+    const args = submitPriceArgs(point, signPoint(key, point, a.contract));
+    expect(args.attestation).toEqual(a);
+    expect(args.public_key).toBe(vector.public_key);
+    expect(args.signature).toBe(vector.signature_base64);
+  });
+
+  it("refuses a price outside u128 rather than signing a truncated value", () => {
+    expect(() => attestationMessage({ ...point, price: 1n << 128n }, a.contract)).toThrow(
+      RangeError,
+    );
+    expect(() => attestationMessage({ ...point, price: -1n }, a.contract)).toThrow(RangeError);
   });
 });

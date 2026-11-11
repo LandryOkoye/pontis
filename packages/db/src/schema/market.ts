@@ -24,9 +24,12 @@ const u128 = (name: string) => numeric(name, { precision: 39, scale: 0 });
 /** A price or value at 8 decimals; read back as a string, never a float. */
 const price = (name: string) => numeric(name, { precision: 48, scale: 8 });
 
-/** A price signed by a price publisher; verified on chain from phase 2 (ADR 0015 section 5). */
+/** A price signed by a price publisher; `submit_price` verifies it on chain (ADR 0016 section 1). */
 export interface StoredAttestation {
   domain: string;
+  version: number;
+  /** The core contract the price was signed for. */
+  contract: string;
   publisherKey: string;
   signature: string;
 }
