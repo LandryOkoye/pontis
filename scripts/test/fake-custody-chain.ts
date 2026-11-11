@@ -19,12 +19,14 @@ const fail = (message: string): never => {
   throw new Error(message);
 };
 
-export function fakeCustodyChain() {
+/** `supplies` maps a token account to its total supply. */
+export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
   const calls: Call[] = [];
   const roles = new Map<string, Set<string>>();
   const keys: { account_id: string; public_key: string; scopes: string[] }[] = [];
   const custodians = new Map<string, Json>();
   const links = new Map<string, Json>();
+  const policies = new Map<string, Json>();
   const has = (role: string, account: string) => roles.get(role)?.has(account) ?? false;
 
   const views: Record<string, (args: Json, contract: string) => unknown> = {
@@ -32,6 +34,8 @@ export function fakeCustodyChain() {
     get_signer_keys: () => keys,
     get_custodian: (a) => custodians.get(a.id as string) ?? null,
     get_custody_link: (a) => links.get(a.representation_id as string) ?? null,
+    get_reserve_policy: (a) => policies.get(a.representation_id as string) ?? null,
+    ft_total_supply: (_a, contract) => (supplies[contract] ?? 0n).toString(),
   };
 
   function applyCore(method: string, args: Json, signer: string): unknown {
@@ -66,6 +70,14 @@ export function fakeCustodyChain() {
         }
         links.set(args.representation_id as string, args);
         return;
+      case "set_reserve_policy": {
+        const rep = args.representation_id as string;
+        const policy = args.policy as Json;
+        const old = policies.get(rep);
+        if (old && old.baseline_supply !== policy.baseline_supply) fail("baseline_supply fixed");
+        policies.set(rep, policy);
+        return;
+      }
       default:
         return fail(`unexpected core call ${method}`);
     }
