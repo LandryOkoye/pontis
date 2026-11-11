@@ -9,6 +9,9 @@ import { NearChainSource } from "./near-source.ts";
 import { nearVaultChain } from "./reconcile/near-vault-chain.ts";
 import { runMarketJobs } from "./market-jobs.ts";
 import { Reconciler, runReconciler } from "./reconcile/reconciler.ts";
+import { CustodyViews } from "./chain-views.ts";
+import { ReserveMonitor, runReserveMonitor } from "./reserve-monitor/monitor.ts";
+import { nearMonitorSigner } from "./reserve-monitor/near-signer.ts";
 
 const config = loadConfig();
 const log: Logger = {
@@ -63,9 +66,32 @@ const marketJobs =
         log,
       })
     : undefined;
+const custody = new CustodyViews(rpc, config.PONTIS_CORE_ACCOUNT_ID);
+const monitoring =
+  config.RESERVE_MONITOR_INTERVAL_MS > 0
+    ? runReserveMonitor({
+        monitor: new ReserveMonitor({
+          db,
+          chain: custody,
+          signer:
+            config.RESERVE_MONITOR_ACCOUNT_ID && config.RESERVE_MONITOR_PRIVATE_KEY
+              ? nearMonitorSigner({
+                  rpcUrl: config.NEAR_RPC_URL,
+                  coreId: config.PONTIS_CORE_ACCOUNT_ID,
+                  accountId: config.RESERVE_MONITOR_ACCOUNT_ID,
+                  privateKey: config.RESERVE_MONITOR_PRIVATE_KEY,
+                })
+              : undefined,
+        }),
+        intervalMs: config.RESERVE_MONITOR_INTERVAL_MS,
+        signal: controller.signal,
+        log,
+      })
+    : undefined;
 await runIndexer({
   db,
   source,
+  mirror: custody,
   verifier: new RpcTxVerifier(rpc),
   coreId: config.PONTIS_CORE_ACCOUNT_ID,
   log,
@@ -76,5 +102,6 @@ await runIndexer({
 });
 await reconciling;
 await marketJobs;
+await monitoring;
 await pool.end();
 log.info("indexer stopped");
