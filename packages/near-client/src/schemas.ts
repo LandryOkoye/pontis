@@ -163,6 +163,19 @@ export const ChainRouteViewSchema = z.object({
 });
 export type ChainRouteView = z.infer<typeof ChainRouteViewSchema>;
 
+/** The latest accepted price of a representation (`get_price`, ADR 0016 section 1). */
+export const ChainPriceSchema = z.object({
+  /** Price of one whole token at 8 decimals, as a decimal string of the integer. */
+  price: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  currency: z.string(),
+  as_of_ms: timestampMs,
+  submitted_ms: timestampMs,
+  simulated: z.boolean(),
+  source: z.string(),
+  publisher_key: z.string(),
+});
+export type ChainPrice = z.infer<typeof ChainPriceSchema>;
+
 /** One line of `get_route_guards`: what was checked and the verdict (ADR 0016 section 6). */
 export const GuardCheckSchema = z.object({
   name: z.string(),

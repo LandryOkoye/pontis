@@ -121,6 +121,23 @@ describe("CoreClient quote-time views", () => {
     await expect(bad.getRouteGuards("a", "b")).rejects.toThrow();
   });
 
+  it("reads the stored price with its honesty label, null before any, and refuses a malformed one", async () => {
+    const stored = {
+      price: "10000000000",
+      currency: "USD",
+      as_of_ms: 1_790_000_000_000,
+      submitted_ms: 1_790_000_001_000,
+      simulated: true,
+      source: "simulated_feed",
+      publisher_key: "ed25519:FgcwodK7aTtn3DgvqwPuSseKgTPcMpGmK6zdf7Ri9KXm",
+    };
+    const price = (value: unknown) => new CoreClient(fakeRpc(() => value).rpc, "core.testnet");
+    expect(await price(stored).getPrice("tgold-a")).toEqual(stored);
+    expect(await price(null).getPrice("tgold-a")).toBeNull();
+    await expect(price({ ...stored, price: "1.5" }).getPrice("tgold-a")).rejects.toThrow();
+    await expect(price({ ...stored, simulated: undefined }).getPrice("tgold-a")).rejects.toThrow();
+  });
+
   it("passes the account to is_allowed and validates fee and signer", async () => {
     const { rpc, calls } = fakeRpc(({ method }) =>
       method === "is_allowed" ? true : method === "get_fee_bps" ? 10 : null,

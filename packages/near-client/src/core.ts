@@ -10,6 +10,7 @@ import {
   ChainIssuerSchema,
   ChainPolicySchema,
   ChainRepresentationSchema,
+  ChainPriceSchema,
   ChainRouteGuardsSchema,
   ChainRouteViewSchema,
   type ChainCanonicalAsset,
@@ -17,6 +18,7 @@ import {
   type ChainIssuer,
   type ChainPolicy,
   type ChainRepresentation,
+  type ChainPrice,
   type ChainRouteGuards,
   type ChainRouteView,
 } from "./schemas.ts";
@@ -100,6 +102,14 @@ export class CoreClient implements RegistrySource {
       amount_in: amountIn ?? null,
     });
     return ChainRouteGuardsSchema.parse(raw);
+  }
+
+  /** The latest reference price the contract holds for a representation, or null before any. */
+  async getPrice(representationId: string): Promise<ChainPrice | null> {
+    const raw = await this.rpc.view(this.accountId, "get_price", {
+      representation_id: representationId,
+    });
+    return raw === null ? null : ChainPriceSchema.parse(raw);
   }
 
   /** Live allowlist check: true if the representation needs no allowlist or the account is on it. */
