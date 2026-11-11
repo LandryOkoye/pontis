@@ -65,6 +65,13 @@ describe("fixtures mode", () => {
     }
   });
 
+  it("serves a labelled NAV example for the fund id, no strike for a fungible asset, 404 otherwise", async () => {
+    const get = async (url: string) => app.inject({ method: "GET", url });
+    expect((await get("/v1/assets/tnav-a/nav")).json().strike).toMatchObject({ simulated: true });
+    expect((await get("/v1/assets/tgold-a/nav")).json()).toMatchObject({ strike: null });
+    expect((await get("/v1/assets/ghost/corporate-actions")).statusCode).toBe(404);
+  });
+
   it("still validates requests like the real server, and 404s unknown records", async () => {
     expect((await app.inject({ method: "GET", url: "/v1/assets?limit=0" })).statusCode).toBe(400);
     expect((await app.inject({ method: "GET", url: "/v1/assets/ghost" })).statusCode).toBe(404);

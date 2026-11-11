@@ -14,7 +14,7 @@ pnpm --filter @pontis/api start          # migrates, starts on :3000, syncs the 
 
 ## Endpoints
 
-`POST /v1/routes/compare`, `POST /v1/quotes` (201, or 422 with a reason code), `GET /v1/quotes/{id}`, `POST /v1/conversions` (needs an `Idempotency-Key` header), `POST /v1/conversions/{id}/submitted`, `GET /v1/transactions/{id}`, `GET /v1/transactions?account=`, `GET /v1/health`, `GET /v1/health/live`, `GET /v1/health/ready`, `/v1/issuers`, `/v1/issuers/{id}`, `/v1/assets`, `/v1/assets/{id}`, `/v1/assets/{id}/compatibility`. Paths and schemas come from `@pontis/api-types`, and each response is validated against its schema before it is sent. Errors are `{code, message, details?}`.
+`POST /v1/routes/compare`, `POST /v1/quotes` (201, or 422 with a reason code), `GET /v1/quotes/{id}`, `POST /v1/conversions` (needs an `Idempotency-Key` header), `POST /v1/conversions/{id}/submitted`, `GET /v1/transactions/{id}`, `GET /v1/transactions?account=`, `GET /v1/health`, `GET /v1/health/live`, `GET /v1/health/ready`, `/v1/issuers`, `/v1/issuers/{id}`, `/v1/assets`, `/v1/assets/{id}`, `/v1/assets/{id}/compatibility`, `/v1/assets/{id}/lifecycle`, `/v1/assets/{id}/corporate-actions`, `/v1/assets/{id}/nav` (the last three are read live from the chain). Paths and schemas come from `@pontis/api-types`, and each response is validated against its schema before it is sent. Errors are `{code, message, details?}`.
 
 ## Market reads
 
