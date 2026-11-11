@@ -45,6 +45,8 @@ describe("openapi.yaml", () => {
         "GET /v1/assets/{id}/activity",
         "GET /v1/compare",
         "GET /v1/search",
+        "GET /v1/issuers/leaderboard",
+        "GET /v1/status",
         "GET /v1/market/overview",
         "GET /v1/market/movers",
         "GET /v1/market/categories",

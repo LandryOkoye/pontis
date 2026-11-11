@@ -10,7 +10,9 @@ import {
   CategoryListSchema,
   CompareQuerySchema,
   CompareResponseSchema,
+  IssuerLeaderboardSchema,
   SearchResultSchema,
+  StatusSchema,
   ChainListSchema,
   MarketMoversSchema,
   MarketOverviewSchema,
@@ -67,6 +69,8 @@ describe("fixtures round-trip through the schemas", () => {
     ["asset activity", ActivityListSchema, fx.activityList],
     ["compare", CompareResponseSchema, fx.compareResponse],
     ["search", SearchResultSchema, fx.searchResult],
+    ["issuer leaderboard", IssuerLeaderboardSchema, fx.issuerLeaderboard],
+    ["status", StatusSchema, fx.status],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));

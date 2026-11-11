@@ -21,6 +21,7 @@ import type { NavChart, PriceChart, SupplyChart, VolumeChart } from "./chart-typ
 import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
 import type { CompareResponse, SearchResult } from "./discovery-types.ts";
 import type { AssetIssuerView, AssetMetadata } from "./detail-types.ts";
+import type { IssuerLeaderboard, Status } from "./status-types.ts";
 import type {
   CategoryList,
   ChainList,
@@ -613,4 +614,40 @@ export const searchResult: SearchResult = {
   })),
   issuers: [],
   chains: [],
+};
+
+export const issuerLeaderboard: IssuerLeaderboard = {
+  data: "all",
+  items: [
+    {
+      rank: 1,
+      issuer: issuerSummaryA,
+      assetCount: 1,
+      totalMarketCap: "33250000.5",
+      simulated: true,
+      reliabilityScore: null,
+    },
+    {
+      rank: 2,
+      issuer: issuerSummaryB,
+      assetCount: 1,
+      totalMarketCap: "3324000.1",
+      simulated: true,
+      reliabilityScore: null,
+    },
+  ],
+};
+
+export const status: Status = {
+  asOf: "2026-11-11T12:00:00.000Z",
+  health,
+  prices: {
+    real: { latestAt: null, ageSeconds: null, stale: true },
+    simulated: { latestAt: "2026-11-11T11:55:00.000Z", ageSeconds: 300, stale: false },
+  },
+  marketJobs: { latestAt: "2026-11-11T11:59:30.000Z", ageSeconds: 30, stale: false },
+  routes: { approved: 1, suspended: 0, proposed: 0 },
+  reserves: null,
+  bridge: null,
+  incidents: [],
 };

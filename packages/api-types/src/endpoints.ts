@@ -55,6 +55,7 @@ import {
   SearchQuerySchema,
   SearchResultSchema,
 } from "./discovery-types.ts";
+import { IssuerLeaderboardSchema, LeaderboardQuerySchema, StatusSchema } from "./status-types.ts";
 
 export const IssuerListSchema = z
   .object({ items: z.array(IssuerSummarySchema) })
@@ -374,6 +375,29 @@ export const ENDPOINTS = {
     errors: { ...VALIDATION, ...COMMON },
     description:
       "All words must match. Assets rank by exact symbol, then symbol prefix, then ID. At most 10 assets, 5 issuers and 5 chains.",
+  },
+  getIssuerLeaderboard: {
+    method: "get",
+    path: "/v1/issuers/leaderboard",
+    summary: "Issuers ranked by market cap of their assets",
+    tag: "Market",
+    status: 200,
+    response: IssuerLeaderboardSchema,
+    query: LeaderboardQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "`reliabilityScore` is null until redemption and reserve data exist; no score is invented. Issuers without a known market cap rank after those with one.",
+  },
+  getStatus: {
+    method: "get",
+    path: "/v1/status",
+    summary: "Transparency feed: indexer, price and job freshness, route health",
+    tag: "Health",
+    status: 200,
+    response: StatusSchema,
+    errors: { ...COMMON },
+    description:
+      "`reserves` and `bridge` are null until those features exist. `stale` marks a price or job older than its threshold (15 minutes for prices, 5 minutes for the market jobs); simulated prices are reported apart from real ones.",
   },
   compareRoutes: {
     method: "post",

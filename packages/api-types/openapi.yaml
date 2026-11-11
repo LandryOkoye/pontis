@@ -1580,6 +1580,152 @@ components:
         - assets
         - issuers
         - chains
+    IssuerLeaderboard:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              rank:
+                type: integer
+                exclusiveMinimum: 0
+              issuer:
+                $ref: "#/components/schemas/IssuerSummary"
+              assetCount:
+                type: integer
+                minimum: 0
+              totalMarketCap:
+                allOf:
+                  - $ref: "#/components/schemas/PriceString"
+                  - type:
+                      - string
+                      - "null"
+              simulated:
+                type:
+                  - boolean
+                  - "null"
+              reliabilityScore:
+                type:
+                  - integer
+                  - "null"
+                minimum: 0
+                maximum: 100
+            required:
+              - rank
+              - issuer
+              - assetCount
+              - totalMarketCap
+              - simulated
+              - reliabilityScore
+      required:
+        - data
+        - items
+    Status:
+      type: object
+      properties:
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        health:
+          $ref: "#/components/schemas/Health"
+        prices:
+          type: object
+          properties:
+            real:
+              type: object
+              properties:
+                latestAt:
+                  $ref: "#/components/schemas/Timestamp"
+                ageSeconds:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 0
+                stale:
+                  type: boolean
+              required:
+                - latestAt
+                - ageSeconds
+                - stale
+            simulated:
+              type: object
+              properties:
+                latestAt:
+                  $ref: "#/components/schemas/Timestamp"
+                ageSeconds:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 0
+                stale:
+                  type: boolean
+              required:
+                - latestAt
+                - ageSeconds
+                - stale
+          required:
+            - real
+            - simulated
+        marketJobs:
+          type: object
+          properties:
+            latestAt:
+              $ref: "#/components/schemas/Timestamp"
+            ageSeconds:
+              type:
+                - integer
+                - "null"
+              minimum: 0
+            stale:
+              type: boolean
+          required:
+            - latestAt
+            - ageSeconds
+            - stale
+        routes:
+          type: object
+          properties:
+            approved:
+              type: integer
+              minimum: 0
+            suspended:
+              type: integer
+              minimum: 0
+            proposed:
+              type: integer
+              minimum: 0
+          required:
+            - approved
+            - suspended
+            - proposed
+        reserves:
+          type: "null"
+        bridge:
+          type: "null"
+        incidents:
+          type: array
+          items:
+            type: object
+            properties:
+              at:
+                $ref: "#/components/schemas/Timestamp"
+              summary:
+                type: string
+            required:
+              - at
+              - summary
+      required:
+        - asOf
+        - health
+        - prices
+        - marketJobs
+        - routes
+        - reserves
+        - bridge
+        - incidents
     CompareRoutesResponse:
       type: object
       properties:
@@ -3090,6 +3236,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuers/leaderboard:
+    get:
+      operationId: getIssuerLeaderboard
+      summary: Issuers ranked by market cap of their assets
+      description: "`reliabilityScore` is null until redemption and reserve data exist; no score is invented. Issuers without a known market cap rank after those with one."
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuerLeaderboard"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/status:
+    get:
+      operationId: getStatus
+      summary: "Transparency feed: indexer, price and job freshness, route health"
+      description: "`reserves` and `bridge` are null until those features exist. `stale` marks a price or job older than its threshold (15 minutes for prices, 5 minutes for the market jobs); simulated prices are reported apart from real ones."
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
         "429":
           description: "Rate limited. Codes: RATE_LIMITED."
           content:
