@@ -31,6 +31,7 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
   const ledger = new Map<string, bigint>();
   const attestations = new Map<string, Json>();
   const terms = new Map<string, Json>();
+  const redemptions: Json[] = [];
   const tokens = new Map(
     Object.entries(supplies).map(([account, supply]) => [
       account,
@@ -83,6 +84,10 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
     storage_balance_of: (a, c) =>
       tokens.get(c)!.registered.has(a.account_id as string) ? { total: "1" } : null,
     get_redemption_terms: (a) => terms.get(a.representation_id as string) ?? null,
+    get_redemptions_by_user: (a) => {
+      const items = redemptions.filter((r) => r.user === a.account_id);
+      return { items: items.slice(a.from_index as number), total: items.length };
+    },
   };
 
   function applyCore(method: string, args: Json, signer: string): unknown {
@@ -148,6 +153,25 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
         terms.set(rep, { terms: args.terms, version, terms_hash: terms_hash.slice(0, 64) });
         return;
       }
+      case "accept_redemption": {
+        const r = redemptions.find((x) => x.id === args.id) ?? fail("redemption not found");
+        if (r.status !== "requested") fail("request is not open");
+        if (signer !== `${r.representation_id}.${DEPLOYER}`) fail("not an issuer account");
+        r.status = "accepted";
+        return;
+      }
+      case "fulfil_redemption": {
+        const r = redemptions.find((x) => x.id === args.id) ?? fail("redemption not found");
+        if (r.status !== "accepted") fail("request is not accepted");
+        const t = tokenOfRep(r.representation_id as string);
+        if (t.minter !== CORE) fail("only the minter can call this method");
+        const amount = BigInt(r.amount as string);
+        t.supply -= amount;
+        t.balances.set(CORE, (t.balances.get(CORE) ?? 0n) - amount);
+        ledger.set(t.rep, (ledger.get(t.rep) ?? 0n) - amount);
+        r.status = "fulfilled";
+        return;
+      }
       default:
         return fail(`unexpected core call ${method}`);
     }
@@ -161,6 +185,25 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
       case "storage_deposit":
         t.registered.add(args.account_id as string);
         return;
+      case "ft_transfer_call": {
+        if (!t.registered.has(CORE)) fail("receiver is not registered");
+        const amount = BigInt(args.amount as string);
+        const [, hash, payout] = (args.msg as string).split(":");
+        t.balances.set(signer, (t.balances.get(signer) ?? 0n) - amount);
+        t.balances.set(CORE, (t.balances.get(CORE) ?? 0n) + amount);
+        // The core returns the tokens, and creates no request, when the terms hash is stale.
+        if (terms.get(t.rep)?.terms_hash !== hash) return fail("TERMS_CHANGED");
+        const id = redemptions.length + 1;
+        redemptions.push({
+          id,
+          user: signer,
+          representation_id: t.rep,
+          amount: amount.toString(),
+          payout_instruction_hash: payout,
+          status: "requested",
+        });
+        return;
+      }
       default:
         return fail(`unexpected token call ${method}`);
     }
@@ -186,7 +229,10 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
 
   return {
     chain: chainFor(DEPLOYER),
+    /** The same chain, signing as another account (the issuer's token account). */
+    as: chainFor,
     tokenOf: tokenOfRep,
+    redemptions,
     terms,
     calls,
     clock,
