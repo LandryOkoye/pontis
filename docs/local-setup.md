@@ -4,12 +4,13 @@ From a clean checkout to a running system, on your machine and then on NEAR Test
 
 ## Prerequisites
 
-| Tool                           | For                                                                                       |
-| ------------------------------ | ----------------------------------------------------------------------------------------- |
-| Node.js 22+ and pnpm           | Everything in TypeScript (the pnpm version is pinned by `packageManager`)                 |
-| Docker                         | Local PostgreSQL 16                                                                       |
-| Rust (`rust-toolchain.toml`)   | Contracts and the sandbox tests                                                           |
-| `cargo-near` **or** `wasm-opt` | Building the wasm: `cargo-near` for the default build, `binaryen`'s `wasm-opt` for `slim` |
+| Tool                           | For                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Node.js 22+ and pnpm           | Everything in TypeScript (the pnpm version is pinned by `packageManager`)                                  |
+| Docker                         | Local PostgreSQL 16                                                                                        |
+| Rust (`rust-toolchain.toml`)   | Contracts and the sandbox tests                                                                            |
+| `cargo-near` **or** `wasm-opt` | Building the wasm: `cargo-near` for the default build, `binaryen`'s `wasm-opt` for `slim`                  |
+| Foundry (`forge`, `anvil`)     | **Optional.** EVM contracts in `contracts-evm/` and the bridge e2e; not needed for Rust or TypeScript work |
 
 ## 1. Install and check
 

@@ -71,6 +71,42 @@ jobs:
       - run: pnpm -r typecheck
       - run: pnpm -r test
 
+  evm:
+    name: EVM contracts (Foundry, optional)
+    runs-on: ubuntu-latest
+    # Optional for contributors who only touch Rust or TypeScript (docs/local-setup.md). The job
+    # does nothing until `contracts-evm/foundry.toml` exists, then runs fmt, build and tests.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Detect the Foundry project
+        id: detect
+        run: |
+          if [ -f contracts-evm/foundry.toml ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No contracts-evm/foundry.toml: skipping the EVM job."
+          fi
+      - name: Install Foundry, pinned
+        if: steps.detect.outputs.present == 'true'
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.1
+      - name: Check formatting
+        if: steps.detect.outputs.present == 'true'
+        working-directory: contracts-evm
+        run: forge fmt --check
+      - name: Build
+        if: steps.detect.outputs.present == 'true'
+        working-directory: contracts-evm
+        run: forge build --sizes
+      - name: Test
+        if: steps.detect.outputs.present == 'true'
+        working-directory: contracts-evm
+        run: forge test -vvv
+
   e2e:
     name: System E2E (sandbox chain, Postgres, API, indexer)
     runs-on: ubuntu-latest
