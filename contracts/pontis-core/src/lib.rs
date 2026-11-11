@@ -17,25 +17,36 @@ mod breaker_reset;
 mod compatibility;
 mod config;
 mod conversion;
+mod custody;
+mod custody_events;
+mod custody_types;
 mod epochs;
 mod events;
 mod guard;
 mod guard_exec;
 mod guard_math;
+mod hexa;
 mod lifecycle;
 mod lifecycle_route;
 mod lifecycle_types;
 mod math;
+mod mint_gate;
+mod mint_types;
 mod nav;
 mod policy;
 mod price;
 mod quote;
 mod registry;
+mod reserve;
+mod reserve_status;
+mod reserve_supply;
+mod reserve_types;
 mod roles;
 mod route;
 mod route_guards;
 mod route_guards_actions;
 mod signers;
+mod token_calls;
 mod types;
 mod vault;
 mod wide;
@@ -43,13 +54,19 @@ mod wide;
 pub use actions_events::ActionEvent;
 pub use actions_types::*;
 pub use conversion::{ConversionPlan, ConversionRecord, Rejection};
+pub use custody_events::CustodyEvent;
+pub use custody_types::{
+    Custodian, CustodianStatus, CustodyLink, CustodyStructure, NewCustodian, Page,
+};
 pub use events::{CoreEvent, PauseScope, RoleName};
 pub use guard::{RouteGuard, StalePolicy};
 pub use lifecycle_types::*;
 pub use math::{compute_amounts, Amounts, MAX_FEE_BPS};
+pub use mint_types::{MintHeadroom, MintRequest, MintStatus};
 pub use nav::{NavAttestation, NavStrike, NAV_DOMAIN, NAV_VERSION};
 pub use price::{PriceAttestation, PriceRecord};
 pub use quote::{parse_nonce, ConversionMsg, QuoteInput, QUOTE_DOMAIN, QUOTE_VERSION};
+pub use reserve_types::*;
 pub use route::{RouteRefusal, RouteTerms, RouteView};
 pub use signers::{SignerError, SignerEvent, SignerKey};
 pub use types::*;
@@ -94,6 +111,18 @@ enum StorageKey {
     ReserveAttesters,
     BridgeAttesters,
     SignerKeys,
+    Custodians,
+    CustodyLinks,
+    ReservePolicies,
+    ReserveLatest,
+    ReserveHistory,
+    ReserveSeq,
+    ReserveState,
+    SupplyLedger,
+    PendingMint,
+    SupplyRead,
+    MintRequests,
+    MintByRep,
 }
 
 #[derive(PanicOnDefault)]
@@ -169,6 +198,26 @@ pub struct Contract {
     /// Lifecycle side record per representation; absent means fungible and active (ADR 0018).
     lifecycles: LookupMap<String, lifecycle_types::Lifecycle>,
     nav_strikes: LookupMap<String, nav::NavStrike>,
+    /// Custodians by id and each representation's custody link (ADR 0020 section 2).
+    custodians: IterableMap<String, custody_types::Custodian>,
+    custody_links: LookupMap<String, custody_types::CustodyLink>,
+    /// Reserve policy per representation; absent means unmonitored.
+    reserve_policies: LookupMap<String, reserve_types::ReservePolicy>,
+    /// Latest attestation per `"{rep}|{custodian}"`, and a ring of the last 500 per representation.
+    reserve_latest: LookupMap<String, reserve_types::ReserveRecord>,
+    reserve_history: LookupMap<(String, u64), reserve_types::ReserveRecord>,
+    /// Attestations ever stored per representation: the next sequence number.
+    reserve_seq: LookupMap<String, u64>,
+    /// The last reserve state emitted per representation.
+    reserve_state: LookupMap<String, reserve_types::ReserveState>,
+    /// Supply the core minted through the gate (plus the baseline) minus what redemption burned,
+    /// mint amounts reserved in flight, and the last `ft_total_supply` read (ADR 0020 section 4).
+    supply_ledger: LookupMap<String, u128>,
+    pending_mint: LookupMap<String, u128>,
+    supply_read: LookupMap<String, reserve_types::SupplyReading>,
+    mint_requests: LookupMap<u64, mint_types::MintRequest>,
+    mint_seq: u64,
+    mint_by_rep: LookupMap<String, Vec<u64>>,
 }
 
 #[near]
@@ -219,6 +268,19 @@ impl Contract {
             approved_multipliers: LookupMap::new(StorageKey::ApprovedMultipliers),
             lifecycles: LookupMap::new(StorageKey::Lifecycles),
             nav_strikes: LookupMap::new(StorageKey::NavStrikes),
+            custodians: IterableMap::new(StorageKey::Custodians),
+            custody_links: LookupMap::new(StorageKey::CustodyLinks),
+            reserve_policies: LookupMap::new(StorageKey::ReservePolicies),
+            reserve_latest: LookupMap::new(StorageKey::ReserveLatest),
+            reserve_history: LookupMap::new(StorageKey::ReserveHistory),
+            reserve_seq: LookupMap::new(StorageKey::ReserveSeq),
+            reserve_state: LookupMap::new(StorageKey::ReserveState),
+            supply_ledger: LookupMap::new(StorageKey::SupplyLedger),
+            pending_mint: LookupMap::new(StorageKey::PendingMint),
+            supply_read: LookupMap::new(StorageKey::SupplyRead),
+            mint_requests: LookupMap::new(StorageKey::MintRequests),
+            mint_seq: 0,
+            mint_by_rep: LookupMap::new(StorageKey::MintByRep),
         }
     }
 }
