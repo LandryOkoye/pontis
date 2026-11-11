@@ -35,3 +35,6 @@ pgdata/
 .agents/
 .claude/
 skills-lock.json
+
+# Simulated custodian cover ratios written by `scripts/reserves.ts drift`
+scripts/.reserves-state.json

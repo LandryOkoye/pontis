@@ -16,7 +16,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "guards": "tsx --env-file-if-exists=.env guards.ts",
-    "actions": "tsx --env-file-if-exists=.env actions.ts"
+    "actions": "tsx --env-file-if-exists=.env actions.ts",
+    "reserves": "tsx --env-file-if-exists=.env reserves.ts",
+    "backoffice": "tsx --env-file-if-exists=.env backoffice.ts"
   },
   "dependencies": {
     "@pontis/db": "workspace:*",
