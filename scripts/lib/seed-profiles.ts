@@ -4,8 +4,10 @@
 
 import { assetProfiles, type Db } from "@pontis/db";
 import { sql } from "drizzle-orm";
-import { CLAIMS, ISSUERS, REPRESENTATIONS, tokenAccount } from "./catalogue.ts";
+import { tokenAccount } from "./catalogue.ts";
 import { PROFILE_TEXT } from "./catalogue-profiles.ts";
+import { richProfileText } from "./catalogue-profiles-rich.ts";
+import { BASE_CATALOGUE, type CatalogueData } from "./catalogue-tiers.ts";
 import { dossierEvidence, REPO_ROOT } from "./evidence.ts";
 
 export type ProfileRow = typeof assetProfiles.$inferInsert;
@@ -15,13 +17,20 @@ export const NEAR_CHAIN = "near-testnet";
 /** A bridge to an EVM chain is planned (ADR 0014 workstream F); none exists, so no contract. */
 export const PLANNED_EVM_CHAIN = "evm-testnet";
 
-export function buildProfiles(deployerId: string, root: string = REPO_ROOT): ProfileRow[] {
-  return REPRESENTATIONS.map((rep) => {
-    const text = PROFILE_TEXT[rep.id];
-    const claim = CLAIMS.find((c) => c.id === rep.claimId);
-    const issuer = ISSUERS.find((i) => i.id === rep.issuerId);
-    if (!text || !claim || !issuer)
-      throw new Error(`no profile text, claim or issuer for ${rep.id}`);
+/**
+ * One profile row per representation of `data` (the phase 1 catalogue unless a tier is given).
+ * The phase 1 tokens have hand-written text; the rest is generated from the catalogue data.
+ */
+export function buildProfiles(
+  deployerId: string,
+  root: string = REPO_ROOT,
+  data: CatalogueData = BASE_CATALOGUE,
+): ProfileRow[] {
+  return data.representations.map((rep) => {
+    const claim = data.claims.find((c) => c.id === rep.claimId);
+    const issuer = data.issuers.find((i) => i.id === rep.issuerId);
+    if (!claim || !issuer) throw new Error(`no claim or issuer for ${rep.id}`);
+    const text = PROFILE_TEXT[rep.id] ?? richProfileText(rep, claim, issuer);
     const document = (title: string, dossier: string) => {
       const { uri, sha256 } = dossierEvidence(dossier, root);
       return { title, uri, sha256 };
