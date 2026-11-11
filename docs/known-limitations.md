@@ -12,7 +12,7 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 
 ## Operations
 
-- **One admin key** for the API's admin endpoint; audit rows name a key fingerprint, not a person. One operator holds every contract role; separation of proposer and approver is not enforced on chain.
+- **Operators sign in with a wallet; the shared admin key remains as break-glass.** Admin endpoints take a session (NEP-413 sign-in, roles read from the contract) or, while `ADMIN_API_KEY` is set, that key, audited as `legacy-admin-key`; it is removed in phase 7. See [the auth runbook](runbooks/auth.md). One operator holds every contract role; separation of proposer and approver is not enforced on chain.
 - **One API instance.** Rate-limit counters live in the process.
 - **Free public RPC endpoints rate limit.** The indexer reads about two calls per block; with the reconciler and the API on the same free endpoint it gets `429`, backs off, and settlements arrive late (they are not lost). A demo wants a keyed endpoint or a node of its own.
 - **The indexer trusts its RPC node.** To read a receipt's logs it asks the node for a light-client proof and reads the outcome inside it. It does not verify that proof cryptographically (no block-header signature check, no Merkle path check), so receiving a proof from the RPC is not the same as verifying one: a dishonest or faulty node could feed it false events. It follows final blocks about four blocks behind, reads only the core's shard, and stalls visibly (health shows lag, and `stale` once its heartbeat stops) rather than skipping a block it cannot read. Past a node's retention, history needs an archival node ([indexer notes](../apps/indexer/README.md)).
@@ -25,6 +25,11 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **Health cannot tell a stopped indexer from a crashed one.** Both show as `stale` once the heartbeat is older than `INDEXER_STALE_AFTER_MS`; the indexer writes no stop marker. The heartbeat age uses the API's clock against the database's.
 - **Postgres is a local container.** No backup or restore drill. Registry state rebuilds from the chain; quotes, conversions and the audit log do not.
 - **Quote-signer key** is one ed25519 key in an environment variable. Rotating it invalidates outstanding quotes at once.
+
+- **Roles lag by up to 60 seconds.** A session caches the account's contract roles for a minute; only the reconciliation read re-checks the chain on every call. A key removed from an account keeps its existing session (at most 8 hours; log out revokes at once).
+- **Sign-in proves a key, not a person.** A full-access key is what NEP-413 asks for; a function-call key is accepted as proof the account issued it and is recorded as such. Anyone can request a challenge for any account; it can only be answered with that account's key.
+- **Sessions are bearer tokens** with no binding to a device, and the `/metrics` scraper must use the break-glass key because a session idles out. Sessions and challenges live in Postgres; there is no session list or "log out everywhere".
+- **No issuer onboarding.** Issuers and assets are mock data ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)); there is no application, proof of account control or third-party attestation.
 
 ## Registry: what is recorded, not verified
 
