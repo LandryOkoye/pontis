@@ -34,6 +34,14 @@ import {
   VolumeChartSchema,
 } from "./chart-types.ts";
 import {
+  ActivityListSchema,
+  ActivityQuerySchema,
+  AssetChainListSchema,
+  AssetDocumentListSchema,
+  AssetIssuerViewSchema,
+  AssetMetadataSchema,
+} from "./detail-types.ts";
+import {
   CategoryListSchema,
   ChainListSchema,
   MarketMoversSchema,
@@ -277,6 +285,65 @@ export const ENDPOINTS = {
     response: CompatibilityListSchema,
     params: IdParam,
     errors: { 404: ["NOT_FOUND"], ...COMMON },
+  },
+  getAssetMetadata: {
+    method: "get",
+    path: "/v1/assets/{id}/metadata",
+    summary: "Dossier metadata (overview, legal, custody, risk)",
+    tag: "Registry",
+    status: 200,
+    response: AssetMetadataSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Off-chain dossier content, labelled with `source` and `simulated`. It never changes a verification status; `profile` is null when no dossier was loaded.",
+  },
+  getAssetIssuer: {
+    method: "get",
+    path: "/v1/assets/{id}/issuer",
+    summary: "The asset's issuer with its evidence and its other assets",
+    tag: "Registry",
+    status: 200,
+    response: AssetIssuerViewSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+  },
+  getAssetChains: {
+    method: "get",
+    path: "/v1/assets/{id}/chains",
+    summary: "Where the asset exists, with supply per chain",
+    tag: "Registry",
+    status: 200,
+    response: AssetChainListSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "The dossier's chain list plus the NEAR contract from the registry, each with the latest supply snapshot when one exists.",
+  },
+  getAssetDocuments: {
+    method: "get",
+    path: "/v1/assets/{id}/documents",
+    summary: "Dossier documents and registry evidence",
+    tag: "Registry",
+    status: 200,
+    response: AssetDocumentListSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Registry evidence keeps its provenance label; the API never upgrades it. Hashes are as recorded, not re-checked here.",
+  },
+  getAssetActivity: {
+    method: "get",
+    path: "/v1/assets/{id}/activity",
+    summary: "Recent conversions involving the asset",
+    tag: "Market",
+    status: 200,
+    response: ActivityListSchema,
+    params: IdParam,
+    query: ActivityQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Newest first. Real rows are settled conversions on the testnet; simulated rows come from the demo simulator and say so. Cursors are opaque.",
   },
   compareRoutes: {
     method: "post",

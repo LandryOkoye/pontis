@@ -19,6 +19,7 @@ import type {
 } from "./registry-types.ts";
 import type { NavChart, PriceChart, SupplyChart, VolumeChart } from "./chart-types.ts";
 import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
+import type { AssetIssuerView, AssetMetadata } from "./detail-types.ts";
 import type {
   CategoryList,
   ChainList,
@@ -493,4 +494,72 @@ export const chainList: ChainList = {
       sources: ["simulated_feed"],
     },
   ],
+};
+
+export const assetMetadata: AssetMetadata = {
+  id: "tgold-a",
+  canonicalAssetId: "syn-gold-oz",
+  category: "Synthetic commodity claim (test only)",
+  profile: {
+    description:
+      "A synthetic test token for one fictional troy ounce of gold. Not backed by anything.",
+    tags: ["synthetic", "gold", "commodity"],
+    sections: {
+      overview: "SYNTHETIC TEST ASSET. Issued by the project for the testnet demo.",
+      risk: "Not backed by any asset. Parity conversion says nothing about price.",
+    },
+    convertible: true,
+    bridgeable: false,
+    source: "simulated_feed",
+    simulated: true,
+    updatedAt: T0,
+  },
+};
+
+export const assetIssuerView: AssetIssuerView = {
+  issuer: issuerA,
+  assets: [{ id: "tgold-a", symbol: "TGOLD-A", name: "SYNTHETIC TEST Gold A", status: "active" }],
+};
+
+export const assetChainList = {
+  items: [
+    {
+      chain: "near-testnet",
+      contract: "tgold-a.pontis.testnet",
+      role: "native",
+      supply: "12400000000",
+      supplyAsOf: "2026-11-11T00:00:00.000Z",
+      simulated: true,
+    },
+  ],
+};
+
+export const assetDocumentList = {
+  items: [
+    {
+      title: "TGOLD-A dossier",
+      uri: "docs/asset-dossiers/TGOLD-A.md",
+      sha256: SHA,
+      origin: "registry_evidence" as const,
+      provenance: "issuer_provided" as const,
+    },
+  ],
+};
+
+export const activityList = {
+  items: [
+    {
+      kind: "conversion" as const,
+      at: "2026-11-11T10:20:00.000Z",
+      accountId: "sim-user-3.testnet",
+      fromId: "tgold-a",
+      toId: "tgold-b",
+      amountIn: "5000000",
+      amountOut: "4995000000",
+      fee: "5000000",
+      source: "simulated_feed" as const,
+      simulated: true,
+    },
+  ],
+  nextCursor: null,
 };

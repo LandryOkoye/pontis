@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   ApiErrorSchema,
+  ActivityListSchema,
+  AssetChainListSchema,
+  AssetDocumentListSchema,
+  AssetIssuerViewSchema,
   AssetListSchema,
+  AssetMetadataSchema,
   CategoryListSchema,
   ChainListSchema,
   MarketMoversSchema,
@@ -52,6 +57,11 @@ describe("fixtures round-trip through the schemas", () => {
     ["market movers", MarketMoversSchema, fx.marketMovers],
     ["category breakdown", CategoryListSchema, fx.categoryList],
     ["chain breakdown", ChainListSchema, fx.chainList],
+    ["asset metadata", AssetMetadataSchema, fx.assetMetadata],
+    ["asset issuer view", AssetIssuerViewSchema, fx.assetIssuerView],
+    ["asset chains", AssetChainListSchema, fx.assetChainList],
+    ["asset documents", AssetDocumentListSchema, fx.assetDocumentList],
+    ["asset activity", ActivityListSchema, fx.activityList],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));

@@ -1233,6 +1233,207 @@ components:
         - rejected
         - suspended
         - reapproved
+    AssetMetadata:
+      type: object
+      properties:
+        id:
+          type: string
+        canonicalAssetId:
+          type: string
+        category:
+          type: string
+        profile:
+          $ref: "#/components/schemas/AssetProfile"
+      required:
+        - id
+        - canonicalAssetId
+        - category
+        - profile
+    AssetProfile:
+      type:
+        - object
+        - "null"
+      properties:
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        sections:
+          type: object
+          additionalProperties:
+            type: string
+        convertible:
+          type: boolean
+        bridgeable:
+          type: boolean
+        source:
+          $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - description
+        - tags
+        - sections
+        - convertible
+        - bridgeable
+        - source
+        - simulated
+        - updatedAt
+    AssetIssuerView:
+      type: object
+      properties:
+        issuer:
+          $ref: "#/components/schemas/Issuer"
+        assets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              symbol:
+                type: string
+              name:
+                type: string
+              status:
+                type: string
+            required:
+              - id
+              - symbol
+              - name
+              - status
+      required:
+        - issuer
+        - assets
+    AssetChainList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetChain"
+      required:
+        - items
+    AssetChain:
+      type: object
+      properties:
+        chain:
+          type: string
+        contract:
+          type:
+            - string
+            - "null"
+        role:
+          type: string
+        supply:
+          $ref: "#/components/schemas/AmountString"
+        supplyAsOf:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type:
+            - boolean
+            - "null"
+      required:
+        - chain
+        - contract
+        - role
+        - supply
+        - supplyAsOf
+        - simulated
+    AssetDocumentList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetDocument"
+      required:
+        - items
+    AssetDocument:
+      type: object
+      properties:
+        title:
+          type: string
+        uri:
+          type: string
+        sha256:
+          type:
+            - string
+            - "null"
+        origin:
+          type: string
+          enum:
+            - dossier
+            - registry_evidence
+        provenance:
+          type:
+            - string
+            - "null"
+          enum:
+            - issuer_provided
+            - third_party_attested
+            - independently_verified
+            - null
+      required:
+        - title
+        - uri
+        - sha256
+        - origin
+        - provenance
+    ActivityList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+        nextCursor:
+          type:
+            - string
+            - "null"
+      required:
+        - items
+        - nextCursor
+    ActivityItem:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - conversion
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        fromId:
+          type: string
+        toId:
+          type: string
+        amountIn:
+          $ref: "#/components/schemas/AmountString"
+        amountOut:
+          $ref: "#/components/schemas/AmountString"
+        fee:
+          $ref: "#/components/schemas/AmountString"
+        source:
+          $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+      required:
+        - kind
+        - at
+        - accountId
+        - fromId
+        - toId
+        - amountIn
+        - amountOut
+        - fee
+        - source
+        - simulated
     CompareRoutesResponse:
       type: object
       properties:
@@ -2431,6 +2632,221 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CompatibilityList"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/metadata:
+    get:
+      operationId: getAssetMetadata
+      summary: Dossier metadata (overview, legal, custody, risk)
+      description: Off-chain dossier content, labelled with `source` and `simulated`. It never changes a verification status; `profile` is null when no dossier was loaded.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMetadata"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/issuer:
+    get:
+      operationId: getAssetIssuer
+      summary: The asset's issuer with its evidence and its other assets
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetIssuerView"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/chains:
+    get:
+      operationId: getAssetChains
+      summary: Where the asset exists, with supply per chain
+      description: The dossier's chain list plus the NEAR contract from the registry, each with the latest supply snapshot when one exists.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetChainList"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/documents:
+    get:
+      operationId: getAssetDocuments
+      summary: Dossier documents and registry evidence
+      description: Registry evidence keeps its provenance label; the API never upgrades it. Hashes are as recorded, not re-checked here.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetDocumentList"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/activity:
+    get:
+      operationId: getAssetActivity
+      summary: Recent conversions involving the asset
+      description: Newest first. Real rows are settled conversions on the testnet; simulated rows come from the demo simulator and say so. Cursors are opaque.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "404":
           description: "Not found. Codes: NOT_FOUND."
           content:
