@@ -160,6 +160,8 @@ The rich catalogue ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)
 - A token sent to the core by plain `ft_transfer` is not credited to inventory and cannot be recovered: the contract has no sweep or credit method, so it stays as surplus until a redeploy and the reconciler keeps warning ([vault runbook](runbooks/vault-low.md)).
 - Contracts are redeployed, not upgraded; there is no migration path.
 
+- **End-to-end coverage of Phase 4.** The `custody` scenario of `tests/e2e` runs on a local sandbox only (never on Testnet), drives the chain directly with the scripts' code and the wallet helper, and does not cover the session endpoints (prepare, reclaim intent, issuer queue). A redemption's fulfil deadline is `settlement_days` (1 to 30) after acceptance, so only the accept deadline is exercised on a chain; the fulfil deadline is covered by contract unit tests.
+
 ## Verification status of the tooling
 
 - **CI.** The workflow runs Rust fmt, clippy and unit tests, the contract sandbox tests, the Node lint, typecheck and tests, and the system end-to-end run (`tests/e2e`, on a local sandbox, no public RPC). Observed on GitHub on 2026-11-10: the first run of the `e2e` job, on `main` (run 42907995499, merge of PR 27), passed together with the Rust and contract jobs; the same run's Node job failed `format:check` on `docs/threat-model/mvp.md`, which PR 30 fixes. Do not read "CI is green" from this file; read the current run.

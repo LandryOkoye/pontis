@@ -9,6 +9,7 @@ import { stuckSubmission } from "./scenarios/stuck.ts";
 import { replay } from "./scenarios/replay.ts";
 import { expiry } from "./scenarios/expiry.ts";
 import { history } from "./scenarios/history.ts";
+import { custody } from "./scenarios/custody.ts";
 import { guards } from "./scenarios/guards.ts";
 import { refusals } from "./scenarios/refusals.ts";
 import { suspension } from "./scenarios/suspension.ts";
@@ -31,6 +32,8 @@ try {
   await reconciliation(world, settled, stuck);
   // Last: a guard changes what every later quote must satisfy.
   if (world.mode === "sandbox") await guards(world);
+  // After guards: it gates the mint of TGOLD-A and restricts its route, which no later step expects.
+  if (world.mode === "sandbox") await custody(world);
   console.log(`\nAll steps passed in ${Math.round((Date.now() - started) / 1000)}s.`);
 } catch (error) {
   failed = true;
