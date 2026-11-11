@@ -37,6 +37,7 @@ import {
   ReconciliationFindingSchema,
   ReconciliationReportSchema,
   SubmittedRequestSchema,
+  RouteGuardsResponseSchema,
   TransactionSchema,
 } from "./helpers.ts";
 import * as fx from "../src/fixtures.ts";
@@ -71,6 +72,7 @@ describe("fixtures round-trip through the schemas", () => {
     ["search", SearchResultSchema, fx.searchResult],
     ["issuer leaderboard", IssuerLeaderboardSchema, fx.issuerLeaderboard],
     ["status", StatusSchema, fx.status],
+    ["route guards", RouteGuardsResponseSchema, fx.routeGuards],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));

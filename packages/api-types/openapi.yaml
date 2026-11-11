@@ -115,6 +115,12 @@ components:
         - ASSET_PAUSED
         - NOT_ELIGIBLE
         - INSUFFICIENT_INVENTORY
+        - PRICE_DEVIATION
+        - PRICE_STALE
+        - PRICE_UNAVAILABLE
+        - AMOUNT_BELOW_MIN
+        - AMOUNT_ABOVE_MAX
+        - WINDOW_LIMIT_EXCEEDED
         - QUOTE_EXPIRED
         - QUOTE_ALREADY_USED
         - UNAUTHORIZED
@@ -1233,6 +1239,7 @@ components:
         - rejected
         - suspended
         - reapproved
+        - guard_set
     AssetMetadata:
       type: object
       properties:
@@ -1767,6 +1774,12 @@ components:
         - ASSET_PAUSED
         - NOT_ELIGIBLE
         - INSUFFICIENT_INVENTORY
+        - PRICE_DEVIATION
+        - PRICE_STALE
+        - PRICE_UNAVAILABLE
+        - AMOUNT_BELOW_MIN
+        - AMOUNT_ABOVE_MAX
+        - WINDOW_LIMIT_EXCEEDED
     CompareRoutesRequest:
       type: object
       properties:
@@ -1780,6 +1793,91 @@ components:
         - fromId
         - toId
       additionalProperties: false
+    RouteGuardsResponse:
+      type: object
+      properties:
+        fromId:
+          type: string
+        toId:
+          type: string
+        amount:
+          $ref: "#/components/schemas/AmountString"
+        executable:
+          type: boolean
+        guarded:
+          type: boolean
+        degraded:
+          type: boolean
+        feeBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        skewBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/GuardCheck"
+        prices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferencePrice"
+      required:
+        - fromId
+        - toId
+        - amount
+        - executable
+        - guarded
+        - degraded
+        - feeBps
+        - skewBps
+        - checks
+        - prices
+    GuardCheck:
+      type: object
+      properties:
+        name:
+          type: string
+        passed:
+          type: boolean
+        detail:
+          type: string
+        reasonCode:
+          $ref: "#/components/schemas/RefusalCode"
+      required:
+        - name
+        - passed
+        - detail
+    ReferencePrice:
+      type: object
+      properties:
+        representationId:
+          type: string
+        price:
+          $ref: "#/components/schemas/PriceString"
+        currency:
+          type: string
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        ageMs:
+          type: integer
+          minimum: 0
+        source:
+          $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+      required:
+        - representationId
+        - price
+        - currency
+        - asOf
+        - ageMs
+        - source
+        - simulated
     Quote:
       type: object
       properties:
@@ -3357,6 +3455,61 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v1/routes/{fromId}/{toId}/guards:
+    get:
+      operationId: getRouteGuards
+      summary: "Why a route is open or closed: every guard and the fee for an amount"
+      description: "Read from the chain, never cached. Checks are independent, so a failure does not hide later ones. With `amount` the amount limits and the effective fee (skew included) are evaluated; a quote copies that fee. `prices` are the contract's stored reference prices with their `simulated` flag: the demo publishes simulated prices only."
+      tags:
+        - Routes
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: fromId
+          in: path
+        - schema:
+            type: string
+          required: true
+          name: toId
+          in: path
+        - schema:
+            $ref: "#/components/schemas/AmountString"
+          required: false
+          description: Non-negative integer in smallest token units, as a decimal string (max u128).
+          name: amount
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteGuardsResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v1/quotes:
     post:
       operationId: createQuote
@@ -3390,7 +3543,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "422":
-          description: "Request understood but refused. Codes: NOT_DIRECT_EQUIVALENT, RELATIONSHIP_SUSPENDED, ASSET_PAUSED, NOT_ELIGIBLE, INSUFFICIENT_INVENTORY."
+          description: "Request understood but refused. Codes: NOT_DIRECT_EQUIVALENT, RELATIONSHIP_SUSPENDED, ASSET_PAUSED, NOT_ELIGIBLE, INSUFFICIENT_INVENTORY, PRICE_DEVIATION, PRICE_STALE, PRICE_UNAVAILABLE, AMOUNT_BELOW_MIN, AMOUNT_ABOVE_MAX, WINDOW_LIMIT_EXCEEDED."
           content:
             application/json:
               schema:

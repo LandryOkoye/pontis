@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { ErrorCodeSchema } from "./common.ts";
 import { ApiErrorSchema } from "./common.ts";
 import { AdminAuthHeaderSchema, ReconciliationReportSchema } from "./admin-types.ts";
+import { RouteGuardsQuerySchema, RouteGuardsResponseSchema } from "./guard-types.ts";
 import {
   AssetSchema,
   CompatibilitySchema,
@@ -411,6 +412,19 @@ export const ENDPOINTS = {
     description:
       "Always returns 200 with `executable: false` and a `reasonCode` when the pair cannot be converted.",
   },
+  getRouteGuards: {
+    method: "get",
+    path: "/v1/routes/{fromId}/{toId}/guards",
+    summary: "Why a route is open or closed: every guard and the fee for an amount",
+    tag: "Routes",
+    status: 200,
+    response: RouteGuardsResponseSchema,
+    params: z.object({ fromId: z.string(), toId: z.string() }),
+    query: RouteGuardsQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Read from the chain, never cached. Checks are independent, so a failure does not hide later ones. With `amount` the amount limits and the effective fee (skew included) are evaluated; a quote copies that fee. `prices` are the contract's stored reference prices with their `simulated` flag: the demo publishes simulated prices only.",
+  },
   createQuote: {
     method: "post",
     path: "/v1/quotes",
@@ -428,6 +442,12 @@ export const ENDPOINTS = {
         "ASSET_PAUSED",
         "NOT_ELIGIBLE",
         "INSUFFICIENT_INVENTORY",
+        "PRICE_DEVIATION",
+        "PRICE_STALE",
+        "PRICE_UNAVAILABLE",
+        "AMOUNT_BELOW_MIN",
+        "AMOUNT_ABOVE_MAX",
+        "WINDOW_LIMIT_EXCEEDED",
       ],
       ...COMMON,
     },
