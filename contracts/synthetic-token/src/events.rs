@@ -19,4 +19,9 @@ pub enum TokenEvent {
     },
     #[event_version("1.0.0")]
     FaucetMinted { account_id: AccountId, amount: U128 },
+    #[event_version("1.0.0")]
+    MinterSet {
+        by: AccountId,
+        minter: Option<AccountId>,
+    },
 }

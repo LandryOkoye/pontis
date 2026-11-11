@@ -57,6 +57,8 @@ fn route_reason(refusal: RouteRefusal) -> RejectReason {
         RouteRefusal::NotConvertible => RejectReason::NotConvertible,
         RouteRefusal::LifecycleBlocked => RejectReason::LifecycleBlocked,
         RouteRefusal::NavWindowClosed => RejectReason::NavWindowClosed,
+        RouteRefusal::ReserveRestricted => RejectReason::ReserveRestricted,
+        RouteRefusal::ReserveStale => RejectReason::ReserveStale,
         _ => RejectReason::NotDirectEquivalent,
     }
 }
