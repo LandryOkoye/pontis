@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { catalogueFor } from "../lib/catalogue-tiers.ts";
 import { CUSTODIANS } from "../lib/catalogue-custody-custodians.ts";
+import { CONTRACT_LIMITS } from "../lib/catalogue-custody-types.ts";
 import { custodyFor } from "../lib/catalogue-custody-tiers.ts";
 import { REAL_BRAND_DENYLIST, REAL_CUSTODIAN_DENYLIST } from "./real-brands.ts";
 
@@ -54,6 +55,40 @@ describe("custodian records", () => {
   it("never claim to be verified, audited or regulated", () => {
     for (const c of CUSTODIANS) {
       expect(`${c.name} ${c.kind}`, c.id).not.toMatch(/audited|regulated|licensed|insured|backed/i);
+    }
+  });
+});
+
+const full = catalogueFor("full");
+const reps = new Map(full.representations.map((r) => [r.id, r]));
+const rows = custodyFor("full").custody;
+
+describe("custody links", () => {
+  it("reference an existing representation and an existing custodian, once each", () => {
+    const ids = new Set(CUSTODIANS.map((c) => c.id));
+    expect(new Set(rows.map((r) => r.representationId)).size).toBe(rows.length);
+    for (const r of rows) {
+      expect(reps.has(r.representationId), r.representationId).toBe(true);
+      expect(ids.has(r.custodianId), r.custodianId).toBe(true);
+    }
+  });
+
+  it("link at most the contract's custodian cap per representation (one each here)", () => {
+    const perRep = new Map<string, number>();
+    for (const r of rows) perRep.set(r.representationId, (perRep.get(r.representationId) ?? 0) + 1);
+    for (const n of perRep.values())
+      expect(n).toBeLessThanOrEqual(CONTRACT_LIMITS.maxCustodiansPerLink);
+  });
+
+  it("only use a custodian the tier of the link already includes", () => {
+    for (const tier of ["demo", "full"] as const) {
+      const { custodians, custody } = custodyFor(tier);
+      const ids = new Set(custodians.map((c) => c.id));
+      const present = new Set(catalogueFor(tier).representations.map((r) => r.id));
+      for (const r of custody) {
+        expect(ids.has(r.custodianId), `${tier} ${r.representationId}`).toBe(true);
+        expect(present.has(r.representationId), `${tier} ${r.representationId}`).toBe(true);
+      }
     }
   });
 });

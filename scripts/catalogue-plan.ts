@@ -8,6 +8,7 @@
 import { existsSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { catalogueCost, renderCost, SLIM_TOKEN_WASM_BYTES } from "./lib/catalogue-cost.ts";
+import { custodySummary } from "./lib/catalogue-custody-tiers.ts";
 import { TIERS, tierFromArgs } from "./lib/catalogue-tiers.ts";
 import { wasmPath } from "./lib/deploy-plan.ts";
 
@@ -21,5 +22,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   console.log(
     `token wasm: ${bytes} bytes (${existsSync(wasm) ? wasm : "slim-build size from docs/architecture/deployments.md"})`,
   );
-  for (const tier of tiers) console.log(`\n${renderCost(catalogueCost(tier, bytes))}`);
+  for (const tier of tiers) {
+    console.log(`\n${renderCost(catalogueCost(tier, bytes))}\n${custodySummary(tier)}`);
+  }
 }
