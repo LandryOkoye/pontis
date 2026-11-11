@@ -24,7 +24,7 @@ pub struct RouteGuards {
     pub degraded: bool,
 }
 
-fn check_line(name: &str, passed: bool, detail: impl Into<String>) -> GuardCheck {
+pub(crate) fn check_line(name: &str, passed: bool, detail: impl Into<String>) -> GuardCheck {
     GuardCheck {
         name: name.to_string(),
         passed,
@@ -49,6 +49,7 @@ impl Contract {
             Ok(_) => check_line("route", true, "executable"),
             Err(r) => check_line("route", false, format!("{r:?}")),
         });
+        checks.extend(self.action_lifecycle_checks(&from_id, &to_id));
         let pair = crate::compatibility::pair_key(&from_id, &to_id);
         let guard = self.guards.get(&pair);
         checks.push(check_line(
@@ -63,7 +64,7 @@ impl Contract {
         if let Some(g) = guard {
             let now = crate::now_ms();
             for id in [&from_id, &to_id] {
-                checks.push(match self.prices.get(id) {
+                checks.push(match self.reference_price(id) {
                     None => check_line("price_freshness", false, format!("{id}: no price")),
                     Some(p) => {
                         let age = now.saturating_sub(p.as_of_ms);

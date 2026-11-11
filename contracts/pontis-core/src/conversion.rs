@@ -51,6 +51,12 @@ fn route_reason(refusal: RouteRefusal) -> RejectReason {
         RouteRefusal::PriceStale => RejectReason::PriceStale,
         RouteRefusal::PriceMissing => RejectReason::PriceMissing,
         RouteRefusal::PriceUnavailable => RejectReason::PriceUnavailable,
+        RouteRefusal::CorporateActionFreeze => RejectReason::CorporateActionFreeze,
+        RouteRefusal::CorporateActionPending => RejectReason::CorporateActionPending,
+        RouteRefusal::EpochMismatch => RejectReason::EpochMismatch,
+        RouteRefusal::NotConvertible => RejectReason::NotConvertible,
+        RouteRefusal::LifecycleBlocked => RejectReason::LifecycleBlocked,
+        RouteRefusal::NavWindowClosed => RejectReason::NavWindowClosed,
         _ => RejectReason::NotDirectEquivalent,
     }
 }

@@ -17,6 +17,10 @@ fn borsh_str(out: &mut Vec<u8>, s: &str) {
 }
 
 impl Env {
+    pub fn publisher_signing_key(&self) -> SigningKey {
+        publisher_seed()
+    }
+
     pub fn publisher_public_key(&self) -> String {
         near_workspaces::types::PublicKey::try_from_parts(
             near_workspaces::types::KeyType::ED25519,

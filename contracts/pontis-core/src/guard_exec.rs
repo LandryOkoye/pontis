@@ -13,8 +13,8 @@ use near_sdk::json_types::U128;
 
 impl Contract {
     /// The price of `rep_id` if it exists, is not older than `max_age_ms` at `now`.
-    fn fresh_price(&self, rep_id: &str, max_age_ms: u64, now: u64) -> Result<&PriceRecord, bool> {
-        match self.prices.get(rep_id) {
+    fn fresh_price(&self, rep_id: &str, max_age_ms: u64, now: u64) -> Result<PriceRecord, bool> {
+        match self.reference_price(rep_id) {
             None => Err(true),
             Some(p) if now.saturating_sub(p.as_of_ms) > max_age_ms => Err(false),
             Some(p) => Ok(p),

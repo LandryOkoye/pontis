@@ -72,8 +72,14 @@ impl Contract {
         let now = now_ms();
         let mut rel = match self.compatibilities.get(&id) {
             Some(existing) => {
+                // A relationship whose multipliers moved apart (ADR 0017) is re-proposed at
+                // the new ratio; so is a rejected one.
+                let rebase = matches!(
+                    existing.status,
+                    RelationshipStatus::Approved | RelationshipStatus::Suspended
+                ) && self.epoch_mismatch(existing, now);
                 check(
-                    existing.status == RelationshipStatus::Rejected,
+                    existing.status == RelationshipStatus::Rejected || rebase,
                     "relationship already exists; only a rejected one can be re-proposed",
                 );
                 existing.clone()
@@ -103,6 +109,7 @@ impl Contract {
         rel.proposed_by = by.clone();
         rel.approved_by = None;
         let version = rel.record(ReviewAction::Proposed, &by, now);
+        self.index_relationship(&rel);
         self.compatibilities.insert(id.clone(), rel);
         CoreEvent::CompatibilityProposed {
             id,
@@ -201,19 +208,32 @@ impl Contract {
             a.status == Status::Active && b.status == Status::Active,
             "both representations must be active to approve",
         );
+        let now = now_ms();
+        for asset in [&a.canonical_asset_id, &b.canonical_asset_id] {
+            check(
+                self.freeze_of(asset, now).is_none() && self.pending_of(asset, now).is_none(),
+                "a corporate action is in progress on one of the assets",
+            );
+        }
+        let multipliers = (
+            self.effective_multiplier(&a.id, now),
+            self.effective_multiplier(&b.id, now),
+        );
+        let (Some(mult_a), Some(mult_b)) = multipliers else {
+            near_sdk::env::panic_str("multiplier schedule not found");
+        };
         if rel.classification == Classification::DirectEquivalent {
             check(
                 !rel.evidence.is_empty(),
                 "approving DIRECT_EQUIVALENT requires at least one evidence reference",
             );
-            let derived = a.unit_multiplier.checked_div(b.unit_multiplier);
+            let derived = mult_a.checked_div(mult_b);
             check(
                 derived == Some(rel.ratio),
                 "ratio does not match the representations' unit multipliers",
             );
         }
 
-        let now = now_ms();
         rel.rationale = rationale;
         rel.status = RelationshipStatus::Approved;
         rel.approved_by = Some(by.clone());
@@ -232,6 +252,8 @@ impl Contract {
             by,
             timestamp_ms: now,
         };
+        self.approved_multipliers
+            .insert(id.clone(), (mult_a, mult_b));
         self.compatibilities.insert(id, rel);
         event.emit();
     }

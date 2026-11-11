@@ -13,6 +13,7 @@ The first run downloads the NEAR sandbox binary. Set `PONTIS_WASM_DIR` to use wa
 | `tests/conversion.rs` | A signed quote converts 1 A to 10 B less the fee; balances, inventory and `conversion_completed` agree                                                                                    |
 | `tests/failures.rs`   | Failed payout refunds the input and the quote cannot be replayed; expired, foreign, altered, suspended, paused, de-listed and under-funded cases are refunded in full; owner-only funding |
 | `tests/gas.rs`        | Gas needed to complete a conversion, and that too little gas never loses funds                                                                                                            |
+| `tests/actions.rs`    | A split closes the pair and voids old quotes when both wrappers apply; NAV strike windows; `no_conversion` and delisted refusals; an unconfigured asset as the MVP                        |
 
 ## Pending inventory (`tests/pending_inventory.rs`)
 
