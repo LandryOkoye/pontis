@@ -212,6 +212,10 @@ pub(crate) fn now_ms() -> u64 {
 }
 
 #[cfg(test)]
+mod action_rebase_tests;
+#[cfg(test)]
+mod action_route_tests;
+#[cfg(test)]
 mod actions_apply_tests;
 #[cfg(test)]
 mod actions_review_tests;
