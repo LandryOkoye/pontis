@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 import { notFound } from "../errors.ts";
 import { priceChart, representationExists, resolveRange, volumeChart } from "../market/charts.ts";
 import { listDirectory } from "../market/directory.ts";
+import { navChart, supplyChart } from "../market/series-charts.ts";
 
 /** OpenAPI `/v1/assets/{id}` to Fastify `/v1/assets/:id`. */
 const route = (path: string) => path.replace(/\{(\w+)\}/g, ":$1");
@@ -29,6 +30,8 @@ export function registerMarketRoutes(app: FastifyInstance, deps: MarketRouteDeps
 
   const charts = [
     [e.getAssetPriceChart, priceChart],
+    [e.getAssetNavChart, navChart],
+    [e.getAssetSupplyChart, supplyChart],
     [e.getAssetVolumeChart, volumeChart],
   ] as const;
   for (const [endpoint, read] of charts) {
