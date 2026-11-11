@@ -721,12 +721,3 @@ export const adminMetrics: AdminMetrics = {
   ],
   requiresReconciliationQuoteIds: ["c6a9f0a4-2b8e-4a53-8f06-2b9a0a6f3e11"],
 };
-
-export const prometheusText = [
-  "# HELP pontis_conversion_success_rate Share of executed conversions that settled.",
-  "# TYPE pontis_conversion_success_rate gauge",
-  'pontis_conversion_success_rate{window="24h",simulated="true"} 0.950000',
-  "# HELP pontis_volume_usd Unavailable until phase 1.",
-  "# TYPE pontis_volume_usd gauge",
-  "",
-].join("\n");
