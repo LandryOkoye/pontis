@@ -14,28 +14,36 @@ export interface DemoSeedOptions {
   testnet: boolean;
   /** Days of simulated history to write. */
   days: number;
+  /** Seeds the fictional custody, reserves and redemptions (seed-custody); on by default for `demo` and `full` on a sandbox. */
+  custody: boolean;
   /** False skips the database steps (registry mirror, profiles, simulated market). */
   market: boolean;
 }
 
 export const DEMO_SEED_USAGE =
-  "usage: demo:seed [--catalogue=mvp|demo|full] [--sandbox-info <file>] [--testnet] [--days <1-365>] [--no-market]";
+  "usage: demo:seed [--catalogue=mvp|demo|full] [--sandbox-info <file>] [--testnet] [--custody|--no-custody] [--days <1-365>] [--no-market]";
 
 export function parseDemoSeedArgs(argv: readonly string[]): DemoSeedOptions {
   const tier = tierFromArgs(argv, DEFAULT_TIER);
   const rest = split(
     argv.filter((a) => a !== "--catalogue" && !a.startsWith("--catalogue=")),
     ["sandbox-info", "days"],
-    ["testnet", "no-market"],
+    ["testnet", "no-market", "custody", "no-custody"],
   );
   if (rest.positionals.length > 0) throw new Error(DEMO_SEED_USAGE);
   const days = Number(optional(rest, "days") ?? 90);
   if (!Number.isInteger(days) || days < 1 || days > 365) throw new Error("--days must be 1 to 365");
   oneOf(tier, ["mvp", "demo", "full"], "--catalogue");
+  const [on, off] = [rest.flags.has("custody"), rest.flags.has("no-custody")];
+  if (on && off) throw new Error("--custody and --no-custody exclude each other");
+  if (on && tier === "mvp") throw new Error("--custody needs --catalogue=demo or --catalogue=full");
+  // Cheap on a sandbox, a few hundred transactions on a public testnet: opt in there.
+  const custody = on || (!off && tier !== "mvp" && optional(rest, "sandbox-info") !== undefined);
   return {
     tier,
     sandboxInfo: optional(rest, "sandbox-info"),
     testnet: rest.flags.has("testnet"),
+    custody,
     days,
     market: !rest.flags.has("no-market"),
   };
