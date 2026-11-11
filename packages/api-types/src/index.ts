@@ -2,6 +2,7 @@ export * from "./action-types.ts";
 export * from "./admin-types.ts";
 export * from "./chart-types.ts";
 export * from "./common.ts";
+export * from "./custody-types.ts";
 export * from "./detail-types.ts";
 export * from "./discovery-types.ts";
 export * from "./endpoints.ts";

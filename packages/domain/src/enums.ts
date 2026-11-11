@@ -159,6 +159,8 @@ export const ERROR_CODES = [
   ...REDEMPTION_ERROR_CODES,
   "QUOTE_EXPIRED",
   "QUOTE_ALREADY_USED",
+  /** A relayed reserve attestation that the contract refused (ADR 0020 section 3). */
+  "ATTESTATION_REJECTED",
   "UNAUTHORIZED",
   "RATE_LIMITED",
   "INTERNAL",
