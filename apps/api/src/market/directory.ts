@@ -23,7 +23,11 @@ import { pickStats, priceText, toSnapshot, type StatsRow } from "./snapshot.ts";
 
 const WEEK_MS = 7 * 86_400_000;
 
-type Item = AssetDirectoryItem & { simulatedClass: boolean | undefined };
+export type Item = AssetDirectoryItem & {
+  /** Which data class the market block came from; undefined when it has none. Not an API field. */
+  simulatedClass: boolean | undefined;
+  registeredAt: Date;
+};
 
 const nullableBps = (v: number | null | undefined) =>
   v === null || v === undefined ? null : BigInt(v);
@@ -69,16 +73,12 @@ function compare(a: AssetDirectoryItem, b: AssetDirectoryItem, q: ListAssetsQuer
   return order === 0 ? a.id.localeCompare(b.id) : q.order === "asc" ? order : -order;
 }
 
-export async function listDirectory(db: Db, q: ListAssetsQuery, now: Date) {
-  let searchIds: string[] | undefined;
-  if (q.q) {
-    const tokens = q.q.toLowerCase().split(/\s+/).filter(Boolean);
-    const hits = await db
-      .select({ id: assetSearch.representationId })
-      .from(assetSearch)
-      .where(and(...tokens.map((t) => ilike(assetSearch.document, `%${escapeLike(t)}%`))));
-    searchIds = hits.map((h) => h.id);
-  }
+/** Every representation with its figures from the chosen data class; the base of every market read. */
+export async function loadItems(
+  db: Db,
+  data: ListAssetsQuery["data"],
+  searchIds?: string[],
+): Promise<Item[]> {
   const rows = await db
     .select({
       rep: assetRepresentations,
@@ -121,7 +121,7 @@ export async function listDirectory(db: Db, q: ListAssetsQuery, now: Date) {
   );
 
   const items: Item[] = rows.map(({ rep, claim, issuer, profile }) => {
-    const row = pickStats(byRep.get(rep.id) ?? [], q.data);
+    const row = pickStats(byRep.get(rep.id) ?? [], data);
     return {
       ...assetSummary(rep, claim, issuer),
       category: claim.category,
@@ -133,8 +133,23 @@ export async function listDirectory(db: Db, q: ListAssetsQuery, now: Date) {
       market: row ? toSnapshot(row) : null,
       sparkline: null,
       simulatedClass: row?.simulated,
+      registeredAt: rep.registeredAt,
     };
   });
+  return items;
+}
+
+export async function listDirectory(db: Db, q: ListAssetsQuery, now: Date) {
+  let searchIds: string[] | undefined;
+  if (q.q) {
+    const tokens = q.q.toLowerCase().split(/\s+/).filter(Boolean);
+    const hits = await db
+      .select({ id: assetSearch.representationId })
+      .from(assetSearch)
+      .where(and(...tokens.map((t) => ilike(assetSearch.document, `%${escapeLike(t)}%`))));
+    searchIds = hits.map((h) => h.id);
+  }
+  const items = await loadItems(db, q.data, searchIds);
 
   const wanted = items
     .filter((i) => !q.category || i.category === q.category)
@@ -151,7 +166,7 @@ export async function listDirectory(db: Db, q: ListAssetsQuery, now: Date) {
   const page = wanted.slice(offset, offset + limit);
   const sparks = await sparklines(db, page, now);
   return {
-    items: page.map(({ simulatedClass: _class, ...item }) => ({
+    items: page.map(({ simulatedClass: _class, registeredAt: _at, ...item }) => ({
       ...item,
       sparkline: sparks.get(item.id) ?? null,
     })),

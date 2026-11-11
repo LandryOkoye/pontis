@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 import { notFound } from "../errors.ts";
 import { priceChart, representationExists, resolveRange, volumeChart } from "../market/charts.ts";
 import { listDirectory } from "../market/directory.ts";
+import { marketCategories, marketMovers, marketOverview } from "../market/overview.ts";
 import { navChart, supplyChart } from "../market/series-charts.ts";
 
 /** OpenAPI `/v1/assets/{id}` to Fastify `/v1/assets/:id`. */
@@ -28,6 +29,20 @@ export function registerMarketRoutes(app: FastifyInstance, deps: MarketRouteDeps
     ),
   );
 
+  app.get(route(e.getMarketOverview.path), async (req) =>
+    e.getMarketOverview.response.parse(
+      await marketOverview(db, e.getMarketOverview.query.parse(req.query).data, now()),
+    ),
+  );
+  app.get(route(e.getMarketMovers.path), async (req) => {
+    const q = e.getMarketMovers.query.parse(req.query);
+    return e.getMarketMovers.response.parse(await marketMovers(db, q.data, q.limit));
+  });
+  app.get(route(e.getMarketCategories.path), async (req) =>
+    e.getMarketCategories.response.parse(
+      await marketCategories(db, e.getMarketCategories.query.parse(req.query).data),
+    ),
+  );
   const charts = [
     [e.getAssetPriceChart, priceChart],
     [e.getAssetNavChart, navChart],
