@@ -35,6 +35,8 @@ export interface CustodianEvidence {
   sha256: string;
   provenance: string;
   description: string;
+  added_by: string;
+  timestamp_ms: number;
 }
 
 /**
