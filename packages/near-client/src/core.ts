@@ -10,12 +10,14 @@ import {
   ChainIssuerSchema,
   ChainPolicySchema,
   ChainRepresentationSchema,
+  ChainRouteGuardsSchema,
   ChainRouteViewSchema,
   type ChainCanonicalAsset,
   type ChainCompatibility,
   type ChainIssuer,
   type ChainPolicy,
   type ChainRepresentation,
+  type ChainRouteGuards,
   type ChainRouteView,
 } from "./schemas.ts";
 
@@ -85,6 +87,19 @@ export class CoreClient implements RegistrySource {
   async getRoute(fromId: string, toId: string): Promise<ChainRouteView> {
     const raw = await this.rpc.view(this.accountId, "get_route", { from_id: fromId, to_id: toId });
     return ChainRouteViewSchema.parse(raw);
+  }
+
+  /**
+   * Every guard of the route with its verdict and, given an amount, the fee the contract will
+   * charge for it (the skew rises as the vault drains). Authoritative: quotes copy this fee.
+   */
+  async getRouteGuards(fromId: string, toId: string, amountIn?: string): Promise<ChainRouteGuards> {
+    const raw = await this.rpc.view(this.accountId, "get_route_guards", {
+      from_id: fromId,
+      to_id: toId,
+      amount_in: amountIn ?? null,
+    });
+    return ChainRouteGuardsSchema.parse(raw);
   }
 
   /** Live allowlist check: true if the representation needs no allowlist or the account is on it. */

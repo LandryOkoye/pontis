@@ -99,6 +99,28 @@ describe("CoreClient quote-time views", () => {
     await expect(unknown.getRoute("a", "b")).rejects.toThrow();
   });
 
+  it("reads the guard breakdown with the amount, and refuses a shape the contract never sends", async () => {
+    const view = {
+      executable: true,
+      checks: [{ name: "route", passed: true, detail: "executable" }],
+      fee_bps: 14,
+      skew_bps: 4,
+      degraded: false,
+    };
+    const { rpc, calls } = fakeRpc(() => view);
+    const core = new CoreClient(rpc, "core.testnet");
+    expect(await core.getRouteGuards("tgold-a", "tgold-b", "5000000")).toEqual(view);
+    expect(calls[0]).toEqual({
+      contractId: "core.testnet",
+      method: "get_route_guards",
+      args: { from_id: "tgold-a", to_id: "tgold-b", amount_in: "5000000" },
+    });
+    await core.getRouteGuards("tgold-a", "tgold-b");
+    expect(calls[1]?.args.amount_in).toBeNull();
+    const bad = new CoreClient(fakeRpc(() => ({ ...view, fee_bps: -1 })).rpc, "core.testnet");
+    await expect(bad.getRouteGuards("a", "b")).rejects.toThrow();
+  });
+
   it("passes the account to is_allowed and validates fee and signer", async () => {
     const { rpc, calls } = fakeRpc(({ method }) =>
       method === "is_allowed" ? true : method === "get_fee_bps" ? 10 : null,

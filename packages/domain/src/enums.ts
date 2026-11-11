@@ -72,6 +72,8 @@ export const REVIEW_ACTIONS = [
   "rejected",
   "suspended",
   "reapproved",
+  /** A route guard was set or changed (ADR 0016); the ratio and status are unchanged. */
+  "guard_set",
 ] as const;
 export type ReviewAction = (typeof REVIEW_ACTIONS)[number];
 
@@ -82,6 +84,13 @@ export const REFUSAL_CODES = [
   "ASSET_PAUSED",
   "NOT_ELIGIBLE",
   "INSUFFICIENT_INVENTORY",
+  /** Route guards (ADR 0016): the market price disagrees with the ratio, or cannot be read. */
+  "PRICE_DEVIATION",
+  "PRICE_STALE",
+  "PRICE_UNAVAILABLE",
+  "AMOUNT_BELOW_MIN",
+  "AMOUNT_ABOVE_MAX",
+  "WINDOW_LIMIT_EXCEEDED",
 ] as const;
 export type RefusalCode = (typeof REFUSAL_CODES)[number];
 
