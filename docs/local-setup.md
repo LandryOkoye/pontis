@@ -77,6 +77,30 @@ CI runs this same command in the `e2e` job on every pull request and push to `ma
 
    Test tokens come from the token's `faucet_mint` or the owner's `mint`.
 
+## Seed the demo catalogue (optional)
+
+On top of the MVP seed, the demo catalogue adds four simulated issuers in different trust states, six more fictional claims, eight tokens and two relationships. Everything is synthetic and the dossiers say so ([index](asset-dossiers/README.md)); the data is in [`scripts/lib/catalogue.ts`](../scripts/lib/catalogue.ts). It needs the MVP seed first (the quote signer) and about 22 more NEAR on the deployer on Testnet with the slim build (eight token contracts, each funded with 0.01 NEAR per KB of wasm plus 1 NEAR).
+
+```bash
+pnpm --filter @pontis/scripts deploy-testnet --catalogue   # also creates <representation id>.<deployer> token accounts
+pnpm --filter @pontis/scripts seed-catalogue               # roles, issuers, claims, tokens, relationships, supply, allowlist, vaults
+DATABASE_URL=postgres://pontis:pontis@localhost:5432/pontis \
+  pnpm --filter @pontis/scripts seed-profiles              # off-chain asset_profiles; needs DEPLOYER_ACCOUNT_ID, no chain access
+```
+
+Each step reads current state first, so repeating any of them is safe (`deploy-testnet` without `--catalogue` rewrites the deployment record with the MVP rows only, so keep passing the flag). `ALLOWLIST_ACCOUNTS` is allowlisted on every catalogue token as well. Run `seed-profiles` after the API has migrated the database; the profiles are keyed by representation ID and need no registry rows.
+
+What a fresh chain ends up with:
+
+| Issuer               | Status       | `verification_status` | Tokens                                                  |
+| -------------------- | ------------ | --------------------- | ------------------------------------------------------- |
+| `halcyon-securities` | `active`     | `issuer_attested`     | `tacme-h`, `tustb-h`, `tvilla-1`, `tcredit-1`, `tusd-h` |
+| `meridian-assets`    | `restricted` | `unverified`          | `tacme-m`, `tnova-m` (registered, cannot be activated)  |
+| `orchard-trust`      | `deprecated` | `issuer_attested`     | `tustb-o` (active, not executable)                      |
+| `vantage-credit`     | `rejected`   | `unverified`          | none                                                    |
+
+Only `tustb-h` and `tustb-o` have an approved relationship (`DIRECT_EQUIVALENT`, 1 whole token each = 1 unit) and a funded vault (500,000 whole tokens each); `tacme-h` / `tacme-m` is proposed and cannot be approved while `tacme-m` is not active. `tvilla-1` has one token in total and no faucet. The contract is the authority for every status; why each was chosen is in the [limitations](known-limitations.md#demo-catalogue-trust-states-are-narrative).
+
 ## 5. Optional: a simulated market, or no chain at all
 
 The charts, directory figures and market overview need price data, and a testnet has none. [`apps/simulator`](../apps/simulator/README.md) writes labelled, fake prices, NAV, supply and trade flow for the registered assets (it reads the registry mirror, so run the API sync first, and it needs `PONTIS_CORE_ACCOUNT_ID` in its `.env`: it signs each price for that contract):

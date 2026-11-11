@@ -278,6 +278,9 @@ importers:
 
   scripts:
     dependencies:
+      '@pontis/db':
+        specifier: workspace:*
+        version: link:../packages/db
       '@pontis/dev-keys':
         specifier: workspace:*
         version: link:../packages/dev-keys
@@ -293,6 +296,9 @@ importers:
       '@pontis/quote-engine':
         specifier: workspace:*
         version: link:../packages/quote-engine
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
       near-api-js:
         specifier: ^7.4.0
         version: 7.4.0
