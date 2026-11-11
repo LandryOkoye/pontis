@@ -5,6 +5,7 @@
 import { ENDPOINTS } from "@pontis/api-types";
 import { login } from "../../../../scripts/lib/auth-login.ts";
 import { parse, refusal } from "../api.ts";
+import { waitFor } from "../processes.ts";
 import { assert, section, step } from "../steps.ts";
 import { createUser } from "../wallet.ts";
 import type { World } from "../world.ts";
@@ -52,11 +53,13 @@ export async function auth(world: World): Promise<void> {
 
   await step("an account with no role signs in and is refused every admin endpoint", async () => {
     const user = await createUser(world, { allowlisted: false });
-    const session = await login({
-      apiUrl: api.baseUrl,
-      accountId: user.accountId,
-      secretKey: user.secretKey,
-    });
+    // The API proves key ownership against the final block, which a just-created account reaches
+    // a block or two after creation: sign-in is retried until the chain shows the key.
+    const session = await waitFor(
+      "the new account's key to be final on chain",
+      () => login({ apiUrl: api.baseUrl, accountId: user.accountId, secretKey: user.secretKey }),
+      { timeoutMs: 20_000, intervalMs: 1_000 },
+    );
     assert.deepEqual(session.roles, []);
     for (const path of ["/v1/admin/reconciliation", "/v1/admin/metrics"]) {
       assert.equal(refusal(await api.get(path, bearer(session.token)), 403), "FORBIDDEN");
