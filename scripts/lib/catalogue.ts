@@ -375,3 +375,28 @@ export function tokenAccount(representationId: string, deployerId: string): stri
 export function unitMultiplier(rep: CatalogueRepresentation): Rational {
   return rational(rep.unitsPerToken.num, rep.unitsPerToken.den * 10n ** BigInt(rep.decimals));
 }
+
+export const RELATIONSHIPS: readonly CatalogueRelationship[] = [
+  {
+    a: "tacme-h",
+    b: "tacme-m",
+    claimId: "syn-acme",
+    scope: "Parity conversion of synthetic test tokens through the controlled test vault only.",
+    rationale:
+      "Both are test representations of SYN-ACME; ratio derived from unit multipliers (1 tacme-h = 10 tacme-m).",
+    approvalRationale:
+      "Not approved: tacme-m cannot be activated while meridian-assets is restricted.",
+    approve: false,
+  },
+  {
+    a: "tustb-h",
+    b: "tustb-o",
+    claimId: "syn-ustb",
+    scope: "Parity conversion of synthetic test tokens through the controlled test vault only.",
+    rationale:
+      "Both are test representations of SYN-USTB; ratio derived from unit multipliers (1 whole token of each = 1 unit).",
+    approvalRationale:
+      "Approved for the demo catalogue while orchard-trust was active; self-reviewed by the project team.",
+    approve: true,
+  },
+];
