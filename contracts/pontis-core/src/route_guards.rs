@@ -50,6 +50,7 @@ impl Contract {
             Err(r) => check_line("route", false, format!("{r:?}")),
         });
         checks.extend(self.action_lifecycle_checks(&from_id, &to_id));
+        checks.extend(self.reserve_guard_checks(&from_id, &to_id));
         let pair = crate::compatibility::pair_key(&from_id, &to_id);
         let guard = self.guards.get(&pair);
         checks.push(check_line(

@@ -474,4 +474,6 @@ pub enum RejectReason {
     NotConvertible,
     LifecycleBlocked,
     NavWindowClosed,
+    ReserveRestricted,
+    ReserveStale,
 }

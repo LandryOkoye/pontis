@@ -31,6 +31,8 @@ pub enum RouteRefusal {
     NotConvertible,
     LifecycleBlocked,
     NavWindowClosed,
+    ReserveRestricted,
+    ReserveStale,
 }
 
 /// What a quote and its execution must be bound to.
@@ -108,6 +110,7 @@ impl Contract {
         }
         self.check_lifecycle(from_id, to_id)?;
         self.check_actions(from_id, to_id)?;
+        self.check_reserves(from_id, to_id)?;
         let key = crate::compatibility::pair_key(from_id, to_id);
         let rel = self
             .compatibilities

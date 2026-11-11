@@ -8,13 +8,48 @@ use crate::types::{Classification, Ratio, RejectReason, Status, SubjectType};
 use near_sdk::json_types::U128;
 use near_sdk::{near, AccountId};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[near(serializers = [json])]
 #[serde(rename_all = "snake_case")]
 pub enum RoleName {
     Registrar,
     CompatApprover,
     Pauser,
+    Attester,
+    ReserveAttester,
+    BridgeAttester,
+}
+
+impl RoleName {
+    /// Every grantable role, in the order `get_account_roles` lists them.
+    pub const ALL: [RoleName; 6] = [
+        RoleName::Registrar,
+        RoleName::CompatApprover,
+        RoleName::Pauser,
+        RoleName::Attester,
+        RoleName::ReserveAttester,
+        RoleName::BridgeAttester,
+    ];
+
+    /// The snake_case name used in JSON and as the signer registry key.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RoleName::Registrar => "registrar",
+            RoleName::CompatApprover => "compat_approver",
+            RoleName::Pauser => "pauser",
+            RoleName::Attester => "attester",
+            RoleName::ReserveAttester => "reserve_attester",
+            RoleName::BridgeAttester => "bridge_attester",
+        }
+    }
+
+    /// Roles whose signatures are attestations; they have a signer key registry.
+    pub fn is_attester(self) -> bool {
+        matches!(
+            self,
+            RoleName::Attester | RoleName::ReserveAttester | RoleName::BridgeAttester
+        )
+    }
 }
 
 #[derive(Clone, Copy)]

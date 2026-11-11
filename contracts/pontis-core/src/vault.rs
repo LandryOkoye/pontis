@@ -36,6 +36,15 @@ impl Contract {
         msg: String,
     ) -> PromiseOrValue<U128> {
         let token = env::predecessor_account_id();
+        if msg.starts_with(crate::redemption_types::REDEEM_PREFIX) {
+            return match self.try_redeem(&token, &sender_id, amount, &msg) {
+                Ok(_) => PromiseOrValue::Value(U128(0)),
+                Err(reason) => {
+                    self.refuse_redemption(reason, sender_id, token, amount);
+                    PromiseOrValue::Value(amount)
+                }
+            };
+        }
         let Some(rep_id) = self.representation_by_account.get(&token).cloned() else {
             return self.refuse(RejectReason::UnknownToken, None, sender_id, token, amount);
         };
