@@ -83,6 +83,16 @@ impl Contract {
 }
 
 impl Contract {
+    /// Lowers the ledger and the stored read by `amount` (saturating) after a confirmed burn.
+    pub(crate) fn supply_burned(&mut self, rep_id: &str, amount: u128) {
+        let ledger = self.supply_ledger.get(rep_id).copied().unwrap_or(0);
+        self.supply_ledger
+            .insert(rep_id.to_string(), ledger.saturating_sub(amount));
+        if let Some(read) = self.supply_read.get_mut(rep_id) {
+            read.units = U128(read.units.0.saturating_sub(amount));
+        }
+    }
+
     pub(crate) fn assert_supply_room(&self, rep_id: &str, amount: u128) {
         let ledger = self.supply_ledger.get(rep_id).copied().unwrap_or(0);
         let pending = self.pending_mint.get(rep_id).copied().unwrap_or(0);

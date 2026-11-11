@@ -13,6 +13,7 @@ For the person operating a Pontis deployment on testnet. Each runbook gives the 
 | A corporate action, freeze, delisting or NAV window is involved   | [Corporate actions](corporate-actions.md)         |
 | An account needs an attester role or a signer key                 | [Roles and signer keys](roles-and-signer-keys.md) |
 | Quotes say `RESERVE_*`, or a token needs reserves and a mint gate | [Reserves and the gated mint](reserves.md)        |
+| A redemption is stuck, or the escrow disagrees                    | [Redemptions](redemptions.md)                     |
 
 First look, always:
 

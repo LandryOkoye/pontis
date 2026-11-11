@@ -45,6 +45,16 @@ IDs are lowercase `a-z0-9-`, 2 to 64 characters. List views take `from_index` an
 - **Signed bytes:** `b"pontis-quote-v1" ++ borsh(payload)`, pinned by `test-vectors/quote-signing.json`. Amount math is pinned by `test-vectors/quote-math.json` and property tests.
 - **Gas:** `GAS_FT_TRANSFER` (10 Tgas) and `GAS_CALLBACK` (15 Tgas) are reserved for the payout and its callback; the sandbox burns about 1 and 2 Tgas. A whole conversion completes with 40 Tgas prepaid (`contracts/integration-tests/tests/gas.rs`).
 
+## Custody, reserves, mint gate and redemption ([ADR 0020](../../docs/decisions/0020-custody-reserves-and-redemption.md))
+
+Simulated backing and redemption; nothing is custodied or paid out.
+
+- **Custody:** `register_custodian`, `set_custodian_status`, `set_custodian_key`, `link_custody` (registrar); `get_custodian(s)`, `get_custody_link`.
+- **Reserves:** `submit_reserve_attestation` (anyone relays; the custodian's key signs `pontis-reserve-v1`, pinned by `test-vectors/reserve-attestation.json`), `set_reserve_policy` (owner), `refresh_supply` and `evaluate_reserve` (anyone). The status `get_reserve_status` is computed on read: `circulating <= attested * (1 + tolerance_bps / 10_000)`, a staleness limit and an action (`warn`, `restrict_conversions`, `pause_mint`). `check_route` refuses `reserve_restricted` and `reserve_stale`.
+- **Mint gate:** `request_mint`, `execute_mint`, `cancel_mint_request` by an account of the issuer's `controlled_accounts`; the core is the token's `minter` and mints only within `get_mint_headroom`.
+- **Redemption:** `set_redemption_terms` (registrar); a holder sends `redeem:{terms_hash}:{payout_instruction_hash}` by `ft_transfer_call`; `accept_redemption`, `reject_redemption`, `fulfil_redemption` (issuer account), `expire_redemption` (anyone), `reclaim_redemption` (the user). `get_escrow_ledger` must satisfy `escrowed_in = burned + returned + held`. Counters: `get_issuer_reliability`.
+- **Pause:** reserve submissions, mints and new redemptions stop while paused; reject, expire, reclaim, `refresh_supply` and `evaluate_reserve` do not.
+
 ## Events
 
 `EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`. It emits `role_granted`, `role_revoked`, `ownership_transfer_proposed`, `ownership_transferred`, `paused`, `unpaused`, `issuer_registered`, `issuer_status_changed`, `canonical_asset_registered`, `canonical_asset_status_changed`, `representation_registered`, `representation_status_changed`, `evidence_added`, `compatibility_proposed`, `compatibility_approved` (flags re-approval), `compatibility_rejected`, `compatibility_suspended`, `policy_updated`, `allowlist_updated`, `quote_signer_set`, `fee_updated`, `vault_funded`, `vault_withdrawn`, `conversion_completed`, `conversion_failed` and `conversion_rejected`.

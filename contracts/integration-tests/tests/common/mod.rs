@@ -138,6 +138,7 @@ mod custody;
 mod guards;
 mod ops;
 mod quotes;
+mod redemption;
 mod setup;
 
 #[allow(unused_imports)] // each test binary uses a subset

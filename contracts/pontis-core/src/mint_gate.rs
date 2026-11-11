@@ -227,8 +227,14 @@ impl Contract {
     /// Requires 1 yocto, no global pause and a caller listed in the `controlled_accounts` of the
     /// active issuer of the representation. Returns the caller.
     pub(crate) fn assert_issuer_account(&self, representation_id: &str) -> AccountId {
-        near_sdk::assert_one_yocto();
         self.assert_not_paused();
+        self.issuer_account_caller(representation_id)
+    }
+
+    /// Like `assert_issuer_account` but not blocked by the global pause: for exits and safety
+    /// actions of an issuer (a rejection).
+    pub(crate) fn issuer_account_caller(&self, representation_id: &str) -> AccountId {
+        near_sdk::assert_one_yocto();
         let caller = env::predecessor_account_id();
         let rep = self
             .representations
