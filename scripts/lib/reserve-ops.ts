@@ -3,7 +3,17 @@
 // no clock, no files, so it is tested directly. Everything these commands set up is SIMULATED.
 
 import { devKey } from "@pontis/dev-keys";
-import { SHA256, id, oneOf, optional, positional, split, text, type Parsed } from "./arg-parse.ts";
+import {
+  SHA256,
+  id,
+  oneOf,
+  optional,
+  positional,
+  split,
+  takeAll,
+  text,
+  type Parsed,
+} from "./arg-parse.ts";
 import type { NewEvidence } from "./evidence.ts";
 
 export const GRANTABLE_ROLES = ["registrar", "reserve_attester"] as const;
@@ -54,6 +64,8 @@ export type ReservesCommand =
       intervalMs: number;
       coverBps: number;
       custodianId: string | null;
+      /** Representations the simulated custodian leaves alone, so a lapsed or missing attestation stays that way. */
+      skip: string[];
     }
   | { kind: "drift"; representationId: string; coverBps: number | null };
 
@@ -69,7 +81,7 @@ export const RESERVES_USAGE = [
   "  set-policy <representation> --action warn|restrict_conversions|pause_mint",
   "      [--tolerance-bps 0] [--max-age-ms 86400000] [--baseline-supply 0]",
   "  set-minter <representation>",
-  "  publish [--loop] [--interval-ms 30000] [--cover-bps 10000] [--custodian <id>]",
+  "  publish [--loop] [--interval-ms 30000] [--cover-bps 10000] [--custodian <id>] [--skip <representation>]...",
   "  drift <representation> <bps|clear>",
 ].join("\n");
 
@@ -208,7 +220,8 @@ export function parseReservesArgs(argv: string[]): ReservesCommand {
       return { kind, representationId: id(rep!, "representation") };
     }
     case "publish": {
-      const p = split(rest, ["interval-ms", "cover-bps", "custodian"], ["loop"]);
+      const skipped = takeAll(rest, "skip");
+      const p = split(skipped.rest, ["interval-ms", "cover-bps", "custodian"], ["loop"]);
       positional(p, 0, "no arguments");
       const custodian = optional(p, "custodian");
       return {
@@ -227,6 +240,7 @@ export function parseReservesArgs(argv: string[]): ReservesCommand {
           MAX_COVER_BPS,
         ),
         custodianId: custodian === undefined ? null : id(custodian, "custodian id"),
+        skip: [...new Set(skipped.values.map((v) => id(v, "representation")))],
       };
     }
     case "drift": {

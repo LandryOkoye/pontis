@@ -51,6 +51,7 @@ export async function representations(chain: Chain): Promise<RepresentationRef[]
 export interface PublishOptions {
   coverBps: number;
   custodianId: string | null;
+  skip?: readonly string[];
 }
 
 /**
@@ -74,6 +75,7 @@ export async function publishOnce(
     await representations(chain),
     devKey("reserve-attester").publicKey,
     options.custodianId,
+    options.skip,
   );
   for (const line of skipped) console.log(`skipped ${line}`);
   const state = loadCoverState(path);
@@ -168,7 +170,11 @@ export async function run(chain: Chain, command: ReservesCommand): Promise<void>
     }
     case "publish": {
       const relayer = relayerChain(chain);
-      const options = { coverBps: command.coverBps, custodianId: command.custodianId };
+      const options = {
+        coverBps: command.coverBps,
+        custodianId: command.custodianId,
+        skip: command.skip,
+      };
       const lastAsOf = new Map<string, number>();
       console.log(
         `SIMULATED custodian: dev reserve-attester key ${devKey("reserve-attester").publicKey}, relayer ${relayer.config.deployerId}`,
