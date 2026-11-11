@@ -1,5 +1,6 @@
+import { DEFAULT_CLAIMS } from "@pontis/market-data";
 import { describe, expect, it } from "vitest";
-import { CATEGORY, ISSUERS } from "../lib/catalogue.ts";
+import { CATEGORY, CLAIMS, ISSUERS } from "../lib/catalogue.ts";
 
 describe("catalogue issuers", () => {
   it("has exactly the four simulated issuers, with unique ids", () => {
@@ -49,6 +50,45 @@ describe("catalogue issuers", () => {
       for (const category of issuer.authorizedCategories) {
         expect(Object.values(CATEGORY)).toContain(category);
       }
+    }
+  });
+});
+
+describe("catalogue canonical assets", () => {
+  it("has unique ids and covers every default simulated profile except the MVP gold", () => {
+    const ids = CLAIMS.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect([...ids].sort()).toEqual(
+      Object.keys(DEFAULT_CLAIMS)
+        .filter((id) => id !== "syn-gold-oz")
+        .sort(),
+    );
+  });
+
+  it("puts each claim in a category some issuer is authorized for", () => {
+    for (const claim of CLAIMS) {
+      expect(Object.values(CATEGORY)).toContain(claim.category);
+      expect(
+        ISSUERS.some((i) => i.authorizedCategories.includes(claim.category)),
+        claim.id,
+      ).toBe(true);
+    }
+  });
+
+  it("fills every field of the record and claims no rights, legal structure or backing", () => {
+    for (const claim of CLAIMS) {
+      for (const text of [
+        claim.name,
+        claim.claimDescription,
+        claim.unitDefinition,
+        claim.redemptionTerms,
+        claim.eligibilityRestrictions,
+      ]) {
+        expect(text.trim().length, claim.id).toBeGreaterThan(0);
+      }
+      expect(claim.economicRights, claim.id).toMatch(/^None/);
+      expect(claim.legalClaimStructure, claim.id).toMatch(/^None/);
+      expect(claim.riskDisclosures.length, claim.id).toBeGreaterThan(0);
     }
   });
 });
