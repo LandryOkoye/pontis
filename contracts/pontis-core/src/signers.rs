@@ -170,7 +170,6 @@ impl Contract {
 
     /// Verifies that `public_key` is registered for `role` with `scope` and signed `message`.
     /// Returns the account the key is tied to.
-    #[allow(dead_code)] // the first caller is the reserve attestation of ADR 0020
     pub(crate) fn verify_signer(
         &self,
         role: RoleName,
