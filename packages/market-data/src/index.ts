@@ -6,3 +6,6 @@ export * from "./trades.ts";
 export * from "./search.ts";
 export * from "./stats-refresh.ts";
 export * from "./jobs.ts";
+export * from "./feed/attestation.ts";
+export * from "./feed/prng.ts";
+export * from "./feed/types.ts";

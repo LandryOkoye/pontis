@@ -16,6 +16,7 @@
   "dependencies": {
     "@pontis/db": "workspace:*",
     "@pontis/domain": "workspace:*",
+    "@pontis/quote-engine": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "zod": "^4.6.7"
   },
