@@ -146,6 +146,12 @@ export const ROUTE_REFUSALS = [
   "price_stale",
   "price_missing",
   "price_unavailable",
+  "corporate_action_freeze",
+  "corporate_action_pending",
+  "epoch_mismatch",
+  "not_convertible",
+  "lifecycle_blocked",
+  "nav_window_closed",
 ] as const;
 export type RouteRefusal = (typeof ROUTE_REFUSALS)[number];
 
@@ -160,6 +166,8 @@ export const ChainRouteViewSchema = z.object({
       policy_version: z.number().int().nonnegative(),
     })
     .nullable(),
+  /** The start of the next approved freeze window of either claim, if one is still ahead. */
+  next_freeze_ms: timestampMs.nullable(),
 });
 export type ChainRouteView = z.infer<typeof ChainRouteViewSchema>;
 
