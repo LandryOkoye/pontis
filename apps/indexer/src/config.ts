@@ -19,6 +19,10 @@ const EnvSchema = z.object({
   RECONCILE_STUCK_AFTER_MS: z.coerce.number().int().min(60_000).default(600_000),
   /** Settlement consistency is checked for quotes touched within this window. */
   RECONCILE_LOOKBACK_MS: z.coerce.number().int().min(60_000).default(604_800_000),
+  /** Pause between market job passes (trades, candles, stats, search); 0 turns them off. */
+  MARKET_JOBS_INTERVAL_MS: z.coerce.number().int().min(0).default(60_000),
+  /** Candles are rebuilt for this much recent time on each pass. */
+  MARKET_JOBS_WINDOW_MS: z.coerce.number().int().min(60_000).default(7_200_000),
   /** Parallel chunk reads per block; keep low on public RPC endpoints. */
   INDEXER_CHUNK_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(4),
 });
