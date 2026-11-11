@@ -50,20 +50,23 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 
 ## Corporate actions, lifecycle and NAV strikes (contract, phase 2)
 
-The contract side of [ADR 0017](decisions/0017-corporate-actions-and-multiplier-epochs.md) and [0018](decisions/0018-asset-lifecycle-and-nav-strikes.md). The API, indexer and web mirrors are separate work.
+The contract side of [ADR 0017](decisions/0017-corporate-actions-and-multiplier-epochs.md) and [0018](decisions/0018-asset-lifecycle-and-nav-strikes.md), and its API, scripts and indexer mirrors ([phase 2 actions API](progress/phase-2-actions-api.md)). The web mirror is separate work.
 
 - **Actions are registrar-entered records, not observed facts.** The contract enforces the freeze and the agreement of multipliers; it does not know a split happened. Evidence is a recorded claim like any other ([ADR 0009](decisions/0009-synthetic-evidence-labelling.md)).
 - **A wrapper that never applies blocks every route touching it.** An approved split cannot be cancelled once effective. The registrar applies for the issuer; an issuer that does not cooperate leaves its claim's routes closed until its wrapper is deprecated (then `settle_corporate_action` closes the action).
 - **Application needs the effective time to have passed.** Approval is refused at or after `effective_ms`, so an action is always announced and frozen before it takes effect; an action proposed too late is simply never approved. A corrected action is a new action.
 - **A wrapper registered while an action is open must apply it too.** It counts as unapplied, and a wrapper already registered at the new denomination cannot apply the old factor. Register new wrappers only when no approved action is open.
 - **A non-uniform change closes the pair until it is rebased.** A split on one side of a cross-claim pair leaves it `epoch_mismatch`; a `compat_approver` re-proposes the pair at the ratio the new multipliers give and approves it, which is a new version. There is no automatic rebasing.
-- **Mid-window quotes.** `get_route` returns `next_freeze_ms`, but the contract only re-checks at execution. A quote that outlives a freeze start is refused with `CORPORATE_ACTION_FREEZE`; the API is what refuses to sign one that would.
+- **Mid-window quotes.** `get_route` returns `next_freeze_ms`, but the contract only re-checks at execution. A quote that outlives a freeze start is refused with `CORPORATE_ACTION_FREEZE`; the API therefore clamps a quote's `expiresAt` to `next_freeze_ms`, so it never signs one that would.
 - **Cash and stock distributions are data only.** `dividend_cash`, `dividend_stock`, `merger`, `spin_off`, `delisting` and `symbol_change` are recorded and (for a multiplier-free action) settled; nothing is paid or rebalanced on chain.
 - **Delisting needs two accounts but they may belong to one person.** `request_delist` (registrar) and `approve_delist` (a different compat approver) are distinct accounts, not distinct people; role separation is phase 3. Proposer and approver of an action are checked the same way.
 - **No pending conversions.** A NAV fund converts only inside an open strike window, priced off that strike through the deviation guard ([ADR 0018](decisions/0018-asset-lifecycle-and-nav-strikes.md) section 4). A user who wants the next strike waits for the next window; forward pricing needs the escrow of phases 4 and 6.
 - **A NAV strike is a signed attestation.** Like a price it is only as true as its publisher; the demo's strikes are simulated and labelled `simulated` with their `source`. The window rule `now - as_of <= 2 * (cutoff - as_of)` never binds inside `[as_of, cutoff)`; it is kept as the ADR states it.
 - **Matured, redeeming and redeemed stages block conversion; no exit flow exists yet.** Redemption is phase 4.
 - **Corporate actions of an asset are capped at 32 and epochs of a representation at 16.**
+- **The wrapper list of an action comes from the registry mirror.** `GET /v1/assets/{id}/corporate-actions` reads actions and epochs live but takes the set of wrappers (and their `live` status) from the synced registry, so it can lag the chain by one sync. The `CORPORATE_ACTION_OVERDUE` finding uses the same mirror.
+- **The overdue finding is a warning, raised on the next reconciler run after 10 minutes, once per action.** It does not say which operator should act.
+- **NAV strikes carry the feed's `simulated_feed` label.** The operator command signs the simulator's NAV (or `--nav`) with the dev publisher key; no real fund data exists.
 
 ## Demo catalogue: trust states are narrative
 

@@ -85,11 +85,16 @@ describe("CoreClient quote-time views", () => {
 
   it("returns route terms for an executable pair and a snake_case refusal otherwise", async () => {
     const ok = new CoreClient(
-      fakeRpc(() => ({ executable: true, refusal: null, terms })).rpc,
+      fakeRpc(() => ({ executable: true, refusal: null, terms, next_freeze_ms: null })).rpc,
       "core.testnet",
     );
     expect((await ok.getRoute("tgold-a", "tgold-b")).terms?.compatibility_version).toBe(2);
-    const refused = { executable: false, refusal: "relationship_suspended", terms: null };
+    const refused = {
+      executable: false,
+      refusal: "relationship_suspended",
+      terms: null,
+      next_freeze_ms: null,
+    };
     const no = new CoreClient(fakeRpc(() => refused).rpc, "core.testnet");
     expect((await no.getRoute("tgold-a", "tgold-b")).refusal).toBe("relationship_suspended");
     const unknown = new CoreClient(
@@ -97,6 +102,25 @@ describe("CoreClient quote-time views", () => {
       "core.testnet",
     );
     await expect(unknown.getRoute("a", "b")).rejects.toThrow();
+  });
+
+  it.each([
+    "corporate_action_freeze",
+    "corporate_action_pending",
+    "epoch_mismatch",
+    "not_convertible",
+    "lifecycle_blocked",
+    "nav_window_closed",
+  ])("accepts the %s refusal and the next freeze time", async (refusal) => {
+    const view = { executable: false, refusal, terms: null, next_freeze_ms: 1_794_100_000_000 };
+    const core = new CoreClient(fakeRpc(() => view).rpc, "core.testnet");
+    expect(await core.getRoute("a", "b")).toEqual(view);
+  });
+
+  it("refuses a route view without next_freeze_ms: the contract always sends it", async () => {
+    const view = { executable: false, refusal: "epoch_mismatch", terms: null };
+    const core = new CoreClient(fakeRpc(() => view).rpc, "core.testnet");
+    await expect(core.getRoute("a", "b")).rejects.toThrow();
   });
 
   it("reads the guard breakdown with the amount, and refuses a shape the contract never sends", async () => {

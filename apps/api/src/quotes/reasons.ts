@@ -21,6 +21,18 @@ export function refusalCode(refusal: RouteRefusal): RefusalCode | "NOT_FOUND" {
     case "price_missing":
     case "price_unavailable":
       return "PRICE_UNAVAILABLE";
+    case "corporate_action_freeze":
+      return "CORPORATE_ACTION_FREEZE";
+    case "corporate_action_pending":
+      return "CORPORATE_ACTION_PENDING";
+    case "epoch_mismatch":
+      return "EPOCH_MISMATCH";
+    case "not_convertible":
+      return "NOT_CONVERTIBLE";
+    case "lifecycle_blocked":
+      return "LIFECYCLE_BLOCKED";
+    case "nav_window_closed":
+      return "NAV_WINDOW_CLOSED";
     default:
       return "NOT_DIRECT_EQUIVALENT";
   }
@@ -44,6 +56,17 @@ const EXPLANATIONS: Record<RouteRefusal, string> = {
   price_missing: "No reference price has been published for one of the assets yet.",
   price_unavailable:
     "The reference prices cannot be compared safely (a value is out of range), so the route is closed.",
+  corporate_action_freeze:
+    "A corporate action on one of the assets' claims is about to take effect, so conversions are paused for its freeze window. They resume once every wrapper has applied the change.",
+  corporate_action_pending:
+    "A corporate action on one of the assets' claims has taken effect, but not every wrapper has applied it yet. The route stays closed until they all have.",
+  epoch_mismatch:
+    "The units of the two assets have moved by different amounts since the pair was approved, so the approved ratio no longer holds. The pair must be re-proposed and approved again.",
+  not_convertible: "One of the assets is not open to conversion: it is flagged as non-convertible.",
+  lifecycle_blocked:
+    "One of the assets is past its active life (matured, redeeming, redeemed or delisted), so it cannot be converted.",
+  nav_window_closed:
+    "A fund converts only inside the window of its latest NAV strike, and that window is closed or no strike has been published.",
 };
 
 export const explain = (refusal: RouteRefusal): string => EXPLANATIONS[refusal];
@@ -73,6 +96,18 @@ export function checkRefusal(check: {
       return check.detail.includes("no price") ? "PRICE_UNAVAILABLE" : "PRICE_STALE";
     case "circuit_breaker":
       return "RELATIONSHIP_SUSPENDED";
+    case "corporate_action_freeze":
+      return "CORPORATE_ACTION_FREEZE";
+    case "corporate_action_pending":
+      return "CORPORATE_ACTION_PENDING";
+    case "epoch_mismatch":
+      return "EPOCH_MISMATCH";
+    case "not_convertible":
+      return "NOT_CONVERTIBLE";
+    case "lifecycle_blocked":
+      return "LIFECYCLE_BLOCKED";
+    case "nav_window_closed":
+      return "NAV_WINDOW_CLOSED";
     case "amount_limits":
       return check.detail === "AmountBelowMin"
         ? "AMOUNT_BELOW_MIN"
@@ -102,6 +137,12 @@ export const explainCode = (code: RefusalCode, fallback: string): string =>
 const STALE_EXPLANATIONS: Partial<Record<RefusalCode, string>> = {
   PRICE_STALE: EXPLANATIONS.price_stale,
   PRICE_UNAVAILABLE: EXPLANATIONS.price_missing,
+  CORPORATE_ACTION_FREEZE: EXPLANATIONS.corporate_action_freeze,
+  CORPORATE_ACTION_PENDING: EXPLANATIONS.corporate_action_pending,
+  EPOCH_MISMATCH: EXPLANATIONS.epoch_mismatch,
+  NOT_CONVERTIBLE: EXPLANATIONS.not_convertible,
+  LIFECYCLE_BLOCKED: EXPLANATIONS.lifecycle_blocked,
+  NAV_WINDOW_CLOSED: EXPLANATIONS.nav_window_closed,
 };
 
 /**

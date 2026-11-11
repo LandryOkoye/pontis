@@ -20,7 +20,12 @@ const app = buildApp({
   chainHeight: async () => 1,
   quotes: {
     chain: {
-      getRoute: async () => ({ executable: false, refusal: "no_relationship", terms: null }),
+      getRoute: async () => ({
+        executable: false,
+        refusal: "no_relationship",
+        terms: null,
+        next_freeze_ms: null,
+      }),
       isAllowed: async () => true,
       getInventory: async () => "0",
       getFeeBps: async () => 10,
@@ -31,6 +36,12 @@ const app = buildApp({
     },
     key: keyFromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1)),
     coreId: "core.testnet",
+  },
+  actionsChain: {
+    getCorporateActions: async () => [],
+    getMultiplierEpochs: async () => [],
+    getLifecycle: async () => null,
+    getNavStrike: async () => null,
   },
   conversionChain: { isRegistered: async () => true },
   txVerifier: { getTransaction: async () => undefined },

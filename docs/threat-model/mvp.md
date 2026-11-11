@@ -120,7 +120,6 @@ Rules: no key is stored in git; `.env*` and `.near-credentials` are ignored; the
 
 ## 6. Verification plan
 
-- Contract unit tests and sandbox scenarios cover T45 to T49 (`cargo test -p pontis-core`, `contracts/integration-tests/tests/actions.rs`): freeze, pending and mismatch refusals, the exact-factor rule and `test-vectors/multiplier-epochs.json`, proposer and approver separation, lifecycle and NAV window refusals, NAV signature and ordering rules.
 - Contract negative tests for T2–T4, T7–T8, T12, T14 (BuildPlan B6–B8).
 - Hash verification tests cover forged, foreign and unrelated hashes, an unreachable node, and both orders of report and settlement (`apps/api/test/submit-verification.test.ts`, `apps/indexer/test/verify-hashes.test.ts`, `packages/near-client/test/transaction*.test.ts`).
 - B14 tests cover T20, T38 and T39: rate limits per class and client, CORS and headers, log scrubbing and the admin audit trail (`apps/api/test`).

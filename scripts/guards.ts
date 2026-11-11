@@ -12,7 +12,7 @@ import { loadConfig } from "./lib/config.ts";
 import { DEMO_GUARD, parseGuardsArgs, type GuardsCommand } from "./lib/guard-ops.ts";
 import { priceSubmissions } from "./lib/price-relay.ts";
 
-async function registry(chain: Chain) {
+export async function registry(chain: Chain) {
   const core = new CoreClient(new RpcClient({ url: chain.config.rpcUrl }), chain.config.coreId);
   return (await core.listRepresentations()).map((r) => ({
     id: r.id,

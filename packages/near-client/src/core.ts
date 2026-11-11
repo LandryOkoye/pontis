@@ -7,7 +7,11 @@ import type { RpcClient } from "./rpc.ts";
 import {
   ChainCanonicalAssetSchema,
   ChainCompatibilitySchema,
+  ChainCorporateActionSchema,
   ChainIssuerSchema,
+  ChainLifecycleSchema,
+  ChainMultiplierEpochSchema,
+  ChainNavStrikeSchema,
   ChainPolicySchema,
   ChainRepresentationSchema,
   ChainPriceSchema,
@@ -15,7 +19,11 @@ import {
   ChainRouteViewSchema,
   type ChainCanonicalAsset,
   type ChainCompatibility,
+  type ChainCorporateAction,
   type ChainIssuer,
+  type ChainLifecycle,
+  type ChainMultiplierEpoch,
+  type ChainNavStrike,
   type ChainPolicy,
   type ChainRepresentation,
   type ChainPrice,
@@ -110,6 +118,36 @@ export class CoreClient implements RegistrySource {
       representation_id: representationId,
     });
     return raw === null ? null : ChainPriceSchema.parse(raw);
+  }
+
+  /** Every corporate action recorded for a canonical asset, oldest first (ADR 0017). */
+  async getCorporateActions(assetId: string): Promise<ChainCorporateAction[]> {
+    const raw = await this.rpc.view(this.accountId, "get_corporate_actions", { asset_id: assetId });
+    return z.array(ChainCorporateActionSchema).parse(raw);
+  }
+
+  /** A representation's multiplier schedule: the genesis epoch first, then one per applied action. */
+  async getMultiplierEpochs(representationId: string): Promise<ChainMultiplierEpoch[]> {
+    const raw = await this.rpc.view(this.accountId, "get_multiplier_epochs", {
+      representation_id: representationId,
+    });
+    return z.array(ChainMultiplierEpochSchema).parse(raw);
+  }
+
+  /** The lifecycle record (a fungible asset in stage `active` when never set); null for an unknown representation. */
+  async getLifecycle(representationId: string): Promise<ChainLifecycle | null> {
+    const raw = await this.rpc.view(this.accountId, "get_lifecycle", {
+      representation_id: representationId,
+    });
+    return raw === null ? null : ChainLifecycleSchema.parse(raw);
+  }
+
+  /** The latest NAV strike of a `nav_fund`, or null before any. */
+  async getNavStrike(representationId: string): Promise<ChainNavStrike | null> {
+    const raw = await this.rpc.view(this.accountId, "get_nav_strike", {
+      representation_id: representationId,
+    });
+    return raw === null ? null : ChainNavStrikeSchema.parse(raw);
   }
 
   /** Live allowlist check: true if the representation needs no allowlist or the account is on it. */

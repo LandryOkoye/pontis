@@ -3,9 +3,13 @@
 // Field names are the contract's snake_case; timestamps are milliseconds since epoch.
 
 import {
+  ACTION_KINDS,
+  ACTION_STATUSES,
+  ASSET_KINDS,
   BRIDGE_STATUSES,
   COMPATIBILITY_CLASSIFICATIONS,
   EVIDENCE_PROVENANCES,
+  LIFECYCLE_STAGES,
   RECORD_STATUSES,
   RELATIONSHIP_STATUSES,
   REVIEW_ACTIONS,
@@ -146,6 +150,12 @@ export const ROUTE_REFUSALS = [
   "price_stale",
   "price_missing",
   "price_unavailable",
+  "corporate_action_freeze",
+  "corporate_action_pending",
+  "epoch_mismatch",
+  "not_convertible",
+  "lifecycle_blocked",
+  "nav_window_closed",
 ] as const;
 export type RouteRefusal = (typeof ROUTE_REFUSALS)[number];
 
@@ -160,6 +170,8 @@ export const ChainRouteViewSchema = z.object({
       policy_version: z.number().int().nonnegative(),
     })
     .nullable(),
+  /** The start of the next approved freeze window of either claim, if one is still ahead. */
+  next_freeze_ms: timestampMs.nullable(),
 });
 export type ChainRouteView = z.infer<typeof ChainRouteViewSchema>;
 
@@ -194,3 +206,81 @@ export const ChainRouteGuardsSchema = z.object({
 });
 export type GuardCheck = z.infer<typeof GuardCheckSchema>;
 export type ChainRouteGuards = z.infer<typeof ChainRouteGuardsSchema>;
+
+/** One step of a representation's multiplier schedule; the first is `genesis` at time 0 (ADR 0017). */
+export const ChainMultiplierEpochSchema = z.object({
+  effective_ms: timestampMs,
+  multiplier: ChainRatioSchema,
+  action_id: z.string(),
+});
+
+export const ChainActionHistoryEntrySchema = z.object({
+  status: z.enum(ACTION_STATUSES),
+  by: accountId,
+  at_ms: timestampMs,
+  note: z.string(),
+});
+
+/** A corporate action on a canonical asset (`get_corporate_actions`, ADR 0017 section 1). */
+export const ChainCorporateActionSchema = z.object({
+  id: z.string(),
+  asset_id: z.string(),
+  kind: z.enum(ACTION_KINDS),
+  announced_at_ms: timestampMs,
+  ex_date_ms: timestampMs,
+  effective_ms: timestampMs,
+  freeze_from_ms: timestampMs,
+  freeze_until_ms: timestampMs,
+  /** `new = old * change` for every wrapper; null when the action does not move the multiplier. */
+  multiplier_change: ChainRatioSchema.nullable(),
+  evidence: z.array(ChainEvidenceSchema),
+  status: z.enum(ACTION_STATUSES),
+  proposed_by: accountId,
+  approved_by: accountId.nullable(),
+  /** Representations that have applied the action so far. */
+  applied_representations: z.array(z.string()),
+  history: z.array(ChainActionHistoryEntrySchema),
+});
+
+export const ChainLifecycleEntrySchema = z.object({
+  from: z.enum(LIFECYCLE_STAGES),
+  to: z.enum(LIFECYCLE_STAGES),
+  by: accountId,
+  at_ms: timestampMs,
+  evidence_hash: z.string().nullable(),
+  note: z.string(),
+});
+
+/** The lifecycle record of a representation (`get_lifecycle`, ADR 0018 section 1). */
+export const ChainLifecycleSchema = z.object({
+  kind: z.enum(ASSET_KINDS),
+  no_conversion: z.boolean(),
+  bridge_only: z.boolean(),
+  stage: z.enum(LIFECYCLE_STAGES),
+  history: z.array(ChainLifecycleEntrySchema),
+  delist_request: z
+    .object({
+      by: accountId,
+      evidence_hash: z.string().nullable(),
+      note: z.string(),
+      at_ms: timestampMs,
+    })
+    .nullable(),
+});
+
+/** The latest NAV strike of a `nav_fund` (`get_nav_strike`, ADR 0018 section 4). */
+export const ChainNavStrikeSchema = z.object({
+  as_of_ms: timestampMs,
+  /** NAV of one whole token at 8 decimals, as a decimal string of the integer. */
+  nav_per_unit: amount,
+  cutoff_ms: timestampMs,
+  currency: z.string(),
+  source: z.string(),
+  simulated: z.boolean(),
+  submitted_ms: timestampMs,
+  publisher_key: z.string(),
+});
+export type ChainMultiplierEpoch = z.infer<typeof ChainMultiplierEpochSchema>;
+export type ChainCorporateAction = z.infer<typeof ChainCorporateActionSchema>;
+export type ChainLifecycle = z.infer<typeof ChainLifecycleSchema>;
+export type ChainNavStrike = z.infer<typeof ChainNavStrikeSchema>;

@@ -24,7 +24,7 @@ afterAll(async () => {
 const key = keyFromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1));
 const NOW = new Date("2026-11-07T18:00:00Z");
 const terms = { ratio: { num: "1000", den: "1" }, compatibility_version: 2, policy_version: 1 };
-const ok: ChainRouteView = { executable: true, refusal: null, terms };
+const ok: ChainRouteView = { executable: true, refusal: null, terms, next_freeze_ms: null };
 type Base = Omit<QuoteChain, "getRouteGuards" | "getPrice">;
 const chain = (over: Partial<QuoteChain> = {}): QuoteChain => {
   const base: Base = {

@@ -30,7 +30,7 @@ describe("compareRoutes", () => {
   it("reports an executable parity route with its ratio and compatibility version", async () => {
     const res = await compareRoutes(
       t.db,
-      chainWith({ executable: true, refusal: null, terms }),
+      chainWith({ executable: true, refusal: null, terms, next_freeze_ms: null }),
       pair,
     );
     expect(res.routes).toHaveLength(1);
@@ -53,7 +53,7 @@ describe("compareRoutes", () => {
   ] as const)("explains a %s refusal as %s", async (refusal, code) => {
     const res = await compareRoutes(
       t.db,
-      chainWith({ executable: false, refusal, terms: null }),
+      chainWith({ executable: false, refusal, terms: null, next_freeze_ms: null }),
       pair,
     );
     expect(res.routes[0]).toMatchObject({ executable: false, reasonCode: code });
@@ -62,7 +62,12 @@ describe("compareRoutes", () => {
 
   // 1 unit at ratio 1000 is 1,000 gross; a 10 bps fee is 1 (rounded up), so the vault must pay 999.
   it("checks inventory against the net payout after the fee, not the gross output", async () => {
-    const executable: ChainRouteView = { executable: true, refusal: null, terms };
+    const executable: ChainRouteView = {
+      executable: true,
+      refusal: null,
+      terms,
+      next_freeze_ms: null,
+    };
     const verdict = async (inventory: string) =>
       (await compareRoutes(t.db, chainWith(executable, inventory), { ...pair, amount: "1" }))
         .routes[0];
@@ -79,6 +84,7 @@ describe("compareRoutes", () => {
     const odd: ChainRouteView = {
       executable: true,
       refusal: null,
+      next_freeze_ms: null,
       terms: { ...terms, ratio: { num: "1001", den: "1" } },
     };
     const verdict = async (inventory: string) =>
@@ -89,7 +95,12 @@ describe("compareRoutes", () => {
   });
 
   it("needs the whole gross output when the fee is zero", async () => {
-    const executable: ChainRouteView = { executable: true, refusal: null, terms };
+    const executable: ChainRouteView = {
+      executable: true,
+      refusal: null,
+      terms,
+      next_freeze_ms: null,
+    };
     const free = (inventory: string): QuoteChain => chainWith(executable, inventory, 0);
     const verdict = async (inventory: string) =>
       (await compareRoutes(t.db, free(inventory), { ...pair, amount: "1" })).routes[0]?.executable;
@@ -101,6 +112,7 @@ describe("compareRoutes", () => {
     const down: ChainRouteView = {
       executable: true,
       refusal: null,
+      next_freeze_ms: null,
       terms: { ...terms, ratio: { num: "1", den: "1000" } },
     };
     expect(
@@ -111,10 +123,14 @@ describe("compareRoutes", () => {
   it("is a NOT_FOUND error for an asset the catalog does not know", async () => {
     expect(
       await errorCodeOf(
-        compareRoutes(t.db, chainWith({ executable: false, refusal: null, terms: null }), {
-          fromId: "ghost",
-          toId: "tgold-b",
-        }),
+        compareRoutes(
+          t.db,
+          chainWith({ executable: false, refusal: null, terms: null, next_freeze_ms: null }),
+          {
+            fromId: "ghost",
+            toId: "tgold-b",
+          },
+        ),
       ),
     ).toBe("NOT_FOUND");
   });

@@ -4,6 +4,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-ope
 import { z } from "zod";
 import type { ErrorCodeSchema } from "./common.ts";
 import { ApiErrorSchema } from "./common.ts";
+import { AssetLifecycleSchema, AssetNavSchema, CorporateActionListSchema } from "./action-types.ts";
 import { AdminAuthHeaderSchema, ReconciliationReportSchema } from "./admin-types.ts";
 import { RouteGuardsQuerySchema, RouteGuardsResponseSchema } from "./guard-types.ts";
 import {
@@ -361,6 +362,42 @@ export const ENDPOINTS = {
     description:
       "Newest first. Real rows are settled conversions on the testnet; simulated rows come from the demo simulator and say so. Cursors are opaque.",
   },
+  getAssetLifecycle: {
+    method: "get",
+    path: "/v1/assets/{id}/lifecycle",
+    summary: "Lifecycle kind, stage, flags and stage history",
+    tag: "Registry",
+    status: 200,
+    response: AssetLifecycleSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. An asset with no lifecycle record is a `fungible` asset in stage `active`. Anything but `active`, or a conversion flag, closes the asset's routes (`NOT_CONVERTIBLE`, `LIFECYCLE_BLOCKED`). Stage changes are entered by the registrar; delisting needs a second account.",
+  },
+  getAssetCorporateActions: {
+    method: "get",
+    path: "/v1/assets/{id}/corporate-actions",
+    summary: "Corporate actions of the asset's claim and each wrapper's multiplier schedule",
+    tag: "Registry",
+    status: 200,
+    response: CorporateActionListSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. Actions belong to the canonical claim and apply to every wrapper of it: `wrappers` says which have applied. Routes of the claim are closed during an approved action's freeze window (`CORPORATE_ACTION_FREEZE`) and until every live wrapper has applied a multiplier change (`CORPORATE_ACTION_PENDING`). The facts are entered by the registrar; evidence keeps its own provenance label and nothing here is verified.",
+  },
+  getAssetNav: {
+    method: "get",
+    path: "/v1/assets/{id}/nav",
+    summary: "Current NAV strike and its window",
+    tag: "Registry",
+    status: 200,
+    response: AssetNavSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. `strike` is null for an asset that is not a NAV fund and for a fund with no strike yet. A fund converts only while `windowState` is `open`. The demo publishes simulated strikes only: `simulated` and `source` are shown as stored.",
+  },
   compareAssets: {
     method: "get",
     path: "/v1/compare",
@@ -456,11 +493,17 @@ export const ENDPOINTS = {
         "AMOUNT_BELOW_MIN",
         "AMOUNT_ABOVE_MAX",
         "WINDOW_LIMIT_EXCEEDED",
+        "CORPORATE_ACTION_FREEZE",
+        "CORPORATE_ACTION_PENDING",
+        "EPOCH_MISMATCH",
+        "NOT_CONVERTIBLE",
+        "LIFECYCLE_BLOCKED",
+        "NAV_WINDOW_CLOSED",
       ],
       ...COMMON,
     },
     description:
-      "Refusals are `422` with a structured error whose `code` is the reason. Quotes expire after 60 seconds.",
+      "Refusals are `422` with a structured error whose `code` is the reason. Quotes expire after 60 seconds, or at the start of the next approved corporate-action freeze window of either claim if that comes sooner.",
   },
   getQuote: {
     method: "get",

@@ -24,6 +24,7 @@ afterAll(async () => {
 const route: ChainRouteView = {
   executable: true,
   refusal: null,
+  next_freeze_ms: null,
   terms: { ratio: { num: "1000", den: "1" }, compatibility_version: 2, policy_version: 1 },
 };
 const chain: QuoteChain = unguarded({

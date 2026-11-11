@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ApiErrorSchema,
+  AssetLifecycleSchema,
+  AssetNavSchema,
+  CorporateActionListSchema,
   ActivityListSchema,
   AssetChainListSchema,
   AssetDocumentListSchema,
@@ -77,7 +80,9 @@ describe("fixtures round-trip through the schemas", () => {
     ["issuer leaderboard", IssuerLeaderboardSchema, fx.issuerLeaderboard],
     ["status", StatusSchema, fx.status],
     ["route guards", RouteGuardsResponseSchema, fx.routeGuards],
-
+    ["asset lifecycle", AssetLifecycleSchema, fx.assetLifecycle],
+    ["corporate actions", CorporateActionListSchema, fx.corporateActionList],
+    ["asset NAV", AssetNavSchema, fx.assetNav],
     ["protocol metrics", ProtocolMetricsSchema, fx.protocolMetrics],
     ["admin metrics", AdminMetricsSchema, fx.adminMetrics],
   ] as const)("%s", (_name, schema, value) => {
@@ -202,6 +207,27 @@ describe("requests and errors", () => {
       expect(ApiErrorSchema.safeParse({ code, message: "m" }).success).toBe(true);
     }
     expect(ApiErrorSchema.safeParse({ code: "SOMETHING_ELSE", message: "m" }).success).toBe(false);
+  });
+});
+
+describe("actions and lifecycle responses", () => {
+  it("keeps the honesty labels of a NAV strike required", () => {
+    const { simulated: _s, ...unlabelled } = fx.assetNav.strike!;
+    expect(AssetNavSchema.safeParse({ ...fx.assetNav, strike: unlabelled }).success).toBe(false);
+    expect(AssetNavSchema.safeParse({ ...fx.assetNav, strike: null }).success).toBe(true);
+  });
+
+  it("refuses a stage or action kind the contract does not know", () => {
+    expect(AssetLifecycleSchema.safeParse({ ...fx.assetLifecycle, stage: "retired" }).success).toBe(
+      false,
+    );
+    const [action] = fx.corporateActionList.items;
+    expect(
+      CorporateActionListSchema.safeParse({
+        ...fx.corporateActionList,
+        items: [{ ...action, kind: "bonus" }],
+      }).success,
+    ).toBe(false);
   });
 });
 
