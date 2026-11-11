@@ -1,4 +1,5 @@
 // API process: verify the RPC network, migrate, start the HTTP server and the background registry sync, stop cleanly.
+// `API_MODE=fixtures` skips all of that and serves the example data instead (fixtures-app.ts).
 
 import { CoreClient, RpcClient, RpcTxVerifier, TokenClient } from "@pontis/near-client";
 import { parseSecretKey } from "@pontis/quote-engine";
@@ -10,6 +11,24 @@ import { runMigrations } from "@pontis/db";
 import { syncRegistry } from "./sync/registry-sync.ts";
 import { expireQuotes } from "./quotes/lifecycle.ts";
 import { startScheduler } from "./sync/scheduler.ts";
+
+if (process.env.API_MODE === "fixtures") {
+  const { buildFixturesApp } = await import("./fixtures-app.ts");
+  const origins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
+    .split(",")
+    .map((o) => o.trim());
+  const app = buildFixturesApp({ corsOrigins: origins });
+  console.warn(
+    JSON.stringify({
+      level: "warn",
+      message: "API_MODE=fixtures: serving example data, not the chain",
+    }),
+  );
+  await app.listen({ host: process.env.HOST ?? "0.0.0.0", port: Number(process.env.PORT ?? 3000) });
+  await new Promise<void>((resolve) => process.once("SIGINT", resolve).once("SIGTERM", resolve));
+  await app.close();
+  process.exit(0);
+}
 
 const config = loadConfig();
 const rpc = new RpcClient({ url: config.NEAR_RPC_URL });
