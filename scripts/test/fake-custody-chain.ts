@@ -53,7 +53,9 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
     const policy = policies.get(rep);
     if (!policy) return { monitored: false, state: "unmonitored", oldest_as_of_ms: null };
     const ids = (links.get(rep)?.custodian_ids as string[] | undefined) ?? [];
-    const records = ids.flatMap((c) => attestations.get(`${rep}|${c}`) ?? []);
+    const records = ids
+      .map((c) => attestations.get(`${rep}|${c}`))
+      .filter((r): r is Json => r !== undefined);
     const attested = records.reduce((sum, r) => sum + BigInt(r.reserved_units as string), 0n);
     const limit = attested + (attested * BigInt(policy.tolerance_bps as number)) / 10_000n;
     const oldest = records.length ? Math.min(...records.map((r) => r.as_of_ms as number)) : null;
@@ -72,6 +74,8 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
   const views: Record<string, (args: Json, contract: string) => unknown> = {
     has_role: (a) => has(a.role as string, a.account_id as string),
     get_signer_keys: () => keys,
+    get_representation: (a) =>
+      [...tokens.values()].some((t) => t.rep === a.id) ? { status: "active" } : null,
     get_custodian: (a) => custodians.get(a.id as string) ?? null,
     get_custody_link: (a) => links.get(a.representation_id as string) ?? null,
     get_reserve_policy: (a) => policies.get(a.representation_id as string) ?? null,

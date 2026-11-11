@@ -9,6 +9,7 @@
     "deploy-testnet": "tsx --env-file-if-exists=.env deploy-testnet.ts",
     "seed": "tsx --env-file-if-exists=.env seed-testnet.ts",
     "seed-catalogue": "tsx --env-file-if-exists=.env seed-catalogue.ts",
+    "seed-custody": "tsx --env-file-if-exists=.env seed-custody.ts",
     "seed-profiles": "tsx --env-file-if-exists=.env seed-profiles.ts",
     "catalogue-plan": "tsx catalogue-plan.ts",
     "demo-seed": "tsx --env-file-if-exists=.env demo-seed.ts",

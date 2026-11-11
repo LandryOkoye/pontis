@@ -41,7 +41,7 @@ export async function seedTokens(
 
     // A token whose minter is the core is gated (the custody seed does that): the owner mint is
     // closed, and a redemption burn lowers its supply on purpose, so it is not topped up again.
-    const gated = (await view<string | null>("get_minter", {})) != null;
+    const gated = Boolean(await view<string | null>("get_minter", {}));
     const supply = BigInt((await view<string>("ft_total_supply", {})) ?? "0");
     if (supply < startingSupply && !gated) {
       await admin(chain, token, "mint", {
