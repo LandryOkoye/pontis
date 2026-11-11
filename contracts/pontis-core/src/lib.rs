@@ -88,6 +88,9 @@ enum StorageKey {
     ApprovedMultipliers,
     Lifecycles,
     NavStrikes,
+    Attesters,
+    ReserveAttesters,
+    BridgeAttesters,
 }
 
 #[derive(PanicOnDefault)]
@@ -99,6 +102,10 @@ pub struct Contract {
     registrars: IterableSet<AccountId>,
     compat_approvers: IterableSet<AccountId>,
     pausers: IterableSet<AccountId>,
+    /// Attester roles (ADR 0019); their signing keys live in `signer_keys`.
+    attesters: IterableSet<AccountId>,
+    reserve_attesters: IterableSet<AccountId>,
+    bridge_attesters: IterableSet<AccountId>,
     issuers: IterableMap<String, Issuer>,
     canonical_assets: IterableMap<String, CanonicalAsset>,
     representations: IterableMap<String, Representation>,
@@ -173,6 +180,9 @@ impl Contract {
             registrars: IterableSet::new(StorageKey::Registrars),
             compat_approvers: IterableSet::new(StorageKey::CompatApprovers),
             pausers: IterableSet::new(StorageKey::Pausers),
+            attesters: IterableSet::new(StorageKey::Attesters),
+            reserve_attesters: IterableSet::new(StorageKey::ReserveAttesters),
+            bridge_attesters: IterableSet::new(StorageKey::BridgeAttesters),
             issuers: IterableMap::new(StorageKey::Issuers),
             canonical_assets: IterableMap::new(StorageKey::CanonicalAssets),
             representations: IterableMap::new(StorageKey::Representations),
@@ -275,6 +285,8 @@ mod price_tests;
 mod quote_tests;
 #[cfg(test)]
 mod registry_tests;
+#[cfg(test)]
+mod roles_sep_tests;
 #[cfg(test)]
 mod route_tests;
 #[cfg(test)]
