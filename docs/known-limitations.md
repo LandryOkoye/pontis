@@ -48,6 +48,12 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **Limits are tumbling windows.** Up to twice the window limit can pass across a boundary. A payout failure does not give the allowance back.
 - **The breaker counts evaluations.** Every price submission evaluates the pair, so a deviation counts once per submission that leaves it in place, including one for the other leg.
 
+## Roles and signer keys (contract, phase 3)
+
+- **The owner decides which keys count.** The owner registers every attester signer key; the contract checks the role, the scope and the curve, not who really holds the key. Until a multisig owner exists (phase 7) that is one account's judgement.
+- **Separation is per account.** A registrar cannot hold an attester role and the owner holds none, but one operator can run two accounts. The rule shows the mechanism, not an organisation.
+- **Issuer onboarding is not built** ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)). No issuer is `third_party_attested`, and attester roles sign reserves, custody and bridge attestations only, never issuer claims.
+
 ## Corporate actions, lifecycle and NAV strikes (contract, phase 2)
 
 The contract side of [ADR 0017](decisions/0017-corporate-actions-and-multiplier-epochs.md) and [0018](decisions/0018-asset-lifecycle-and-nav-strikes.md), and its API, scripts and indexer mirrors ([phase 2 actions API](progress/phase-2-actions-api.md)). The web mirror is separate work.

@@ -35,6 +35,7 @@ mod roles;
 mod route;
 mod route_guards;
 mod route_guards_actions;
+mod signers;
 mod types;
 mod vault;
 mod wide;
@@ -50,6 +51,7 @@ pub use nav::{NavAttestation, NavStrike, NAV_DOMAIN, NAV_VERSION};
 pub use price::{PriceAttestation, PriceRecord};
 pub use quote::{parse_nonce, ConversionMsg, QuoteInput, QUOTE_DOMAIN, QUOTE_VERSION};
 pub use route::{RouteRefusal, RouteTerms, RouteView};
+pub use signers::{SignerError, SignerEvent, SignerKey};
 pub use types::*;
 
 use near_sdk::store::{IterableMap, IterableSet, LookupMap, LookupSet};
@@ -88,6 +90,10 @@ enum StorageKey {
     ApprovedMultipliers,
     Lifecycles,
     NavStrikes,
+    Attesters,
+    ReserveAttesters,
+    BridgeAttesters,
+    SignerKeys,
 }
 
 #[derive(PanicOnDefault)]
@@ -99,6 +105,12 @@ pub struct Contract {
     registrars: IterableSet<AccountId>,
     compat_approvers: IterableSet<AccountId>,
     pausers: IterableSet<AccountId>,
+    /// Attester roles (ADR 0019); their signing keys live in `signer_keys`.
+    attesters: IterableSet<AccountId>,
+    reserve_attesters: IterableSet<AccountId>,
+    bridge_attesters: IterableSet<AccountId>,
+    /// Registered signing keys per attester role name (ADR 0019 section 2).
+    signer_keys: LookupMap<String, Vec<signers::SignerKey>>,
     issuers: IterableMap<String, Issuer>,
     canonical_assets: IterableMap<String, CanonicalAsset>,
     representations: IterableMap<String, Representation>,
@@ -173,6 +185,10 @@ impl Contract {
             registrars: IterableSet::new(StorageKey::Registrars),
             compat_approvers: IterableSet::new(StorageKey::CompatApprovers),
             pausers: IterableSet::new(StorageKey::Pausers),
+            attesters: IterableSet::new(StorageKey::Attesters),
+            reserve_attesters: IterableSet::new(StorageKey::ReserveAttesters),
+            bridge_attesters: IterableSet::new(StorageKey::BridgeAttesters),
+            signer_keys: LookupMap::new(StorageKey::SignerKeys),
             issuers: IterableMap::new(StorageKey::Issuers),
             canonical_assets: IterableMap::new(StorageKey::CanonicalAssets),
             representations: IterableMap::new(StorageKey::Representations),
@@ -276,7 +292,13 @@ mod quote_tests;
 #[cfg(test)]
 mod registry_tests;
 #[cfg(test)]
+mod roles_sep_tests;
+#[cfg(test)]
 mod route_tests;
+#[cfg(test)]
+mod signers_tests;
+#[cfg(test)]
+mod signers_verify_tests;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
