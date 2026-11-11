@@ -1,0 +1,188 @@
+{
+  "description": "Redemption terms vectors, computed independently in Python (ADR 0020 section 7): terms_hash = sha256(b'pontis-redeem-terms-v1' ++ borsh(contract, representation_id, version, min_amount, max_amount, fee_bps, window_anchor_ms, window_length_ms, window_period_ms, accept_within_ms, settlement_days)); the window is open when period = 0 or (now >= anchor and (now - anchor) mod period < length); fee_units = ceil(amount * fee_bps / 10000). Rust (redemption_vector_tests.rs) reproduces each case.",
+  "contract": "core.testnet",
+  "terms": [
+    {
+      "representation_id": "tgold-a",
+      "version": 1,
+      "terms": {
+        "min_amount": "1000000",
+        "max_amount": "0",
+        "fee_bps": 25,
+        "window_anchor_ms": 0,
+        "window_length_ms": 0,
+        "window_period_ms": 0,
+        "accept_within_ms": 86400000,
+        "settlement_days": 3
+      },
+      "terms_hash": "70d1748078a2a68868db5925b0620d3676d7953af99dff87232285ec0f674e59",
+      "message_hex": "706f6e7469732d72656465656d2d7465726d732d76310c000000636f72652e746573746e65740700000074676f6c642d61010000000000000040420f00000000000000000000000000000000000000000000000000000000001900000000000000000000000000000000000000000000000000005c2605000000000300"
+    },
+    {
+      "representation_id": "tgold-a",
+      "version": 2,
+      "terms": {
+        "min_amount": "1000000",
+        "max_amount": "0",
+        "fee_bps": 25,
+        "window_anchor_ms": 0,
+        "window_length_ms": 0,
+        "window_period_ms": 0,
+        "accept_within_ms": 86400000,
+        "settlement_days": 3
+      },
+      "terms_hash": "c187b2acce8c6f6f4d42e05e50145980d076e7dcc7d11a2900105267d2ed55ba",
+      "message_hex": "706f6e7469732d72656465656d2d7465726d732d76310c000000636f72652e746573746e65740700000074676f6c642d61020000000000000040420f00000000000000000000000000000000000000000000000000000000001900000000000000000000000000000000000000000000000000005c2605000000000300"
+    },
+    {
+      "representation_id": "tgold-b",
+      "version": 1,
+      "terms": {
+        "min_amount": "1000000",
+        "max_amount": "500000000",
+        "fee_bps": 100,
+        "window_anchor_ms": 1790000000000,
+        "window_length_ms": 3600000,
+        "window_period_ms": 604800000,
+        "accept_within_ms": 86400000,
+        "settlement_days": 3
+      },
+      "terms_hash": "d1c02da92c9b3f2bb0bb551d8bf91e8b3725c28a17451aba04b8fb39ae50bd43",
+      "message_hex": "706f6e7469732d72656465656d2d7465726d732d76310c000000636f72652e746573746e65740700000074676f6c642d62010000000000000040420f000000000000000000000000000065cd1d0000000000000000000000006400006c50c4a001000080ee36000000000000840c2400000000005c2605000000000300"
+    }
+  ],
+  "windows": {
+    "anchor_ms": 1790000000000,
+    "length_ms": 3600000,
+    "period_ms": 604800000,
+    "cases": [
+      {
+        "name": "before the anchor",
+        "now_ms": 1789999999999,
+        "open": false
+      },
+      {
+        "name": "at the anchor",
+        "now_ms": 1790000000000,
+        "open": true
+      },
+      {
+        "name": "last ms of the first window",
+        "now_ms": 1790003599999,
+        "open": true
+      },
+      {
+        "name": "first ms after the window",
+        "now_ms": 1790003600000,
+        "open": false
+      },
+      {
+        "name": "mid period",
+        "now_ms": 1790302400000,
+        "open": false
+      },
+      {
+        "name": "start of the second window",
+        "now_ms": 1790604800000,
+        "open": true
+      },
+      {
+        "name": "last ms of the second window",
+        "now_ms": 1790608399999,
+        "open": true
+      },
+      {
+        "name": "after the second window",
+        "now_ms": 1790608400000,
+        "open": false
+      }
+    ]
+  },
+  "fees": [
+    {
+      "amount": "1000000",
+      "fee_bps": 25,
+      "fee_units": "2500",
+      "net_units": "997500"
+    },
+    {
+      "amount": "1",
+      "fee_bps": 25,
+      "fee_units": "1",
+      "net_units": "0"
+    },
+    {
+      "amount": "10000",
+      "fee_bps": 25,
+      "fee_units": "25",
+      "net_units": "9975"
+    },
+    {
+      "amount": "10001",
+      "fee_bps": 25,
+      "fee_units": "26",
+      "net_units": "9975"
+    },
+    {
+      "amount": "5000000",
+      "fee_bps": 0,
+      "fee_units": "0",
+      "net_units": "5000000"
+    },
+    {
+      "amount": "123456789",
+      "fee_bps": 100,
+      "fee_units": "1234568",
+      "net_units": "122222221"
+    },
+    {
+      "amount": "999",
+      "fee_bps": 1000,
+      "fee_units": "100",
+      "net_units": "899"
+    },
+    {
+      "amount": "1267650600228229401496703205376",
+      "fee_bps": 1000,
+      "fee_units": "126765060022822940149670320538",
+      "net_units": "1140885540205406461347032884838"
+    }
+  ],
+  "messages": [
+    {
+      "name": "accepted",
+      "msg": "redeem:70d1748078a2a68868db5925b0620d3676d7953af99dff87232285ec0f674e59:dc2e52d5bc35cd4e1ee62a9f93d970d855ba77e44bb8a356151d815bc1263855",
+      "valid_grammar": true
+    },
+    {
+      "name": "one segment only",
+      "msg": "redeem:70d1748078a2a68868db5925b0620d3676d7953af99dff87232285ec0f674e59",
+      "valid_grammar": false
+    },
+    {
+      "name": "uppercase hex",
+      "msg": "redeem:70D1748078A2A68868DB5925B0620D3676D7953AF99DFF87232285EC0F674E59:dc2e52d5bc35cd4e1ee62a9f93d970d855ba77e44bb8a356151d815bc1263855",
+      "valid_grammar": false
+    },
+    {
+      "name": "short hash",
+      "msg": "redeem:70d1748078a2a68868db5925b0620d3676d7953af99dff87232285ec0f674e:dc2e52d5bc35cd4e1ee62a9f93d970d855ba77e44bb8a356151d815bc1263855",
+      "valid_grammar": false
+    },
+    {
+      "name": "extra segment",
+      "msg": "redeem:70d1748078a2a68868db5925b0620d3676d7953af99dff87232285ec0f674e59:dc2e52d5bc35cd4e1ee62a9f93d970d855ba77e44bb8a356151d815bc1263855:x",
+      "valid_grammar": false
+    },
+    {
+      "name": "wrong prefix",
+      "msg": "redeem 70d1748078a2a68868db5925b0620d3676d7953af99dff87232285ec0f674e59:dc2e52d5bc35cd4e1ee62a9f93d970d855ba77e44bb8a356151d815bc1263855",
+      "valid_grammar": false
+    },
+    {
+      "name": "empty payout",
+      "msg": "redeem:70d1748078a2a68868db5925b0620d3676d7953af99dff87232285ec0f674e59:",
+      "valid_grammar": false
+    }
+  ]
+}

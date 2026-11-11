@@ -397,6 +397,8 @@ mod redemption_expiry_tests;
 #[cfg(test)]
 mod redemption_fixture;
 #[cfg(test)]
+mod redemption_vector_tests;
+#[cfg(test)]
 mod registry_tests;
 #[cfg(test)]
 mod reserve_status_tests;
