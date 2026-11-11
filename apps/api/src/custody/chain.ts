@@ -1,10 +1,14 @@
 import type {
   ChainCustodian,
   ChainCustodyLink,
+  ChainIssuer,
   ChainIssuerReliability,
+  ChainMintHeadroom,
+  ChainMintRequest,
   ChainPage,
   ChainRedemption,
   ChainRedemptionTerms,
+  ChainRepresentation,
   ChainReserveRecord,
   ChainReserveStatus,
 } from "@pontis/near-client";
@@ -38,6 +42,16 @@ export interface CustodyRepository {
     limit: number,
   ): Promise<ChainPage<ChainRedemption>>;
   getIssuerReliability(issuerId: string): Promise<ChainIssuerReliability>;
+  /** The session endpoints read who controls an issuer, the token account and the mint state from the chain, never from the mirror. */
+  getIssuer(id: string): Promise<ChainIssuer | null>;
+  getRepresentation(id: string): Promise<ChainRepresentation | null>;
+  getMintRequest(id: number): Promise<ChainMintRequest | null>;
+  getMintRequests(
+    representationId: string,
+    fromIndex: number,
+    limit: number,
+  ): Promise<ChainPage<ChainMintRequest>>;
+  getMintHeadroom(representationId: string): Promise<ChainMintHeadroom>;
 }
 
 /** The arguments of `submit_reserve_attestation`, in the contract's JSON shape. */

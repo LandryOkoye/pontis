@@ -7,6 +7,20 @@ import { ApiErrorSchema } from "./common.ts";
 import { AssetLifecycleSchema, AssetNavSchema, CorporateActionListSchema } from "./action-types.ts";
 import { AdminAuthHeaderSchema, ReconciliationReportSchema } from "./admin-types.ts";
 import {
+  CreateMintRequestSchema,
+  FulfilRedemptionRequestSchema,
+  IssuerMintRequestsQuerySchema,
+  IssuerRedemptionListSchema,
+  IssuerRedemptionsQuerySchema,
+  MintIntentSchema,
+  MintRequestListSchema,
+  PrepareRedemptionRequestSchema,
+  PrepareRedemptionResponseSchema,
+  RedemptionIntentSchema,
+  RejectRedemptionRequestSchema,
+  ReserveMonitorReportSchema,
+} from "./session-types.ts";
+import {
   AssetCustodySchema,
   AssetRedemptionTermsSchema,
   AssetReservesSchema,
@@ -120,6 +134,7 @@ interface Endpoint {
     | "Transactions"
     | "Metrics"
     | "Auth"
+    | "Issuer"
     | "Admin";
   readonly status: number;
   readonly response: z.ZodType;
@@ -139,6 +154,7 @@ interface Endpoint {
 }
 
 const VALIDATION = { 400: ["VALIDATION_ERROR"] } as const;
+const SESSION = { 401: ["UNAUTHORIZED"], 403: ["FORBIDDEN"] } as const;
 const FORBIDDEN = { 403: ["FORBIDDEN"] } as const;
 const COMMON = { 429: ["RATE_LIMITED"], 500: ["INTERNAL"] } as const;
 
@@ -605,6 +621,44 @@ export const ENDPOINTS = {
     description:
       "The escrow is released by the issuer's fulfilment (burned) or by the user's reclaim after a rejection or expiry. `timeline` is rebuilt from the chain record; `txHash` stays null until the indexer's event mirror supplies it.",
   },
+  prepareRedemption: {
+    method: "post",
+    path: "/v1/redemptions/prepare",
+    summary: "Prepare a redemption request (unsigned)",
+    tag: "Custody",
+    status: 201,
+    response: PrepareRedemptionResponseSchema,
+    headers: AuthSessionHeaderSchema,
+    body: PrepareRedemptionRequestSchema,
+    errors: {
+      ...VALIDATION,
+      401: ["UNAUTHORIZED"],
+      404: ["NOT_FOUND"],
+      409: [
+        "REDEMPTION_WINDOW_CLOSED",
+        "REDEMPTION_BELOW_MIN",
+        "REDEMPTION_ABOVE_MAX",
+        "REDEMPTION_TERMS_CHANGED",
+      ],
+      422: ["ASSET_PAUSED"],
+      ...COMMON,
+    },
+    description:
+      "Session required; the signed-in account is the redeemer. Checks `amount` and the window against the stored terms (read from the chain), stores the client-encrypted payout instruction unread, and returns the `redeem:{termsHash}:{payoutInstructionHash}` message with the unsigned `ft_transfer_call` that escrows the whole amount. The API signs and sends nothing: the wallet signs `actions`. A redemption in this demo pays nothing out; it escrows tokens that the simulated issuer then burns or the user reclaims.",
+  },
+  reclaimRedemptionIntent: {
+    method: "post",
+    path: "/v1/redemptions/{id}/reclaim-intent",
+    summary: "Unsigned action to reclaim an escrow",
+    tag: "Custody",
+    status: 200,
+    response: RedemptionIntentSchema,
+    headers: AuthSessionHeaderSchema,
+    params: RedemptionIdParam,
+    errors: { ...VALIDATION, ...SESSION, 404: ["NOT_FOUND"], 409: ["STATE_CONFLICT"], ...COMMON },
+    description:
+      "Session required, and only the redemption's own account. Refused with `STATE_CONFLICT` unless the escrow is reclaimable now (`rejected`, `expired`, or past its deadline) and no token call is in flight. Returns the unsigned `reclaim_redemption`; the wallet signs it.",
+  },
   submitReserveAttestation: {
     method: "post",
     path: "/v1/reserves/attestations",
@@ -734,6 +788,118 @@ export const ENDPOINTS = {
     errors: { 401: ["UNAUTHORIZED"], ...FORBIDDEN, ...COMMON },
     description:
       "Operators only: a session whose account holds the owner, registrar, compat_approver or pauser role (re-read from the chain on every call), or the break-glass admin key. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.",
+  },
+  listIssuerRedemptions: {
+    method: "get",
+    path: "/v1/issuer/redemptions",
+    summary: "The issuer back-office redemption queue",
+    tag: "Issuer",
+    status: 200,
+    response: IssuerRedemptionListSchema,
+    headers: AuthSessionHeaderSchema,
+    query: IssuerRedemptionsQuerySchema,
+    errors: { ...VALIDATION, ...SESSION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Session required. Lists redemptions of the representations of every issuer whose `controlled_accounts` (read from the chain) hold the signed-in account; an operator role (owner, registrar, compat_approver, pauser) lists every issuer's queue. Never includes payout instructions. `status` filters while scanning the newest 500 requests of each representation, so a page can hold fewer than `limit` items while `nextCursor` is set. The back-office is a labelled mock: the registrar's claim of control is not proof of anything.",
+  },
+  acceptRedemption: {
+    method: "post",
+    path: "/v1/issuer/redemptions/{id}/accept",
+    summary: "Unsigned action to accept a redemption",
+    tag: "Issuer",
+    status: 200,
+    response: RedemptionIntentSchema,
+    headers: AuthSessionHeaderSchema,
+    params: RedemptionIdParam,
+    errors: { ...VALIDATION, ...SESSION, 404: ["NOT_FOUND"], 409: ["STATE_CONFLICT"], ...COMMON },
+    description:
+      "Session required; the account must be one the redemption's issuer controls (read from the chain). `STATE_CONFLICT` unless the request is `requested` and before its accept deadline. Returns the unsigned `accept_redemption`.",
+  },
+  rejectRedemption: {
+    method: "post",
+    path: "/v1/issuer/redemptions/{id}/reject",
+    summary: "Unsigned action to reject a redemption",
+    tag: "Issuer",
+    status: 200,
+    response: RedemptionIntentSchema,
+    headers: AuthSessionHeaderSchema,
+    params: RedemptionIdParam,
+    body: RejectRedemptionRequestSchema,
+    errors: { ...VALIDATION, ...SESSION, 404: ["NOT_FOUND"], 409: ["STATE_CONFLICT"], ...COMMON },
+    description:
+      "Like accept, for a request that is `requested` or `accepted` and not past its current deadline. Returns the unsigned `reject_redemption`; the user then reclaims the escrow.",
+  },
+  fulfilRedemption: {
+    method: "post",
+    path: "/v1/issuer/redemptions/{id}/fulfil",
+    summary: "Unsigned action to fulfil a redemption",
+    tag: "Issuer",
+    status: 200,
+    response: RedemptionIntentSchema,
+    headers: AuthSessionHeaderSchema,
+    params: RedemptionIdParam,
+    body: FulfilRedemptionRequestSchema,
+    errors: { ...VALIDATION, ...SESSION, 404: ["NOT_FOUND"], 409: ["STATE_CONFLICT"], ...COMMON },
+    description:
+      "Like accept, for a request that is `accepted`, before its fulfil deadline and not mid-settlement. Returns the unsigned `fulfil_redemption`, which burns the escrow. Fulfilment is a simulated record: nothing is paid to anyone.",
+  },
+  listIssuerMintRequests: {
+    method: "get",
+    path: "/v1/issuer/mint-requests",
+    summary: "The issuer's mint requests",
+    tag: "Issuer",
+    status: 200,
+    response: MintRequestListSchema,
+    headers: AuthSessionHeaderSchema,
+    query: IssuerMintRequestsQuerySchema,
+    errors: { ...VALIDATION, ...SESSION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Same access and scanning rules as the redemption queue. Mint requests are read from the chain.",
+  },
+  createIssuerMintRequest: {
+    method: "post",
+    path: "/v1/issuer/mint-requests",
+    summary: "Unsigned action to request a gated mint",
+    tag: "Issuer",
+    status: 200,
+    response: MintIntentSchema,
+    headers: AuthSessionHeaderSchema,
+    body: CreateMintRequestSchema,
+    errors: { ...VALIDATION, ...SESSION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Session required; the account must be one the asset's issuer controls. Returns the unsigned `request_mint`, which only records the intent: nothing is minted until `execute_mint`, and the contract caps that at the attested headroom.",
+  },
+  executeIssuerMintRequest: {
+    method: "post",
+    path: "/v1/issuer/mint-requests/{id}/execute",
+    summary: "Unsigned action to execute a mint request",
+    tag: "Issuer",
+    status: 200,
+    response: MintIntentSchema,
+    headers: AuthSessionHeaderSchema,
+    params: RedemptionIdParam,
+    errors: {
+      ...VALIDATION,
+      ...SESSION,
+      404: ["NOT_FOUND"],
+      409: ["STATE_CONFLICT"],
+      422: ["MINT_REFUSED"],
+      ...COMMON,
+    },
+    description:
+      "Like the request, for a mint request that is still `requested`. `MINT_REFUSED` when the chain would refuse now: above the attested reserve headroom, paused by the reserve action, or no reserve policy. Returns the unsigned `execute_mint`.",
+  },
+  getReserveMonitor: {
+    method: "get",
+    path: "/v1/admin/reserve-monitor",
+    summary: "The reserve monitor's latest pass",
+    tag: "Admin",
+    status: 200,
+    response: ReserveMonitorReportSchema,
+    headers: AdminAuthHeaderSchema,
+    errors: { 401: ["UNAUTHORIZED"], ...FORBIDDEN, ...COMMON },
+    description:
+      "Operators only, like the reconciliation read. What the indexer's monitor saw of each monitored representation in its last pass (breaches, stale reserves, failed reads) and whether it could sign the permissionless `refresh_supply` and `evaluate_reserve` calls. Labelled simulated: the reserves are signed claims of fictional custodians.",
   },
   getProtocolMetrics: {
     method: "get",

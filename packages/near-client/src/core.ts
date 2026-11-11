@@ -97,6 +97,16 @@ export class CoreClient implements RegistrySource {
   listRepresentations = () => this.listAll("list_representations", ChainRepresentationSchema);
   listCompatibilities = () => this.listAll("list_compatibilities", ChainCompatibilitySchema);
 
+  async getIssuer(id: string): Promise<ChainIssuer | null> {
+    const raw = await this.rpc.view(this.accountId, "get_issuer", { id });
+    return raw === null ? null : ChainIssuerSchema.parse(raw);
+  }
+
+  async getRepresentation(id: string): Promise<ChainRepresentation | null> {
+    const raw = await this.rpc.view(this.accountId, "get_representation", { id });
+    return raw === null ? null : ChainRepresentationSchema.parse(raw);
+  }
+
   async getPolicy(representationId: string): Promise<ChainPolicy | null> {
     const raw = await this.rpc.view(this.accountId, "get_policy", {
       representation_id: representationId,

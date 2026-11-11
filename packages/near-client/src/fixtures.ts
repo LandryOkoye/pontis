@@ -294,6 +294,7 @@ export const fixtureRedemption: ChainRedemption = {
   reject_reason: null,
   miss: null,
   settlement_days: 3,
+  settling: false,
 };
 
 export const fixtureEscrowLedger: ChainEscrowLedger = {

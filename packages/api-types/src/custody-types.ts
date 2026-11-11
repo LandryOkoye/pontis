@@ -37,7 +37,9 @@ const labels = {
   notice: z.string(),
 };
 
-const ListQueryFields = {
+export const CUSTODY_LABEL_FIELDS = labels;
+
+export const ListQueryFields = {
   limit: z.coerce.number().int().min(1).max(100).default(25),
   cursor: z.string().max(200).optional(),
 };

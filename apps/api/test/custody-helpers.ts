@@ -1,5 +1,7 @@
 import type { ChainPage } from "@pontis/near-client";
 import {
+  issuers,
+  representations,
   fixtureCustodian,
   fixtureCustodyLink,
   fixtureIssuerReliability,
@@ -38,6 +40,17 @@ export function fixtureRepo(over: Partial<CustodyRepository> = {}): CustodyRepos
       fixtureRedemption,
     ]) as CustodyRepository["getRedemptionsByRepresentation"],
     getIssuerReliability: async () => fixtureIssuerReliability,
+    getIssuer: async (id) => issuers.find((i) => i.id === id) ?? null,
+    getRepresentation: async (id) => representations.find((r) => r.id === id) ?? null,
+    getMintRequest: async () => null,
+    getMintRequests: pagedOver([]) as CustodyRepository["getMintRequests"],
+    getMintHeadroom: async () => ({
+      headroom_units: "200000000000",
+      circulating_units: "0",
+      attested_units: "200000000000",
+      state: "ok",
+      mint_paused: false,
+    }),
     ...over,
   };
 }

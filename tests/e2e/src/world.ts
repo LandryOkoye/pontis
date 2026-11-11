@@ -6,7 +6,7 @@ import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createTestDb } from "@pontis/db/testing";
+import { createTestDb, type TestDb } from "@pontis/db/testing";
 import { deploy } from "../../../scripts/deploy-testnet.ts";
 import { connect, type Chain } from "../../../scripts/lib/chain.ts";
 import { loadConfig, type ChainConfig } from "../../../scripts/lib/config.ts";
@@ -24,6 +24,8 @@ export interface World {
   chain: Chain;
   config: ChainConfig;
   api: ApiClient;
+  /** The throwaway database the API and the indexer use, for assertions on the indexer's mirror. */
+  pool: TestDb["pool"];
   logDir: string;
   stop(): Promise<void>;
 }
@@ -98,6 +100,8 @@ export async function startWorld(): Promise<World> {
           QUOTE_SIGNER_SECRET_KEY: signerKey,
           ADMIN_API_KEY: adminKey,
           REGISTRY_SYNC_INTERVAL_MS: "2000",
+          // The expiry scenario needs an accepted quote marked EXPIRED before its transfer lands.
+          QUOTE_SWEEP_INTERVAL_MS: "1000",
           // The run polls far more than a person would.
           RATE_LIMIT_READ: "100000",
           RATE_LIMIT_WRITE: "100000",
@@ -130,7 +134,7 @@ export async function startWorld(): Promise<World> {
       },
       { timeoutMs: 120_000 },
     );
-    return { mode, chain, config, api, logDir, stop };
+    return { mode, chain, config, api, pool: database.pool, logDir, stop };
   } catch (error) {
     await stop();
     throw error;

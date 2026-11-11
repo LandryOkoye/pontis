@@ -124,7 +124,7 @@ The indexer side of [ADR 0020](decisions/0020-custody-reserves-and-redemption.md
 - **Reserve history is capped by the chain.** The contract keeps the last 500 attestations per asset; older ones exist only in events and in the indexer's tables, and the API does not serve them yet.
 - **The reserve relay does not pre-verify the signature.** It forwards to the contract, which does; a forged call is refused on chain and costs the relayer its gas ([threat T60](threat-model/mvp.md), [runbook](runbooks/reserve-relay.md)). There is no relayer in fixtures mode, and one is needed in the real server only for this endpoint.
 - **Reliability is a derived score on simulated counters.** The contract keeps counts and latency sums; the API computes the rates and averages. A demo issuer's figures say nothing about a real one.
-- **Session endpoints are not here.** Preparing a redemption, the reclaim intent, the issuer queue and issuer mint requests need the NEP-413 session and come later; until then a client builds the `ft_transfer_call` itself from the terms and their `termsHash`.
+- **Session endpoints are here, with limits** ([phase 4 session report](progress/phase-4-session.md)). Prepare, reclaim, the issuer queues and unsigned mint and redemption actions need a wallet session and return unsigned actions; the API signs and sends nothing. A payout instruction is stored encrypted and unread, is never returned, and nothing decrypts it or acts on it, because nothing is paid. Prepared instructions that never become a redemption are never purged. The issuer back-office is a labelled mock: an account in an issuer's `controlled_accounts` (a registrar's unproven claim) is authorised, checked against the chain on every call, and an operator role may read a queue but not act. A queue scans the newest 500 requests of each asset, so a rare status can be missed beyond that; `execute_mint` emits no event, so `minting` reaches the mirror from a chain read on the next indexer pass, not from an event.
 
 ## Demo catalogue: trust states are narrative
 
@@ -173,6 +173,8 @@ The rich catalogue ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)
 - The output is reserved (taken out of inventory) before the payout, and the input is held as pending, not spendable, until the payout succeeds. If the payout fails the input is returned by the token's refund, the reserved output goes back to inventory, and the quote ends `FAILED`. The settlement is callback-based with a compensating refund, not atomic ([ADR 0007](decisions/0007-conversion-via-ft-transfer-call.md)).
 - A token sent to the core by plain `ft_transfer` is not credited to inventory and cannot be recovered: the contract has no sweep or credit method, so it stays as surplus until a redeploy and the reconciler keeps warning ([vault runbook](runbooks/vault-low.md)).
 - Contracts are redeployed, not upgraded; there is no migration path.
+
+- **End-to-end coverage of Phase 4.** The `custody` scenario of `tests/e2e` runs on a local sandbox only (never on Testnet), drives the chain directly with the scripts' code and the wallet helper, and does not cover the session endpoints (prepare, reclaim intent, issuer queue). A redemption's fulfil deadline is `settlement_days` (1 to 30) after acceptance, so only the accept deadline is exercised on a chain; the fulfil deadline is covered by contract unit tests.
 
 ## Verification status of the tooling
 
