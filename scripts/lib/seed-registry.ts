@@ -6,24 +6,30 @@ import { buildSeed } from "./seed-data.ts";
 
 const ROLES = ["registrar", "compat_approver", "pauser"] as const;
 
-interface RegistryRecord {
+export interface RegistryRecord {
   status: string;
   evidence: unknown[];
 }
 
+/** Grants the deployer every role the seeds act under; roles it already holds are left alone. */
+export async function grantRoles(chain: Chain): Promise<void> {
+  const { coreId, deployerId } = chain.config;
+  for (const role of ROLES) {
+    if (!(await chain.view<boolean>(coreId, "has_role", { role, account_id: deployerId }))) {
+      await admin(chain, coreId, "grant_role", { role, account_id: deployerId });
+      console.log(`granted ${role} to ${deployerId}`);
+    }
+  }
+}
+
 export async function seedRegistry(chain: Chain): Promise<void> {
-  const { coreId, tokenAId, tokenBId, deployerId } = chain.config;
+  const { coreId, tokenAId, tokenBId } = chain.config;
   const core = <T>(method: string, args: Record<string, unknown> = {}) =>
     chain.view<T | null>(coreId, method, args);
   const act = (method: string, args: Record<string, unknown>) => admin(chain, coreId, method, args);
   const data = buildSeed({ tokenA: tokenAId, tokenB: tokenBId });
 
-  for (const role of ROLES) {
-    if (!(await core<boolean>("has_role", { role, account_id: deployerId }))) {
-      await act("grant_role", { role, account_id: deployerId });
-      console.log(`granted ${role} to ${deployerId}`);
-    }
-  }
+  await grantRoles(chain);
 
   const ensure = async (
     label: string,

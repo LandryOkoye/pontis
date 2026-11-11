@@ -7,7 +7,6 @@ import { ApiErrorSchema } from "./common.ts";
 import { AdminAuthHeaderSchema, ReconciliationReportSchema } from "./admin-types.ts";
 import {
   AssetSchema,
-  AssetSummarySchema,
   CompatibilitySchema,
   HealthSchema,
   IssuerSchema,
@@ -26,13 +25,41 @@ import {
   SubmittedRequestSchema,
   TransactionSchema,
 } from "./trading-types.ts";
+import { AssetListSchema, ListAssetsQuerySchema } from "./market-types.ts";
+import {
+  ChartQuerySchema,
+  NavChartSchema,
+  PriceChartSchema,
+  SupplyChartSchema,
+  VolumeChartSchema,
+} from "./chart-types.ts";
+import {
+  ActivityListSchema,
+  ActivityQuerySchema,
+  AssetChainListSchema,
+  AssetDocumentListSchema,
+  AssetIssuerViewSchema,
+  AssetMetadataSchema,
+} from "./detail-types.ts";
+import {
+  CategoryListSchema,
+  ChainListSchema,
+  MarketMoversSchema,
+  MarketOverviewSchema,
+  MoversQuerySchema,
+  OverviewQuerySchema,
+} from "./overview-types.ts";
+import {
+  CompareQuerySchema,
+  CompareResponseSchema,
+  SearchQuerySchema,
+  SearchResultSchema,
+} from "./discovery-types.ts";
+import { IssuerLeaderboardSchema, LeaderboardQuerySchema, StatusSchema } from "./status-types.ts";
 
 export const IssuerListSchema = z
   .object({ items: z.array(IssuerSummarySchema) })
   .meta({ id: "IssuerList" });
-export const AssetListSchema = z
-  .object({ items: z.array(AssetSummarySchema) })
-  .meta({ id: "AssetList" });
 export const CompatibilityListSchema = z
   .object({ items: z.array(CompatibilitySchema) })
   .meta({ id: "CompatibilityList" });
@@ -50,7 +77,15 @@ interface Endpoint {
   readonly path: string;
   readonly summary: string;
   readonly tag:
-    "Health" | "Registry" | "Routes" | "Quotes" | "Conversions" | "Transactions" | "Admin";
+    | "Health"
+    | "Registry"
+    | "Market"
+    | "Charts"
+    | "Routes"
+    | "Quotes"
+    | "Conversions"
+    | "Transactions"
+    | "Admin";
   readonly status: number;
   readonly response: z.ZodType;
   /** Error codes this endpoint can return, with their HTTP status. */
@@ -133,13 +168,110 @@ export const ENDPOINTS = {
   listAssets: {
     method: "get",
     path: "/v1/assets",
-    summary: "List asset representations",
-    tag: "Registry",
+    summary: "Asset directory: search, filter, sort, paginate",
+    tag: "Market",
     status: 200,
     response: AssetListSchema,
-    errors: { ...COMMON },
+    query: ListAssetsQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
     description:
-      "Each representation embeds its canonical claim name and issuer summary. Canonical claim and representation are separate records; use `GET /v1/assets/{id}` for the claim detail.",
+      "One row per representation with its canonical claim name, issuer summary, filter facts, latest market figures and a 7 day sparkline. `market` is null when the asset has no price. Every market figure carries `simulated` and `sources`; `data` selects real rows, simulated rows, or real where they exist (`all`). Sorting by a figure that is null for some assets puts those last. Cursors are opaque and valid only for the same query.",
+  },
+  getAssetPriceChart: {
+    method: "get",
+    path: "/v1/assets/{id}/charts/price",
+    summary: "OHLCV candles",
+    tag: "Charts",
+    status: 200,
+    response: PriceChartSchema,
+    params: IdParam,
+    query: ChartQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Candles in `[from, to)`, ascending. `from` defaults to a window of at most 500 buckets before `to`, `to` to now; a range of more than 5000 buckets is refused. A bucket without an observation repeats the previous close and has `filled: true`. Volume of parity conversions is units moved, not a market measure.",
+  },
+  getAssetNavChart: {
+    method: "get",
+    path: "/v1/assets/{id}/charts/nav",
+    summary: "NAV per token",
+    tag: "Charts",
+    status: 200,
+    response: NavChartSchema,
+    params: IdParam,
+    query: ChartQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "The last NAV before the end of each bucket, carried forward; `filled: true` when the bucket has no print of its own. Buckets before the first print are omitted, so an asset without a NAV has empty `points`. For `data=all` the real series is used when one exists, otherwise the simulated one.",
+  },
+  getAssetSupplyChart: {
+    method: "get",
+    path: "/v1/assets/{id}/charts/supply",
+    summary: "Circulating supply",
+    tag: "Charts",
+    status: 200,
+    response: SupplyChartSchema,
+    params: IdParam,
+    query: ChartQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Supply summed over chains: the last snapshot before the end of each bucket, carried forward, `filled: true` when the bucket has none of its own. Smallest units. Series selection for `data=all` is as for NAV.",
+  },
+  getAssetVolumeChart: {
+    method: "get",
+    path: "/v1/assets/{id}/charts/volume",
+    summary: "Traded volume",
+    tag: "Charts",
+    status: 200,
+    response: VolumeChartSchema,
+    params: IdParam,
+    query: ChartQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+  },
+  getMarketOverview: {
+    method: "get",
+    path: "/v1/market/overview",
+    summary: "Global market stats",
+    tag: "Market",
+    status: 200,
+    response: MarketOverviewSchema,
+    query: OverviewQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Counts and totals over every asset. Totals include only assets that have the figure (an asset with no known supply has no market cap and is left out of `totalMarketCap`, not counted as zero). `change24hBps` is the market-cap-weighted mean of the assets' 24h changes. `simulated` is true when any included figure is simulated.",
+  },
+  getMarketMovers: {
+    method: "get",
+    path: "/v1/market/movers",
+    summary: "Gainers, losers, top volume, top TVL, newly listed",
+    tag: "Market",
+    status: 200,
+    response: MarketMoversSchema,
+    query: MoversQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Each list has at most `limit` entries and only includes assets with the relevant figure. Gainers have a positive 24h change and losers a negative one.",
+  },
+  getMarketCategories: {
+    method: "get",
+    path: "/v1/market/categories",
+    summary: "Breakdown by category",
+    tag: "Market",
+    status: 200,
+    response: CategoryListSchema,
+    query: OverviewQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+  },
+  getMarketChains: {
+    method: "get",
+    path: "/v1/market/chains",
+    summary: "Breakdown by chain",
+    tag: "Market",
+    status: 200,
+    response: ChainListSchema,
+    query: OverviewQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Supply per chain valued at each asset's price. Only the NEAR testnet has real supply today; other chains appear when assets have profile entries or supply snapshots there.",
   },
   getAsset: {
     method: "get",
@@ -160,6 +292,112 @@ export const ENDPOINTS = {
     response: CompatibilityListSchema,
     params: IdParam,
     errors: { 404: ["NOT_FOUND"], ...COMMON },
+  },
+  getAssetMetadata: {
+    method: "get",
+    path: "/v1/assets/{id}/metadata",
+    summary: "Dossier metadata (overview, legal, custody, risk)",
+    tag: "Registry",
+    status: 200,
+    response: AssetMetadataSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Off-chain dossier content, labelled with `source` and `simulated`. It never changes a verification status; `profile` is null when no dossier was loaded.",
+  },
+  getAssetIssuer: {
+    method: "get",
+    path: "/v1/assets/{id}/issuer",
+    summary: "The asset's issuer with its evidence and its other assets",
+    tag: "Registry",
+    status: 200,
+    response: AssetIssuerViewSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+  },
+  getAssetChains: {
+    method: "get",
+    path: "/v1/assets/{id}/chains",
+    summary: "Where the asset exists, with supply per chain",
+    tag: "Registry",
+    status: 200,
+    response: AssetChainListSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "The dossier's chain list plus the NEAR contract from the registry, each with the latest supply snapshot when one exists.",
+  },
+  getAssetDocuments: {
+    method: "get",
+    path: "/v1/assets/{id}/documents",
+    summary: "Dossier documents and registry evidence",
+    tag: "Registry",
+    status: 200,
+    response: AssetDocumentListSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Registry evidence keeps its provenance label; the API never upgrades it. Hashes are as recorded, not re-checked here.",
+  },
+  getAssetActivity: {
+    method: "get",
+    path: "/v1/assets/{id}/activity",
+    summary: "Recent conversions involving the asset",
+    tag: "Market",
+    status: 200,
+    response: ActivityListSchema,
+    params: IdParam,
+    query: ActivityQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Newest first. Real rows are settled conversions on the testnet; simulated rows come from the demo simulator and say so. Cursors are opaque.",
+  },
+  compareAssets: {
+    method: "get",
+    path: "/v1/compare",
+    summary: "Compare representations side by side",
+    tag: "Market",
+    status: 200,
+    response: CompareResponseSchema,
+    query: CompareQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Two to six asset IDs. Each item carries price, NAV and premium to NAV; `pairs` gives, for assets that share a canonical claim, the parity ratio from the registry's unit definitions, the implied market ratio and the deviation between them. All figures are from the data class selected by `data` and say whether they are simulated.",
+  },
+  search: {
+    method: "get",
+    path: "/v1/search",
+    summary: "Search assets, issuers and chains",
+    tag: "Market",
+    status: 200,
+    response: SearchResultSchema,
+    query: SearchQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "All words must match. Assets rank by exact symbol, then symbol prefix, then ID. At most 10 assets, 5 issuers and 5 chains.",
+  },
+  getIssuerLeaderboard: {
+    method: "get",
+    path: "/v1/issuers/leaderboard",
+    summary: "Issuers ranked by market cap of their assets",
+    tag: "Market",
+    status: 200,
+    response: IssuerLeaderboardSchema,
+    query: LeaderboardQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "`reliabilityScore` is null until redemption and reserve data exist; no score is invented. Issuers without a known market cap rank after those with one.",
+  },
+  getStatus: {
+    method: "get",
+    path: "/v1/status",
+    summary: "Transparency feed: indexer, price and job freshness, route health",
+    tag: "Health",
+    status: 200,
+    response: StatusSchema,
+    errors: { ...COMMON },
+    description:
+      "`reserves` and `bridge` are null until those features exist. `stale` marks a price or job older than its threshold (15 minutes for prices, 5 minutes for the market jobs); simulated prices are reported apart from real ones.",
   },
   compareRoutes: {
     method: "post",

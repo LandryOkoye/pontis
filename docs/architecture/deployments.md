@@ -12,6 +12,8 @@ Contracts live on sub-accounts of the deployer (`DEPLOYER_ACCOUNT_ID`), which is
 | `synthetic-token` (TGOLD-A) | `tgold-a.<deployer>.testnet`     | `TGOLD_A_ACCOUNT_ID`     |
 | `synthetic-token` (TGOLD-B) | `tgold-b.<deployer>.testnet`     | `TGOLD_B_ACCOUNT_ID`     |
 
+The demo catalogue ([local setup](../local-setup.md#seed-the-demo-catalogue-optional)) adds one `synthetic-token` per representation, named `<representation id>.<deployer>.testnet` (for example `tacme-h.<deployer>.testnet`), created by `deploy-testnet --catalogue`. There is no env var for them; the names derive from the deployer and the ids in `scripts/lib/catalogue.ts`.
+
 ## Fresh deploy and seed
 
 Prerequisites: a funded testnet account, Node 22 and pnpm, and either `cargo-near` or `wasm-opt` (binaryen). Each contract account is funded with 0.01 NEAR per byte of its wasm plus 1 NEAR: about 14 NEAR in total with the slim build (core 403 KB, tokens 180 KB each) and about 29 NEAR with the unoptimised build, plus the deployer's gas. Keep at least 20 NEAR on the deployer for a slim build.

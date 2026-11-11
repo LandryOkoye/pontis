@@ -16,6 +16,14 @@ pnpm --filter @pontis/api start          # migrates, starts on :3000, syncs the 
 
 `POST /v1/routes/compare`, `POST /v1/quotes` (201, or 422 with a reason code), `GET /v1/quotes/{id}`, `POST /v1/conversions` (needs an `Idempotency-Key` header), `POST /v1/conversions/{id}/submitted`, `GET /v1/transactions/{id}`, `GET /v1/transactions?account=`, `GET /v1/health`, `GET /v1/health/live`, `GET /v1/health/ready`, `/v1/issuers`, `/v1/issuers/{id}`, `/v1/assets`, `/v1/assets/{id}`, `/v1/assets/{id}/compatibility`. Paths and schemas come from `@pontis/api-types`, and each response is validated against its schema before it is sent. Errors are `{code, message, details?}`.
 
+## Market reads
+
+`GET /v1/assets` is the asset directory: `q` (all words, matched against symbol, name, claim, issuer, category and tags), `category`, `issuerId`, `chain`, `verification`, `status`, `convertible`, `bridgeable`, `sort` (`id` by default, or `name`, `price`, `marketCap`, `tvl`, `volume24h`, `change24h`, `change7d`, `change30d`), `order`, `limit` (25, at most 100) and an opaque `cursor` that only works for the query it came from. Each row carries a `market` block and a 7 day `sparkline`; both are null for an asset with no price.
+
+`GET /v1/assets/{id}/charts/{price,nav,supply,volume}` take `interval` (`1m` to `1d`), `from`, `to` (at most 5000 buckets) and return `{points, interval, from, to, source, simulated, filledPoints}`.
+
+**Real and simulated data are never mixed in one figure.** `data=real|simulated|all` picks the class (`all` prefers real and falls back to simulated), and every `market` block, sparkline, chart and point says `simulated` and its `sources`. Today almost everything is simulated by [`apps/simulator`](../simulator/README.md). Screens, endpoints and caveats for the frontend are in [`docs/api/FRONTEND_HANDOFF.md`](../../docs/api/FRONTEND_HANDOFF.md); `API_MODE=fixtures` serves the example data with no chain or database. The reads are public and carry an `ETag` and `Cache-Control: public, max-age=5`; send `If-None-Match` to get a `304`.
+
 ## Quotes
 
 `POST /v1/quotes` checks the live route on-chain (`get_route`), eligibility (`is_allowed` for both assets), the fee and the vault inventory, computes the output with `@pontis/quote-engine` (the same math and byte layout `pontis-core` verifies), signs it with `QUOTE_SIGNER_SECRET_KEY`, and stores it as `QUOTED` for 60 seconds. Refusals are `422`: `NOT_DIRECT_EQUIVALENT`, `RELATIONSHIP_SUSPENDED`, `ASSET_PAUSED`, `NOT_ELIGIBLE`, `INSUFFICIENT_INVENTORY`. A background sweep (and every `GET /v1/quotes/{id}`) marks quotes past their expiry `EXPIRED`. On start the server warns if the on-chain signer differs from the configured key, because the contract would reject every quote.
