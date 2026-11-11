@@ -8,6 +8,7 @@ import { loadConfig } from "./config.ts";
 import { verifyStartup } from "./startup.ts";
 import { createDb } from "@pontis/db";
 import { runMigrations } from "@pontis/db";
+import { NearReserveRelayer } from "./custody/near-relayer.ts";
 import { syncRegistry } from "./sync/registry-sync.ts";
 import { expireQuotes } from "./quotes/lifecycle.ts";
 import { startScheduler } from "./sync/scheduler.ts";
@@ -50,6 +51,17 @@ const app = buildApp({
   },
   quotes: { chain: core, key, coreId: config.PONTIS_CORE_ACCOUNT_ID },
   actionsChain: core,
+  custodyChain: core,
+  ...(config.PONTIS_RELAYER_ACCOUNT_ID && config.PONTIS_RELAYER_SECRET_KEY
+    ? {
+        reserveRelayer: new NearReserveRelayer({
+          rpcUrl: config.NEAR_RPC_URL,
+          coreId: config.PONTIS_CORE_ACCOUNT_ID,
+          accountId: config.PONTIS_RELAYER_ACCOUNT_ID,
+          secretKey: config.PONTIS_RELAYER_SECRET_KEY,
+        }),
+      }
+    : {}),
   conversionChain: {
     isRegistered: async (tokenId, account) =>
       (await new TokenClient(rpc, tokenId).storageBalanceOf(account)) !== null,
