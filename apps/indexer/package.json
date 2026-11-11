@@ -15,6 +15,7 @@
     "@pontis/api-types": "workspace:*",
     "@pontis/db": "workspace:*",
     "@pontis/domain": "workspace:*",
+    "@pontis/market-data": "workspace:*",
     "@pontis/near-client": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "zod": "^4.6.7"

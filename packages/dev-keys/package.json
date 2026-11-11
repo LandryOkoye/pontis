@@ -1,0 +1,23 @@
+{
+  "name": "@pontis/dev-keys",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic ed25519 keys for simulated publishers, attesters and custodians. Development and tests only, never mainnet",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pontis/quote-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "vitest": "^5.1.0"
+  }
+}
