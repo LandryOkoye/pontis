@@ -7,14 +7,41 @@ import { eq } from "drizzle-orm";
 import { Reconciler } from "../src/reconcile/reconciler.ts";
 import type { ActionChain } from "../src/reconcile/actions.ts";
 import type { ChainCorporateAction } from "@pontis/near-client";
+import type { ChainReserveStatus, ReserveChain } from "../src/chain-views.ts";
 import type { VaultChain } from "../src/reconcile/vaults.ts";
 import { seedQuote } from "./seed.ts";
 
 export const NOW = new Date("2026-11-09T12:00:00Z");
 export const MINUTE = 60_000;
 
-export class FakeVaultChain implements VaultChain, ActionChain {
+/** A `get_reserve_status` result for a monitored representation that is fine; override what a test needs. */
+export function reserveStatusFixture(over: Partial<ChainReserveStatus> = {}): ChainReserveStatus {
+  return {
+    monitored: true,
+    state: "ok",
+    action: "restrict_conversions",
+    tolerance_bps: 0,
+    max_reserve_age_ms: 86_400_000,
+    attested_units: "1000",
+    limit_units: "1000",
+    circulating_units: "1000",
+    headroom_units: "0",
+    ratio_bps: 10_000,
+    oldest_as_of_ms: NOW.getTime() - MINUTE,
+    age_ms: MINUTE,
+    supply_read_ms: NOW.getTime() - MINUTE,
+    restricts_conversions: false,
+    mint_paused: false,
+    simulated: true,
+    sources: ["simulated_custodian"],
+    ...over,
+  };
+}
+
+export class FakeVaultChain implements VaultChain, ActionChain, ReserveChain {
   actions = new Map<string, ChainCorporateAction[]>();
+  reserves = new Map<string, ChainReserveStatus>();
+  escrow = new Map<string, string>();
   inventories = new Map<string, string>();
   balances = new Map<string, string>();
   failing = false;
@@ -33,6 +60,17 @@ export class FakeVaultChain implements VaultChain, ActionChain {
   async corporateActions(assetId: string): Promise<ChainCorporateAction[]> {
     if (this.failing) throw new Error("rpc down");
     return this.actions.get(assetId) ?? [];
+  }
+
+  async reserveStatus(representationId: string): Promise<ChainReserveStatus> {
+    if (this.failing) throw new Error("rpc down");
+    const status = this.reserves.get(representationId);
+    if (!status) throw new Error(`no reserve status set for ${representationId}`);
+    return status;
+  }
+
+  async escrowHeld(representationId: string): Promise<string> {
+    return this.escrow.get(representationId) ?? "0";
   }
 
   async balanceOf(tokenAccountId: string): Promise<string> {
