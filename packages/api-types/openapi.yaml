@@ -127,8 +127,15 @@ components:
         - NOT_CONVERTIBLE
         - LIFECYCLE_BLOCKED
         - NAV_WINDOW_CLOSED
+        - RESERVE_RESTRICTED
+        - RESERVE_STALE
+        - REDEMPTION_WINDOW_CLOSED
+        - REDEMPTION_BELOW_MIN
+        - REDEMPTION_ABOVE_MAX
+        - REDEMPTION_TERMS_CHANGED
         - QUOTE_EXPIRED
         - QUOTE_ALREADY_USED
+        - ATTESTATION_REJECTED
         - UNAUTHORIZED
         - RATE_LIMITED
         - INTERNAL
@@ -2117,6 +2124,8 @@ components:
         - NOT_CONVERTIBLE
         - LIFECYCLE_BLOCKED
         - NAV_WINDOW_CLOSED
+        - RESERVE_RESTRICTED
+        - RESERVE_STALE
     CompareRoutesRequest:
       type: object
       properties:
@@ -2215,6 +2224,906 @@ components:
         - ageMs
         - source
         - simulated
+    CustodianList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Custodian"
+        total:
+          type: integer
+          minimum: 0
+        nextCursor:
+          type:
+            - string
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - items
+        - total
+        - nextCursor
+        - simulated
+        - sources
+        - notice
+    Custodian:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        jurisdiction:
+          type:
+            - string
+            - "null"
+        attesterKey:
+          type: string
+        status:
+          $ref: "#/components/schemas/CustodianStatus"
+        synthetic:
+          type: boolean
+        verificationStatus:
+          $ref: "#/components/schemas/VerificationStatus"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionEvidence"
+        registeredBy:
+          $ref: "#/components/schemas/AccountId"
+        registeredAt:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - id
+        - name
+        - jurisdiction
+        - attesterKey
+        - status
+        - synthetic
+        - verificationStatus
+        - evidence
+        - registeredBy
+        - registeredAt
+        - simulated
+        - sources
+        - notice
+    CustodianStatus:
+      type: string
+      enum:
+        - active
+        - suspended
+        - retired
+    AssetCustody:
+      type: object
+      properties:
+        assetId:
+          type: string
+        linked:
+          type: boolean
+        structure:
+          $ref: "#/components/schemas/CustodyStructure"
+        custodians:
+          type: array
+          items:
+            $ref: "#/components/schemas/Custodian"
+        linkedBy:
+          allOf:
+            - $ref: "#/components/schemas/AccountId"
+            - type:
+                - string
+                - "null"
+        linkedAt:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - assetId
+        - linked
+        - structure
+        - custodians
+        - linkedBy
+        - linkedAt
+        - simulated
+        - sources
+        - notice
+    CustodyStructure:
+      type:
+        - string
+        - "null"
+      enum:
+        - segregated
+        - omnibus
+        - on_chain_vault
+        - null
+    AssetReserves:
+      type: object
+      properties:
+        assetId:
+          type: string
+        monitored:
+          type: boolean
+        state:
+          $ref: "#/components/schemas/ReserveState"
+        policy:
+          $ref: "#/components/schemas/ReservePolicy"
+        attestedUnits:
+          $ref: "#/components/schemas/AmountString"
+        limitUnits:
+          $ref: "#/components/schemas/AmountString"
+        circulatingUnits:
+          $ref: "#/components/schemas/AmountString"
+        headroomUnits:
+          $ref: "#/components/schemas/AmountString"
+        ratioBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        ratioPercent:
+          type:
+            - string
+            - "null"
+        freshness:
+          $ref: "#/components/schemas/ReserveFreshness"
+        oldestAsOf:
+          $ref: "#/components/schemas/Timestamp"
+        ageMs:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        supplyReadAt:
+          $ref: "#/components/schemas/Timestamp"
+        restrictsConversions:
+          type: boolean
+        mintPaused:
+          type: boolean
+        custodians:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReserveCustodianLine"
+        explanation:
+          type: string
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - assetId
+        - monitored
+        - state
+        - policy
+        - attestedUnits
+        - limitUnits
+        - circulatingUnits
+        - headroomUnits
+        - ratioBps
+        - ratioPercent
+        - freshness
+        - oldestAsOf
+        - ageMs
+        - supplyReadAt
+        - restrictsConversions
+        - mintPaused
+        - custodians
+        - explanation
+        - simulated
+        - sources
+        - notice
+    ReserveState:
+      type: string
+      enum:
+        - ok
+        - breached
+        - stale
+        - no_attestation
+        - unmonitored
+      description: "`ok`, `breached` (supply above attested reserves plus tolerance), `stale` (oldest attestation older than the policy allows), `no_attestation`, or `unmonitored` (no reserve policy: nothing is enforced)."
+    ReservePolicy:
+      type:
+        - object
+        - "null"
+      properties:
+        action:
+          $ref: "#/components/schemas/ReservePolicyAction"
+        toleranceBps:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        maxReserveAgeMs:
+          type: integer
+          exclusiveMinimum: 0
+      required:
+        - action
+        - toleranceBps
+        - maxReserveAgeMs
+    ReservePolicyAction:
+      type: string
+      enum:
+        - warn
+        - restrict_conversions
+        - pause_mint
+    ReserveFreshness:
+      type: string
+      enum:
+        - fresh
+        - stale
+        - none
+    ReserveCustodianLine:
+      type: object
+      properties:
+        custodianId:
+          type: string
+        custodianName:
+          type: string
+        custodianStatus:
+          $ref: "#/components/schemas/CustodianStatus"
+        counted:
+          type: boolean
+        latest:
+          $ref: "#/components/schemas/LatestReserveAttestation"
+      required:
+        - custodianId
+        - custodianName
+        - custodianStatus
+        - counted
+        - latest
+    LatestReserveAttestation:
+      type:
+        - object
+        - "null"
+      properties:
+        seq:
+          type: integer
+          minimum: 0
+        custodianId:
+          type: string
+        reservedUnits:
+          $ref: "#/components/schemas/AmountString"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        submittedAt:
+          $ref: "#/components/schemas/Timestamp"
+        reportUri:
+          type: string
+        reportHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        attesterKey:
+          type: string
+        simulated:
+          type: boolean
+        source:
+          type: string
+        ageMs:
+          type: integer
+          minimum: 0
+        fresh:
+          type: boolean
+      required:
+        - seq
+        - custodianId
+        - reservedUnits
+        - asOf
+        - submittedAt
+        - reportUri
+        - reportHash
+        - attesterKey
+        - simulated
+        - source
+        - ageMs
+        - fresh
+    ReserveHistory:
+      type: object
+      properties:
+        assetId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReserveAttestation"
+        total:
+          type: integer
+          minimum: 0
+        nextCursor:
+          type:
+            - string
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - assetId
+        - items
+        - total
+        - nextCursor
+        - simulated
+        - sources
+        - notice
+    ReserveAttestation:
+      type: object
+      properties:
+        seq:
+          type: integer
+          minimum: 0
+        custodianId:
+          type: string
+        reservedUnits:
+          $ref: "#/components/schemas/AmountString"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        submittedAt:
+          $ref: "#/components/schemas/Timestamp"
+        reportUri:
+          type: string
+        reportHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        attesterKey:
+          type: string
+        simulated:
+          type: boolean
+        source:
+          type: string
+      required:
+        - seq
+        - custodianId
+        - reservedUnits
+        - asOf
+        - submittedAt
+        - reportUri
+        - reportHash
+        - attesterKey
+        - simulated
+        - source
+    AssetRedemptionTerms:
+      type: object
+      properties:
+        assetId:
+          type: string
+        description:
+          type: string
+        terms:
+          $ref: "#/components/schemas/RedemptionTermsBody"
+        version:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+        termsHash:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9a-f]{64}$
+        setBy:
+          allOf:
+            - $ref: "#/components/schemas/AccountId"
+            - type:
+                - string
+                - "null"
+        setAt:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - assetId
+        - description
+        - terms
+        - version
+        - termsHash
+        - setBy
+        - setAt
+        - simulated
+        - sources
+        - notice
+    RedemptionTermsBody:
+      type:
+        - object
+        - "null"
+      properties:
+        minAmount:
+          $ref: "#/components/schemas/AmountString"
+        maxAmount:
+          $ref: "#/components/schemas/AmountString"
+        feeBps:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        window:
+          $ref: "#/components/schemas/RedemptionWindow"
+        acceptWithinMs:
+          type: integer
+          exclusiveMinimum: 0
+        settlementDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+      required:
+        - minAmount
+        - maxAmount
+        - feeBps
+        - window
+        - acceptWithinMs
+        - settlementDays
+    RedemptionWindow:
+      type: object
+      properties:
+        alwaysOpen:
+          type: boolean
+        anchorAt:
+          $ref: "#/components/schemas/Timestamp"
+        lengthMs:
+          type: integer
+          minimum: 0
+        periodMs:
+          type: integer
+          minimum: 0
+        open:
+          type: boolean
+        nextOpenAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - alwaysOpen
+        - anchorAt
+        - lengthMs
+        - periodMs
+        - open
+        - nextOpenAt
+    IssuerReliability:
+      type: object
+      properties:
+        issuerId:
+          type: string
+        requested:
+          type: integer
+          minimum: 0
+        accepted:
+          type: integer
+          minimum: 0
+        fulfilled:
+          type: integer
+          minimum: 0
+        rejected:
+          type: integer
+          minimum: 0
+        expired:
+          type: integer
+          minimum: 0
+        acceptMisses:
+          type: integer
+          minimum: 0
+        fulfilMisses:
+          type: integer
+          minimum: 0
+        reclaimed:
+          type: integer
+          minimum: 0
+        lastMissAt:
+          $ref: "#/components/schemas/Timestamp"
+        score:
+          $ref: "#/components/schemas/IssuerReliabilityScore"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - issuerId
+        - requested
+        - accepted
+        - fulfilled
+        - rejected
+        - expired
+        - acceptMisses
+        - fulfilMisses
+        - reclaimed
+        - lastMissAt
+        - score
+        - simulated
+        - sources
+        - notice
+    IssuerReliabilityScore:
+      type: object
+      properties:
+        fulfilmentRateBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 10000
+        acceptMissRateBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 10000
+        fulfilMissRateBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 10000
+        avgAcceptLatencyMs:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        avgSettleLatencyMs:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+      required:
+        - fulfilmentRateBps
+        - acceptMissRateBps
+        - fulfilMissRateBps
+        - avgAcceptLatencyMs
+        - avgSettleLatencyMs
+    RedemptionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RedemptionSummary"
+        nextCursor:
+          type:
+            - string
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - items
+        - nextCursor
+        - simulated
+        - sources
+        - notice
+    RedemptionSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9]+$
+        user:
+          $ref: "#/components/schemas/AccountId"
+        assetId:
+          type: string
+        issuerId:
+          type: string
+        amount:
+          $ref: "#/components/schemas/AmountString"
+        feeBps:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        feeUnits:
+          $ref: "#/components/schemas/AmountString"
+        netUnits:
+          $ref: "#/components/schemas/AmountString"
+        termsHash:
+          type: string
+        termsVersion:
+          type: integer
+          exclusiveMinimum: 0
+        payoutInstructionHash:
+          type: string
+        status:
+          $ref: "#/components/schemas/RedemptionStatus"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        acceptDeadline:
+          $ref: "#/components/schemas/Timestamp"
+        acceptedAt:
+          $ref: "#/components/schemas/Timestamp"
+        fulfilDeadline:
+          $ref: "#/components/schemas/Timestamp"
+        resolvedAt:
+          $ref: "#/components/schemas/Timestamp"
+        fulfilmentEvidenceHash:
+          type:
+            - string
+            - "null"
+        rejectReason:
+          type:
+            - string
+            - "null"
+        miss:
+          type:
+            - string
+            - "null"
+          enum:
+            - accept
+            - fulfil
+            - null
+        settlementDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+        reclaimable:
+          type: boolean
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - id
+        - user
+        - assetId
+        - issuerId
+        - amount
+        - feeBps
+        - feeUnits
+        - netUnits
+        - termsHash
+        - termsVersion
+        - payoutInstructionHash
+        - status
+        - createdAt
+        - acceptDeadline
+        - acceptedAt
+        - fulfilDeadline
+        - resolvedAt
+        - fulfilmentEvidenceHash
+        - rejectReason
+        - miss
+        - settlementDays
+        - reclaimable
+        - simulated
+        - sources
+        - notice
+    RedemptionStatus:
+      type: string
+      enum:
+        - requested
+        - accepted
+        - fulfilled
+        - rejected
+        - expired
+        - reclaimed
+    Redemption:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9]+$
+        user:
+          $ref: "#/components/schemas/AccountId"
+        assetId:
+          type: string
+        issuerId:
+          type: string
+        amount:
+          $ref: "#/components/schemas/AmountString"
+        feeBps:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        feeUnits:
+          $ref: "#/components/schemas/AmountString"
+        netUnits:
+          $ref: "#/components/schemas/AmountString"
+        termsHash:
+          type: string
+        termsVersion:
+          type: integer
+          exclusiveMinimum: 0
+        payoutInstructionHash:
+          type: string
+        status:
+          $ref: "#/components/schemas/RedemptionStatus"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        acceptDeadline:
+          $ref: "#/components/schemas/Timestamp"
+        acceptedAt:
+          $ref: "#/components/schemas/Timestamp"
+        fulfilDeadline:
+          $ref: "#/components/schemas/Timestamp"
+        resolvedAt:
+          $ref: "#/components/schemas/Timestamp"
+        fulfilmentEvidenceHash:
+          type:
+            - string
+            - "null"
+        rejectReason:
+          type:
+            - string
+            - "null"
+        miss:
+          type:
+            - string
+            - "null"
+          enum:
+            - accept
+            - fulfil
+            - null
+        settlementDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+        reclaimable:
+          type: boolean
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+        timeline:
+          type: array
+          items:
+            $ref: "#/components/schemas/RedemptionEvent"
+      required:
+        - id
+        - user
+        - assetId
+        - issuerId
+        - amount
+        - feeBps
+        - feeUnits
+        - netUnits
+        - termsHash
+        - termsVersion
+        - payoutInstructionHash
+        - status
+        - createdAt
+        - acceptDeadline
+        - acceptedAt
+        - fulfilDeadline
+        - resolvedAt
+        - fulfilmentEvidenceHash
+        - rejectReason
+        - miss
+        - settlementDays
+        - reclaimable
+        - simulated
+        - sources
+        - notice
+        - timeline
+    RedemptionEvent:
+      type: object
+      properties:
+        event:
+          $ref: "#/components/schemas/RedemptionStatus"
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        txHash:
+          type:
+            - string
+            - "null"
+      required:
+        - event
+        - at
+        - txHash
+    SubmitReserveAttestationResponse:
+      type: object
+      properties:
+        txHash:
+          type: string
+        representationId:
+          type: string
+        custodianId:
+          type: string
+        simulated:
+          type: boolean
+      required:
+        - txHash
+        - representationId
+        - custodianId
+        - simulated
+    SubmitReserveAttestationRequest:
+      type: object
+      properties:
+        attestation:
+          $ref: "#/components/schemas/ReserveAttestationInput"
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 200
+        publicKey:
+          type: string
+          minLength: 10
+          maxLength: 120
+      required:
+        - attestation
+        - signature
+        - publicKey
+    ReserveAttestationInput:
+      type: object
+      properties:
+        version:
+          type: number
+          enum:
+            - 1
+        contract:
+          $ref: "#/components/schemas/AccountId"
+        representationId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        custodianId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        reservedUnits:
+          $ref: "#/components/schemas/AmountString"
+        asOfMs:
+          type: integer
+          minimum: 0
+        reportHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        reportUri:
+          type: string
+          maxLength: 256
+        simulated:
+          type: boolean
+        source:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required:
+        - version
+        - contract
+        - representationId
+        - custodianId
+        - reservedUnits
+        - asOfMs
+        - reportHash
+        - reportUri
+        - simulated
+        - source
     Quote:
       type: object
       properties:
@@ -4120,6 +5029,465 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v1/custodians:
+    get:
+      operationId: listCustodians
+      summary: Registered custodians
+      description: "Read from the chain, never cached. Oldest first. Every custodian in the demo is a simulator holding a test key: `synthetic` is true and `verificationStatus` is never above what the registrar recorded, which the contract keeps below `independently_verified`. Nothing here is custodied, audited or regulated."
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustodianList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/custodians/{id}:
+    get:
+      operationId: getCustodian
+      summary: One custodian
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Custodian"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/custody:
+    get:
+      operationId: getAssetCustody
+      summary: How an asset's reserves are held and by whom
+      description: Read from the chain. `linked` is false until the registrar links the asset to custodians. This is a record of who is said to hold the reserves, not a proof that anyone does.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustody"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/reserves:
+    get:
+      operationId: getAssetReserves
+      summary: "Reserve status: attested reserves against supply"
+      description: "Computed by the contract on every read from the custodians' signed attestations and the supply it tracks; never a stored verdict, never cached. `ratioBps` is attested over circulating in basis points (null while nothing circulates); render `ratioPercent`. `state` is `unmonitored` when the asset has no reserve policy. `simulated` and `sources` say whose figures these are: in the demo, a fictional custodian's. Never present them as backed, custodied or audited."
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetReserves"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/reserves/history:
+    get:
+      operationId: getAssetReserveHistory
+      summary: Reserve attestations, newest first
+      description: The attestations the chain still holds (the last 500 per asset), each with the label its signer put on it.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReserveHistory"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/redemption-terms:
+    get:
+      operationId: getAssetRedemptionTerms
+      summary: Enforced redemption terms
+      description: "`terms` is null until the registrar sets them; then the asset cannot be redeemed. The terms hash is part of the redeem message: a request made under older terms is refused. Redemption pays no value: fee and net are figures a simulated issuer honours off-chain."
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetRedemptionTerms"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuers/{id}/reliability:
+    get:
+      operationId: getIssuerReliability
+      summary: An issuer's redemption record
+      description: Counters from the contract and a score derived from them here. Every issuer in the demo is a simulator, so `simulated` is true.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuerReliability"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/redemptions:
+    get:
+      operationId: listRedemptions
+      summary: Redemption requests
+      description: Needs `user` or `representationId`. Newest first, read from the chain. `status` filters within a page, so a page may hold fewer than `limit` items while `nextCursor` is set.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/AccountId"
+          required: false
+          description: NEAR account ID.
+          name: user
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: representationId
+          in: query
+        - schema:
+            $ref: "#/components/schemas/RedemptionStatus"
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedemptionList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/redemptions/{id}:
+    get:
+      operationId: getRedemption
+      summary: A redemption and its timeline
+      description: The escrow is released by the issuer's fulfilment (burned) or by the user's reclaim after a rejection or expiry. `timeline` is rebuilt from the chain record; `txHash` stays null until the indexer's event mirror supplies it.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[0-9]{1,20}$
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Redemption"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/reserves/attestations:
+    post:
+      operationId: submitReserveAttestation
+      summary: Relay a signed reserve attestation
+      description: "Testnet and sandbox only. A relayer account pays for the transaction; the signature is the authority, so the relayer holds no custodian key and no user key. The contract checks the signature, the custodian's registered key, the link, the time and the sequence, and refuses with `ATTESTATION_REJECTED` otherwise. Unknown asset: `NOT_FOUND`; also `NOT_FOUND` where no relayer is configured."
+      tags:
+        - Custody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitReserveAttestationRequest"
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitReserveAttestationResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: "Request understood but refused. Codes: ATTESTATION_REJECTED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v1/quotes:
     post:
       operationId: createQuote
@@ -4153,7 +5521,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "422":
-          description: "Request understood but refused. Codes: NOT_DIRECT_EQUIVALENT, RELATIONSHIP_SUSPENDED, ASSET_PAUSED, NOT_ELIGIBLE, INSUFFICIENT_INVENTORY, PRICE_DEVIATION, PRICE_STALE, PRICE_UNAVAILABLE, AMOUNT_BELOW_MIN, AMOUNT_ABOVE_MAX, WINDOW_LIMIT_EXCEEDED, CORPORATE_ACTION_FREEZE, CORPORATE_ACTION_PENDING, EPOCH_MISMATCH, NOT_CONVERTIBLE, LIFECYCLE_BLOCKED, NAV_WINDOW_CLOSED."
+          description: "Request understood but refused. Codes: NOT_DIRECT_EQUIVALENT, RELATIONSHIP_SUSPENDED, ASSET_PAUSED, NOT_ELIGIBLE, INSUFFICIENT_INVENTORY, PRICE_DEVIATION, PRICE_STALE, PRICE_UNAVAILABLE, AMOUNT_BELOW_MIN, AMOUNT_ABOVE_MAX, WINDOW_LIMIT_EXCEEDED, CORPORATE_ACTION_FREEZE, CORPORATE_ACTION_PENDING, EPOCH_MISMATCH, NOT_CONVERTIBLE, LIFECYCLE_BLOCKED, NAV_WINDOW_CLOSED, RESERVE_RESTRICTED, RESERVE_STALE."
           content:
             application/json:
               schema:

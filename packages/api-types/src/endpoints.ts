@@ -6,6 +6,21 @@ import type { ErrorCodeSchema } from "./common.ts";
 import { ApiErrorSchema } from "./common.ts";
 import { AssetLifecycleSchema, AssetNavSchema, CorporateActionListSchema } from "./action-types.ts";
 import { AdminAuthHeaderSchema, ReconciliationReportSchema } from "./admin-types.ts";
+import {
+  AssetCustodySchema,
+  AssetRedemptionTermsSchema,
+  AssetReservesSchema,
+  CustodianListSchema,
+  CustodianSchema,
+  CustodyListQuerySchema,
+  IssuerReliabilitySchema,
+  ListRedemptionsQuerySchema,
+  RedemptionListSchema,
+  RedemptionSchema,
+  ReserveHistorySchema,
+  SubmitReserveAttestationRequestSchema,
+  SubmitReserveAttestationResponseSchema,
+} from "./custody-types.ts";
 import { RouteGuardsQuerySchema, RouteGuardsResponseSchema } from "./guard-types.ts";
 import {
   AssetSchema,
@@ -76,6 +91,7 @@ export const TransactionListSchema = z
 
 const IdParam = z.object({ id: z.string() });
 const UuidParam = z.object({ id: z.uuid() });
+const RedemptionIdParam = z.object({ id: z.string().regex(/^[0-9]{1,20}$/) });
 
 type Method = "get" | "post";
 
@@ -89,6 +105,7 @@ interface Endpoint {
     | "Market"
     | "Charts"
     | "Routes"
+    | "Custody"
     | "Quotes"
     | "Conversions"
     | "Transactions"
@@ -470,6 +487,125 @@ export const ENDPOINTS = {
     description:
       "Read from the chain, never cached. Checks are independent, so a failure does not hide later ones. With `amount` the amount limits and the effective fee (skew included) are evaluated; a quote copies that fee. `prices` are the contract's stored reference prices with their `simulated` flag: the demo publishes simulated prices only.",
   },
+  listCustodians: {
+    method: "get",
+    path: "/v1/custodians",
+    summary: "Registered custodians",
+    tag: "Custody",
+    status: 200,
+    response: CustodianListSchema,
+    query: CustodyListQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Read from the chain, never cached. Oldest first. Every custodian in the demo is a simulator holding a test key: `synthetic` is true and `verificationStatus` is never above what the registrar recorded, which the contract keeps below `independently_verified`. Nothing here is custodied, audited or regulated.",
+  },
+  getCustodian: {
+    method: "get",
+    path: "/v1/custodians/{id}",
+    summary: "One custodian",
+    tag: "Custody",
+    status: 200,
+    response: CustodianSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+  },
+  getAssetCustody: {
+    method: "get",
+    path: "/v1/assets/{id}/custody",
+    summary: "How an asset's reserves are held and by whom",
+    tag: "Custody",
+    status: 200,
+    response: AssetCustodySchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Read from the chain. `linked` is false until the registrar links the asset to custodians. This is a record of who is said to hold the reserves, not a proof that anyone does.",
+  },
+  getAssetReserves: {
+    method: "get",
+    path: "/v1/assets/{id}/reserves",
+    summary: "Reserve status: attested reserves against supply",
+    tag: "Custody",
+    status: 200,
+    response: AssetReservesSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Computed by the contract on every read from the custodians' signed attestations and the supply it tracks; never a stored verdict, never cached. `ratioBps` is attested over circulating in basis points (null while nothing circulates); render `ratioPercent`. `state` is `unmonitored` when the asset has no reserve policy. `simulated` and `sources` say whose figures these are: in the demo, a fictional custodian's. Never present them as backed, custodied or audited.",
+  },
+  getAssetReserveHistory: {
+    method: "get",
+    path: "/v1/assets/{id}/reserves/history",
+    summary: "Reserve attestations, newest first",
+    tag: "Custody",
+    status: 200,
+    response: ReserveHistorySchema,
+    params: IdParam,
+    query: CustodyListQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "The attestations the chain still holds (the last 500 per asset), each with the label its signer put on it.",
+  },
+  getAssetRedemptionTerms: {
+    method: "get",
+    path: "/v1/assets/{id}/redemption-terms",
+    summary: "Enforced redemption terms",
+    tag: "Custody",
+    status: 200,
+    response: AssetRedemptionTermsSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "`terms` is null until the registrar sets them; then the asset cannot be redeemed. The terms hash is part of the redeem message: a request made under older terms is refused. Redemption pays no value: fee and net are figures a simulated issuer honours off-chain.",
+  },
+  getIssuerReliability: {
+    method: "get",
+    path: "/v1/issuers/{id}/reliability",
+    summary: "An issuer's redemption record",
+    tag: "Custody",
+    status: 200,
+    response: IssuerReliabilitySchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Counters from the contract and a score derived from them here. Every issuer in the demo is a simulator, so `simulated` is true.",
+  },
+  listRedemptions: {
+    method: "get",
+    path: "/v1/redemptions",
+    summary: "Redemption requests",
+    tag: "Custody",
+    status: 200,
+    response: RedemptionListSchema,
+    query: ListRedemptionsQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Needs `user` or `representationId`. Newest first, read from the chain. `status` filters within a page, so a page may hold fewer than `limit` items while `nextCursor` is set.",
+  },
+  getRedemption: {
+    method: "get",
+    path: "/v1/redemptions/{id}",
+    summary: "A redemption and its timeline",
+    tag: "Custody",
+    status: 200,
+    response: RedemptionSchema,
+    params: RedemptionIdParam,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "The escrow is released by the issuer's fulfilment (burned) or by the user's reclaim after a rejection or expiry. `timeline` is rebuilt from the chain record; `txHash` stays null until the indexer's event mirror supplies it.",
+  },
+  submitReserveAttestation: {
+    method: "post",
+    path: "/v1/reserves/attestations",
+    summary: "Relay a signed reserve attestation",
+    tag: "Custody",
+    status: 201,
+    response: SubmitReserveAttestationResponseSchema,
+    body: SubmitReserveAttestationRequestSchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], 422: ["ATTESTATION_REJECTED"], ...COMMON },
+    description:
+      "Testnet and sandbox only. A relayer account pays for the transaction; the signature is the authority, so the relayer holds no custodian key and no user key. The contract checks the signature, the custodian's registered key, the link, the time and the sequence, and refuses with `ATTESTATION_REJECTED` otherwise. Unknown asset: `NOT_FOUND`; also `NOT_FOUND` where no relayer is configured.",
+  },
   createQuote: {
     method: "post",
     path: "/v1/quotes",
@@ -499,6 +635,8 @@ export const ENDPOINTS = {
         "NOT_CONVERTIBLE",
         "LIFECYCLE_BLOCKED",
         "NAV_WINDOW_CLOSED",
+        "RESERVE_RESTRICTED",
+        "RESERVE_STALE",
       ],
       ...COMMON,
     },
