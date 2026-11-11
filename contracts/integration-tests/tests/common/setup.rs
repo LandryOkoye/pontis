@@ -41,7 +41,7 @@ impl Env {
         };
         for (id, token) in [("issuer-a", &self.token_a), ("issuer-b", &self.token_b)] {
             self.ok("register_issuer", json!({"issuer": {"id": id, "name": format!("Synthetic {id}"), "jurisdiction": null,
-                "authorized_categories": ["Synthetic commodity claim"], "controlled_accounts": [token.id()], "contact": null,
+                "authorized_categories": ["Synthetic commodity claim"], "controlled_accounts": [token.id(), self.carol.id()], "contact": null,
                 "synthetic": true, "verification_status": "unverified"}})).await?;
             self.ok("add_evidence", json!({"subject_type": "issuer", "subject_id": id, "evidence": evidence("TGOLD-A")})).await?;
             self.ok("set_issuer_status", json!({"id": id, "status": "active"}))
