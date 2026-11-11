@@ -43,6 +43,13 @@
       "when": 1794358113795,
       "tag": "0005_market_data",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794395612923,
+      "tag": "0006_custody_reserves_redemption",
+      "breakpoints": true
     }
   ]
 }
