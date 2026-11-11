@@ -1,0 +1,73 @@
+{
+  "formula": "input_value=floor(amount_in*oracle_price); depth=min(reserve_out,floor(reserve_in*oracle_price)); before_fee=floor(input_value*depth/(depth+input_value)); fee=ceil(before_fee*fee_bps/10000); impact_bps=ceil(input_value*10000/(depth+input_value))",
+  "cases": [
+    {
+      "name": "balanced pool, small trade",
+      "input": {
+        "amount_in": "1000",
+        "oracle_price": { "num": "2", "den": "1" },
+        "reserve_in": "5000000",
+        "reserve_out": "10000000",
+        "fee_bps": 30
+      },
+      "expected": {
+        "midAmountOut": "2000",
+        "inputValue": "2000",
+        "depth": "10000000",
+        "amountOutBeforeFee": "1999",
+        "fee": "6",
+        "amountOut": "1993",
+        "priceImpactBps": "2"
+      }
+    },
+    {
+      "name": "output-side shallow pool sets depth",
+      "input": {
+        "amount_in": "1000",
+        "oracle_price": { "num": "3", "den": "2" },
+        "reserve_in": "1000000",
+        "reserve_out": "1000",
+        "fee_bps": 100
+      },
+      "expected": {
+        "midAmountOut": "1500",
+        "inputValue": "1500",
+        "depth": "1000",
+        "amountOutBeforeFee": "600",
+        "fee": "6",
+        "amountOut": "594",
+        "priceImpactBps": "6000"
+      }
+    },
+    {
+      "name": "fractional oracle price rounds down against trader",
+      "input": {
+        "amount_in": "7",
+        "oracle_price": { "num": "3", "den": "2" },
+        "reserve_in": "1000",
+        "reserve_out": "2000",
+        "fee_bps": 0
+      },
+      "expected": {
+        "midAmountOut": "10",
+        "inputValue": "10",
+        "depth": "1500",
+        "amountOutBeforeFee": "9",
+        "fee": "0",
+        "amountOut": "9",
+        "priceImpactBps": "67"
+      }
+    },
+    {
+      "name": "zero amount has no quote",
+      "input": {
+        "amount_in": "0",
+        "oracle_price": { "num": "1", "den": "1" },
+        "reserve_in": "1000",
+        "reserve_out": "1000",
+        "fee_bps": 0
+      },
+      "expected": null
+    }
+  ]
+}
