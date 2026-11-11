@@ -1,5 +1,6 @@
 // What to deploy where, and the deployments record (BuildPlan B8).
 
+import { REPRESENTATIONS, tokenAccount } from "./catalogue.ts";
 import { REPO_ROOT } from "./evidence.ts";
 
 const NEAR = 10n ** 24n;
@@ -10,41 +11,62 @@ export function fundingFor(codeBytes: number): bigint {
 }
 
 export interface Target {
+  /** Name in the deployment record. */
+  readonly label: string;
   readonly accountId: string;
   readonly wasm: string;
   readonly ownerView: string;
   readonly init: Record<string, unknown>;
 }
 
-export function targets(deployerId: string, ids: { core: string; a: string; b: string }): Target[] {
-  const token = (name: string, symbol: string, decimals: number) => ({
+function tokenInit(deployerId: string, name: string, symbol: string, decimals: number) {
+  return {
     owner_id: deployerId,
     name,
     symbol,
     decimals,
     faucet_max_per_call: null,
     faucet_cooldown_ms: null,
-  });
+  };
+}
+
+export function targets(deployerId: string, ids: { core: string; a: string; b: string }): Target[] {
+  const token = (name: string, symbol: string, decimals: number) =>
+    tokenInit(deployerId, name, symbol, decimals);
   return [
     {
+      label: "pontis-core",
       accountId: ids.core,
       wasm: "pontis_core",
       ownerView: "get_owner",
       init: { owner_id: deployerId },
     },
     {
+      label: "TGOLD-A",
       accountId: ids.a,
       wasm: "synthetic_token",
       ownerView: "owner_id",
       init: token("SYNTHETIC TEST Gold A", "TGOLD-A", 6),
     },
     {
+      label: "TGOLD-B",
       accountId: ids.b,
       wasm: "synthetic_token",
       ownerView: "owner_id",
       init: token("SYNTHETIC TEST Gold B", "TGOLD-B", 8),
     },
   ];
+}
+
+/** One `synthetic-token` per catalogue representation, on `<representation id>.<deployer>`. */
+export function catalogueTargets(deployerId: string): Target[] {
+  return REPRESENTATIONS.map((rep) => ({
+    label: rep.symbol,
+    accountId: tokenAccount(rep.id, deployerId),
+    wasm: "synthetic_token",
+    ownerView: "owner_id",
+    init: tokenInit(deployerId, rep.name, rep.symbol, rep.decimals),
+  }));
 }
 
 export function wasmPath(name: string, env: NodeJS.ProcessEnv = process.env): string {
