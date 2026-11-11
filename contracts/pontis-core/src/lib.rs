@@ -254,6 +254,10 @@ mod guard_route_tests;
 #[cfg(test)]
 mod guard_vector_tests;
 #[cfg(test)]
+mod lifecycle_delist_tests;
+#[cfg(test)]
+mod lifecycle_tests;
+#[cfg(test)]
 mod math_tests;
 #[cfg(test)]
 mod policy_tests;
