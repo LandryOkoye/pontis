@@ -18,6 +18,7 @@ Decisions that settle the open items in brief §23–24. Any change to a decisio
 | [0012](0012-reconciliation.md)                      | Reconciliation                              | §7.4, §24.3                 |
 | [0013](0013-api-hardening.md)                       | API hardening                               | §10.1, §14.3                |
 | [0014](0014-scope-expansion-beyond-mvp.md)          | Scope expansion beyond the MVP              | expansion brief §0, §2, §14 |
+| [0015](0015-market-data-platform.md)                | Market data platform                        | expansion brief §12         |
 
 ## Format
 
