@@ -1,4 +1,6 @@
+export * from "./bulk.ts";
 export * from "./candles.ts";
+export * from "./concurrency.ts";
 export * from "./intervals.ts";
 export * from "./stats.ts";
 export * from "./candle-builder.ts";
@@ -8,6 +10,7 @@ export * from "./stats-refresh.ts";
 export * from "./jobs.ts";
 export * from "./feed/attestation.ts";
 export * from "./feed/profiles.ts";
+export * from "./feed/profiles-rich.ts";
 export * from "./feed/prng.ts";
 export * from "./feed/series.ts";
 export * from "./feed/simulated-feed.ts";

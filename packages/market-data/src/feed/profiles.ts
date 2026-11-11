@@ -1,6 +1,7 @@
 // Simulated market behaviour for the demo catalogue (expansion brief section 12.6). Claim IDs are
 // the canonical asset IDs the seed registers. Everything here is fiction.
 
+import { RICH_CLAIMS } from "./profiles-rich.ts";
 import type { ClaimProfile } from "./series.ts";
 import type { RepresentationProfile, SimulatedFeedConfig } from "./simulated-feed.ts";
 
@@ -75,6 +76,12 @@ export const DEFAULT_CLAIMS: Readonly<Record<string, ClaimProfile>> = {
   },
 };
 
+/** The default seven plus the rich catalogue's claims; what the simulator feeds by default. */
+export const SIMULATED_CLAIMS: Readonly<Record<string, ClaimProfile>> = {
+  ...DEFAULT_CLAIMS,
+  ...RICH_CLAIMS,
+};
+
 export interface RegistryRepresentation {
   id: string;
   canonicalAssetId: string;
@@ -83,10 +90,10 @@ export interface RegistryRepresentation {
   unitMultiplier: { num: bigint; den: bigint };
 }
 
-/** Feed config for every registry representation whose claim has a default profile. */
+/** Feed config for every registry representation whose claim has a profile (`SIMULATED_CLAIMS` by default). */
 export function feedConfigFor(
   reps: readonly RegistryRepresentation[],
-  claims: Readonly<Record<string, ClaimProfile>> = DEFAULT_CLAIMS,
+  claims: Readonly<Record<string, ClaimProfile>> = SIMULATED_CLAIMS,
 ): SimulatedFeedConfig {
   const representations: Record<string, RepresentationProfile> = {};
   for (const rep of reps) {
