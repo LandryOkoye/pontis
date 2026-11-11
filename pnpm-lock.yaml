@@ -87,9 +87,43 @@ importers:
       '@pontis/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@pontis/market-data':
+        specifier: workspace:*
+        version: link:../../packages/market-data
       '@pontis/near-client':
         specifier: workspace:*
         version: link:../../packages/near-client
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.5
+        version: 22.20.5
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@22.20.5)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  apps/simulator:
+    dependencies:
+      '@pontis/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@pontis/dev-keys':
+        specifier: workspace:*
+        version: link:../../packages/dev-keys
+      '@pontis/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@pontis/market-data':
+        specifier: workspace:*
+        version: link:../../packages/market-data
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
@@ -163,7 +197,45 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
 
+  packages/dev-keys:
+    dependencies:
+      '@pontis/quote-engine':
+        specifier: workspace:*
+        version: link:../quote-engine
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.5
+        version: 22.20.5
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@22.20.5)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/domain:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.5
+        version: 22.20.5
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@types/node@22.20.5)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/market-data:
+    dependencies:
+      '@pontis/db':
+        specifier: workspace:*
+        version: link:../db
+      '@pontis/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@pontis/quote-engine':
+        specifier: workspace:*
+        version: link:../quote-engine
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@types/pg@8.23.1)(pg@8.23.1)
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@types/node':
         specifier: ^22.20.5
