@@ -7,6 +7,7 @@ import { runIndexer, type Logger } from "./indexer.ts";
 import { verifyStartup } from "./startup.ts";
 import { NearChainSource } from "./near-source.ts";
 import { nearVaultChain } from "./reconcile/near-vault-chain.ts";
+import { runMarketJobs } from "./market-jobs.ts";
 import { Reconciler, runReconciler } from "./reconcile/reconciler.ts";
 
 const config = loadConfig();
@@ -52,6 +53,16 @@ const reconciling =
         log,
       })
     : undefined;
+const marketJobs =
+  config.MARKET_JOBS_INTERVAL_MS > 0
+    ? runMarketJobs({
+        db,
+        intervalMs: config.MARKET_JOBS_INTERVAL_MS,
+        windowMs: config.MARKET_JOBS_WINDOW_MS,
+        signal: controller.signal,
+        log,
+      })
+    : undefined;
 await runIndexer({
   db,
   source,
@@ -64,5 +75,6 @@ await runIndexer({
   signal: controller.signal,
 });
 await reconciling;
+await marketJobs;
 await pool.end();
 log.info("indexer stopped");

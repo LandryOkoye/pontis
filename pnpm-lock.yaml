@@ -87,6 +87,9 @@ importers:
       '@pontis/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@pontis/market-data':
+        specifier: workspace:*
+        version: link:../../packages/market-data
       '@pontis/near-client':
         specifier: workspace:*
         version: link:../../packages/near-client
