@@ -1,6 +1,13 @@
 // Redemption terms, requests, state changes and the timeline, applied to the mirror tables.
 
-import { issuerReliability, redemptionEvents, redemptionTerms, redemptions } from "@pontis/db";
+import {
+  issuerReliability,
+  redemptionEvents,
+  redemptionPayoutInstructions,
+  redemptionRefusals,
+  redemptionTerms,
+  redemptions,
+} from "@pontis/db";
 import { asc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { execution, useSeededDb } from "./harness.ts";
@@ -181,5 +188,119 @@ describe("replay", () => {
     await h.apply(execution([fx.redemptionAccepted({ id: 404 })]));
     expect(await row(404)).toBeUndefined();
     expect(await timeline(404)).toEqual(["accepted"]);
+  });
+});
+
+describe("a refused redemption request", () => {
+  it("is recorded once, with the contract's reason, and creates no redemption", async () => {
+    const before = (await h.db.select().from(redemptions)).length;
+    const refused = execution([fx.redemptionRefused({ reason: "BELOW_MIN", amount: "10" })]);
+    await h.apply(refused);
+    await h.apply(refused);
+    const rows = await h.db.select().from(redemptionRefusals);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      reason: "BELOW_MIN",
+      senderId: "alice.testnet",
+      token: "a.pontis.testnet",
+      amount: "10",
+    });
+    expect(rows[0]?.at.getTime()).toBe(fx.T0 + 5_000);
+    expect((await h.db.select().from(redemptions)).length).toBe(before);
+  });
+
+  it("keeps two refusals in one receipt as two rows", async () => {
+    await h.apply(
+      execution([
+        fx.redemptionRefused({ reason: "WINDOW_CLOSED", sender_id: "bob.testnet" }),
+        fx.redemptionRefused({ reason: "INVALID_MSG", sender_id: "bob.testnet" }),
+      ]),
+    );
+    const rows = await h.db
+      .select()
+      .from(redemptionRefusals)
+      .where(eq(redemptionRefusals.senderId, "bob.testnet"));
+    expect(rows.map((r) => r.reason).sort()).toEqual(["INVALID_MSG", "WINDOW_CLOSED"]);
+  });
+});
+
+describe("linking a prepared payout instruction to its redemption", () => {
+  const prepared = (over: Partial<typeof redemptionPayoutInstructions.$inferInsert> = {}) => ({
+    accountId: "carol.testnet",
+    representationId: "a",
+    amount: "5000000",
+    termsHash: fx.HASH_A,
+    payoutInstructionHash: fx.HASH_C,
+    ciphertext: "AAEC",
+    ...over,
+  });
+  const linked = async (accountId: string) =>
+    (
+      await h.db
+        .select()
+        .from(redemptionPayoutInstructions)
+        .where(eq(redemptionPayoutInstructions.accountId, accountId))
+        .orderBy(asc(redemptionPayoutInstructions.createdAt))
+    ).map((r) => r.redemptionId);
+
+  it("sets the redemption id on the oldest unlinked row of the same account and hash, one per request", async () => {
+    await h.db
+      .insert(redemptionPayoutInstructions)
+      .values(prepared({ createdAt: new Date(fx.T0 - 2_000) }));
+    await h.db
+      .insert(redemptionPayoutInstructions)
+      .values(prepared({ createdAt: new Date(fx.T0 - 1_000) }));
+    await h.apply(
+      execution([
+        fx.redemptionRequested({
+          id: 50,
+          user: "carol.testnet",
+          payout_instruction_hash: fx.HASH_C,
+        }),
+      ]),
+    );
+    expect(await linked("carol.testnet")).toEqual([50, null]);
+    await h.apply(
+      execution([
+        fx.redemptionRequested({
+          id: 51,
+          user: "carol.testnet",
+          payout_instruction_hash: fx.HASH_C,
+        }),
+      ]),
+    );
+    expect(await linked("carol.testnet")).toEqual([50, 51]);
+  });
+
+  it("does not link another account's row, another hash, or anything when none was prepared", async () => {
+    await h.db.insert(redemptionPayoutInstructions).values(prepared({ accountId: "dave.testnet" }));
+    await h.apply(
+      execution([
+        fx.redemptionRequested({
+          id: 52,
+          user: "erin.testnet",
+          payout_instruction_hash: fx.HASH_C,
+        }),
+        fx.redemptionRequested({
+          id: 53,
+          user: "dave.testnet",
+          payout_instruction_hash: fx.HASH_A,
+        }),
+      ]),
+    );
+    expect(await linked("dave.testnet")).toEqual([null]);
+    expect((await row(52))?.status).toBe("requested");
+  });
+
+  it("is idempotent on replay of the same receipt", async () => {
+    await h.db
+      .insert(redemptionPayoutInstructions)
+      .values(prepared({ accountId: "frank.testnet" }));
+    const requested = execution([
+      fx.redemptionRequested({ id: 54, user: "frank.testnet", payout_instruction_hash: fx.HASH_C }),
+    ]);
+    await h.apply(requested);
+    await h.apply(requested);
+    expect(await linked("frank.testnet")).toEqual([54]);
   });
 });
