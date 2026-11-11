@@ -104,7 +104,7 @@ describe("lifecycle and NAV strike views", () => {
     nav_per_unit: "10000000000",
     cutoff_ms: 1_794_086_400_000,
     currency: "USD",
-    source: "simulated_nav",
+    source: "simulated_feed",
     simulated: true,
     submitted_ms: 1_794_000_001_000,
     publisher_key: "ed25519:FgcwodK7aTtn3DgvqwPuSseKgTPcMpGmK6zdf7Ri9KXm",

@@ -6,6 +6,7 @@
 import { createPublicKey, sign, verify, type KeyObject } from "node:crypto";
 import { base58Decode, type QuoteKey } from "@pontis/quote-engine";
 import { U128_MAX } from "@pontis/domain";
+import { le, str } from "./borsh.ts";
 import type { FeedPoint } from "./types.ts";
 
 export const PRICE_ATTESTATION_DOMAIN = "pontis-price-v2";
@@ -20,18 +21,6 @@ export interface PriceAttestation {
   publisherKey: string;
   /** Standard base64, 64 bytes. */
   signature: string;
-}
-
-function le(value: bigint, bytes: number): Buffer {
-  const out = Buffer.alloc(bytes);
-  for (let i = 0; i < bytes; i++) out[i] = Number((value >> BigInt(8 * i)) & 0xffn);
-  return out;
-}
-
-/** Borsh string: u32 little-endian length, then UTF-8. */
-function str(value: string): Buffer {
-  const body = Buffer.from(value, "utf8");
-  return Buffer.concat([le(BigInt(body.length), 4), body]);
 }
 
 /** The exact bytes a publisher signs for `point` on `contract`. */
