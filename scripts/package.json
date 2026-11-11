@@ -12,11 +12,15 @@
     "ops": "tsx --env-file-if-exists=.env ops.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "guards": "tsx --env-file-if-exists=.env guards.ts"
   },
   "dependencies": {
+    "@pontis/dev-keys": "workspace:*",
     "@pontis/domain": "workspace:*",
+    "@pontis/market-data": "workspace:*",
     "@pontis/near-client": "workspace:*",
+    "@pontis/quote-engine": "workspace:*",
     "near-api-js": "^7.4.0"
   },
   "devDependencies": {

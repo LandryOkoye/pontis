@@ -278,12 +278,21 @@ importers:
 
   scripts:
     dependencies:
+      '@pontis/dev-keys':
+        specifier: workspace:*
+        version: link:../packages/dev-keys
       '@pontis/domain':
         specifier: workspace:*
         version: link:../packages/domain
+      '@pontis/market-data':
+        specifier: workspace:*
+        version: link:../packages/market-data
       '@pontis/near-client':
         specifier: workspace:*
         version: link:../packages/near-client
+      '@pontis/quote-engine':
+        specifier: workspace:*
+        version: link:../packages/quote-engine
       near-api-js:
         specifier: ^7.4.0
         version: 7.4.0
