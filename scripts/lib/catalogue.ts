@@ -5,7 +5,7 @@
 // Nothing is `third_party_attested` (no third party exists) or `independently_verified` (the
 // contract refuses it).
 
-import type { Rational } from "@pontis/domain";
+import { type Rational, rational } from "@pontis/domain";
 
 export type Verification = "unverified" | "issuer_attested";
 export type RecordStatus = "active" | "restricted" | "deprecated" | "rejected";
@@ -81,6 +81,13 @@ export interface CatalogueRelationship {
   /** False when the contract cannot approve it (a representation that can never be active). */
   approve: boolean;
 }
+
+const NONE = "None";
+const OWNER_CAPABILITIES = ["owner mint", "owner burn", "owner pause"] as const;
+const WITH_FAUCET = [...OWNER_CAPABILITIES, "testnet faucet_mint"] as const;
+/** The transfer policy every catalogue representation states (ADR 0005). */
+export const TRANSFER_POLICY = "Testnet allowlist in pontis-core";
+const tokens = (n: number) => BigInt(n);
 
 export const ISSUERS: readonly CatalogueIssuer[] = [
   {
@@ -247,3 +254,124 @@ export const CLAIMS: readonly CatalogueClaim[] = [
     dossier: "SYN-NOVA",
   },
 ];
+
+const representation = (
+  r: Pick<CatalogueRepresentation, "id" | "claimId" | "issuerId" | "name" | "symbol" | "decimals"> &
+    Partial<CatalogueRepresentation>,
+): CatalogueRepresentation => ({
+  unitsPerToken: rational(1n),
+  adminCapabilities: WITH_FAUCET,
+  custodyDescription: NONE,
+  redemptionMechanism: NONE,
+  startingSupply: tokens(1_000_000),
+  vaultInventory: 0n,
+  faucet: true,
+  convertible: true,
+  bridgeable: false,
+  ...r,
+});
+
+export const REPRESENTATIONS: readonly CatalogueRepresentation[] = [
+  representation({
+    id: "tacme-h",
+    claimId: "syn-acme",
+    issuerId: "halcyon-securities",
+    name: "SYNTHETIC TEST Acme Share (Halcyon)",
+    symbol: "TACME-H",
+    decimals: 6,
+    bridgeable: true,
+  }),
+  representation({
+    // Intentionally 0.1 unit per token with 8 decimals, like TGOLD-B in the MVP.
+    id: "tacme-m",
+    claimId: "syn-acme",
+    issuerId: "meridian-assets",
+    name: "SYNTHETIC TEST Acme Share (Meridian)",
+    symbol: "TACME-M",
+    decimals: 8,
+    unitsPerToken: rational(1n, 10n),
+    startingSupply: tokens(10_000_000),
+  }),
+  representation({
+    id: "tustb-h",
+    claimId: "syn-ustb",
+    issuerId: "halcyon-securities",
+    name: "SYNTHETIC TEST Treasury Fund (Halcyon)",
+    symbol: "TUSTB-H",
+    decimals: 6,
+    startingSupply: tokens(10_000_000),
+    vaultInventory: tokens(500_000),
+    bridgeable: true,
+  }),
+  representation({
+    id: "tustb-o",
+    claimId: "syn-ustb",
+    issuerId: "orchard-trust",
+    name: "SYNTHETIC TEST Treasury Fund (Orchard)",
+    symbol: "TUSTB-O",
+    decimals: 8,
+    startingSupply: tokens(10_000_000),
+    vaultInventory: tokens(500_000),
+  }),
+  representation({
+    // One indivisible record: exactly one token, no faucet, nothing to convert against.
+    id: "tvilla-1",
+    claimId: "syn-villa",
+    issuerId: "halcyon-securities",
+    name: "SYNTHETIC TEST Villa Azul Record",
+    symbol: "TVILLA-1",
+    decimals: 0,
+    adminCapabilities: OWNER_CAPABILITIES,
+    custodyDescription: "None. A fictional property record; no deed, title or custodian exists.",
+    startingSupply: tokens(1),
+    faucet: false,
+    convertible: false,
+    bridgeable: true,
+  }),
+  representation({
+    id: "tcredit-1",
+    claimId: "syn-credit",
+    issuerId: "halcyon-securities",
+    name: "SYNTHETIC TEST Private Credit Note 2028",
+    symbol: "TCREDIT-1",
+    decimals: 6,
+    redemptionMechanism:
+      "None. The simulated maturity and redemption terms are narrative; nothing on chain implements them.",
+    startingSupply: tokens(100_000),
+  }),
+  representation({
+    id: "tusd-h",
+    claimId: "syn-usd",
+    issuerId: "halcyon-securities",
+    name: "SYNTHETIC TEST Dollar (Halcyon)",
+    symbol: "TUSD-H",
+    decimals: 6,
+    startingSupply: tokens(10_000_000),
+    bridgeable: true,
+  }),
+  representation({
+    id: "tnova-m",
+    claimId: "syn-nova",
+    issuerId: "meridian-assets",
+    name: "SYNTHETIC TEST Nova Share (Meridian)",
+    symbol: "TNOVA-M",
+    decimals: 8,
+  }),
+];
+
+/** The issuer of a representation; its dossier is the representation's evidence. */
+export function issuerOf(rep: CatalogueRepresentation): CatalogueIssuer {
+  const issuer = ISSUERS.find((i) => i.id === rep.issuerId);
+  if (!issuer) throw new Error(`representation ${rep.id} names unknown issuer ${rep.issuerId}`);
+  return issuer;
+}
+
+/** Contract account of a catalogue token: a sub-account of the deployer named by representation id. */
+export function tokenAccount(representationId: string, deployerId: string): string {
+  return `${representationId}.${deployerId}`;
+}
+
+/** Canonical units per smallest token unit, as the contract stores it (unreduced). */
+export function unitMultiplier(rep: CatalogueRepresentation): Rational {
+  return rational(rep.unitsPerToken.num, rep.unitsPerToken.den * 10n ** BigInt(rep.decimals));
+}
