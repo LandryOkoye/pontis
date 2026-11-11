@@ -121,6 +121,12 @@ components:
         - AMOUNT_BELOW_MIN
         - AMOUNT_ABOVE_MAX
         - WINDOW_LIMIT_EXCEEDED
+        - CORPORATE_ACTION_FREEZE
+        - CORPORATE_ACTION_PENDING
+        - EPOCH_MISMATCH
+        - NOT_CONVERTIBLE
+        - LIFECYCLE_BLOCKED
+        - NAV_WINDOW_CLOSED
         - QUOTE_EXPIRED
         - QUOTE_ALREADY_USED
         - UNAUTHORIZED
@@ -1240,6 +1246,8 @@ components:
         - suspended
         - reapproved
         - guard_set
+        - multiplier_epoch
+        - lifecycle_flags
     AssetMetadata:
       type: object
       properties:
@@ -1441,6 +1449,329 @@ components:
         - fee
         - source
         - simulated
+    AssetLifecycle:
+      type: object
+      properties:
+        assetId:
+          type: string
+        kind:
+          $ref: "#/components/schemas/AssetKind"
+        stage:
+          $ref: "#/components/schemas/LifecycleStage"
+        noConversion:
+          type: boolean
+        bridgeOnly:
+          type: boolean
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/LifecycleEntry"
+        delistRequest:
+          $ref: "#/components/schemas/DelistRequest"
+      required:
+        - assetId
+        - kind
+        - stage
+        - noConversion
+        - bridgeOnly
+        - history
+        - delistRequest
+    AssetKind:
+      type: string
+      enum:
+        - fungible
+        - nav_fund
+        - term_instrument
+        - unique
+    LifecycleStage:
+      type: string
+      enum:
+        - active
+        - nav_strike_window
+        - matured
+        - redeeming
+        - redeemed
+        - delisted
+    LifecycleEntry:
+      type: object
+      properties:
+        from:
+          $ref: "#/components/schemas/LifecycleStage"
+        to:
+          $ref: "#/components/schemas/LifecycleStage"
+        by:
+          $ref: "#/components/schemas/AccountId"
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        evidenceHash:
+          type:
+            - string
+            - "null"
+        note:
+          type: string
+      required:
+        - from
+        - to
+        - by
+        - at
+        - evidenceHash
+        - note
+    DelistRequest:
+      type:
+        - object
+        - "null"
+      properties:
+        by:
+          $ref: "#/components/schemas/AccountId"
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        evidenceHash:
+          type:
+            - string
+            - "null"
+        note:
+          type: string
+      required:
+        - by
+        - at
+        - evidenceHash
+        - note
+    CorporateActionList:
+      type: object
+      properties:
+        assetId:
+          type: string
+        canonicalAssetId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CorporateAction"
+        multiplierEpochs:
+          type: array
+          items:
+            $ref: "#/components/schemas/WrapperEpochs"
+      required:
+        - assetId
+        - canonicalAssetId
+        - items
+        - multiplierEpochs
+    CorporateAction:
+      type: object
+      properties:
+        id:
+          type: string
+        canonicalAssetId:
+          type: string
+        kind:
+          $ref: "#/components/schemas/ActionKind"
+        status:
+          $ref: "#/components/schemas/ActionStatus"
+        announcedAt:
+          $ref: "#/components/schemas/Timestamp"
+        exDate:
+          $ref: "#/components/schemas/Timestamp"
+        effectiveAt:
+          $ref: "#/components/schemas/Timestamp"
+        freezeFrom:
+          $ref: "#/components/schemas/Timestamp"
+        freezeUntil:
+          $ref: "#/components/schemas/Timestamp"
+        freezeActive:
+          type: boolean
+        multiplierChange:
+          allOf:
+            - $ref: "#/components/schemas/Rational"
+            - type:
+                - object
+                - "null"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionEvidence"
+        proposedBy:
+          $ref: "#/components/schemas/AccountId"
+        approvedBy:
+          allOf:
+            - $ref: "#/components/schemas/AccountId"
+            - type:
+                - string
+                - "null"
+        wrappers:
+          type: array
+          items:
+            $ref: "#/components/schemas/WrapperApplication"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionHistoryEntry"
+      required:
+        - id
+        - canonicalAssetId
+        - kind
+        - status
+        - announcedAt
+        - exDate
+        - effectiveAt
+        - freezeFrom
+        - freezeUntil
+        - freezeActive
+        - multiplierChange
+        - evidence
+        - proposedBy
+        - approvedBy
+        - wrappers
+        - history
+    ActionKind:
+      type: string
+      enum:
+        - split
+        - reverse_split
+        - dividend_cash
+        - dividend_stock
+        - merger
+        - spin_off
+        - delisting
+        - symbol_change
+        - custom
+    ActionStatus:
+      type: string
+      enum:
+        - proposed
+        - approved
+        - applied
+        - cancelled
+    ActionEvidence:
+      type: object
+      properties:
+        uri:
+          type: string
+        sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        provenance:
+          $ref: "#/components/schemas/EvidenceProvenance"
+        description:
+          type: string
+        addedBy:
+          $ref: "#/components/schemas/AccountId"
+        addedAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - uri
+        - sha256
+        - provenance
+        - description
+        - addedBy
+        - addedAt
+    WrapperApplication:
+      type: object
+      properties:
+        representationId:
+          type: string
+        live:
+          type: boolean
+        applied:
+          type: boolean
+      required:
+        - representationId
+        - live
+        - applied
+    ActionHistoryEntry:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/ActionStatus"
+        by:
+          $ref: "#/components/schemas/AccountId"
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        note:
+          type: string
+      required:
+        - status
+        - by
+        - at
+        - note
+    WrapperEpochs:
+      type: object
+      properties:
+        representationId:
+          type: string
+        epochs:
+          type: array
+          items:
+            $ref: "#/components/schemas/MultiplierEpoch"
+      required:
+        - representationId
+        - epochs
+    MultiplierEpoch:
+      type: object
+      properties:
+        effectiveAt:
+          $ref: "#/components/schemas/Timestamp"
+        multiplier:
+          $ref: "#/components/schemas/Rational"
+        actionId:
+          type:
+            - string
+            - "null"
+      required:
+        - effectiveAt
+        - multiplier
+        - actionId
+    AssetNav:
+      type: object
+      properties:
+        assetId:
+          type: string
+        kind:
+          $ref: "#/components/schemas/AssetKind"
+        strike:
+          $ref: "#/components/schemas/NavStrike"
+      required:
+        - assetId
+        - kind
+        - strike
+    NavStrike:
+      type:
+        - object
+        - "null"
+      properties:
+        navPerUnit:
+          $ref: "#/components/schemas/PriceString"
+        currency:
+          type: string
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        cutoff:
+          $ref: "#/components/schemas/Timestamp"
+        submittedAt:
+          $ref: "#/components/schemas/Timestamp"
+        source:
+          type: string
+        simulated:
+          type: boolean
+        publisherKey:
+          type: string
+        windowState:
+          $ref: "#/components/schemas/NavWindowState"
+      required:
+        - navPerUnit
+        - currency
+        - asOf
+        - cutoff
+        - submittedAt
+        - source
+        - simulated
+        - publisherKey
+        - windowState
+    NavWindowState:
+      type: string
+      enum:
+        - upcoming
+        - open
+        - closed
     CompareResponse:
       type: object
       properties:
@@ -1780,6 +2111,12 @@ components:
         - AMOUNT_BELOW_MIN
         - AMOUNT_ABOVE_MAX
         - WINDOW_LIMIT_EXCEEDED
+        - CORPORATE_ACTION_FREEZE
+        - CORPORATE_ACTION_PENDING
+        - EPOCH_MISMATCH
+        - NOT_CONVERTIBLE
+        - LIFECYCLE_BLOCKED
+        - NAV_WINDOW_CLOSED
     CompareRoutesRequest:
       type: object
       properties:
@@ -2211,6 +2548,7 @@ components:
         - SETTLEMENT_MISMATCH
         - VAULT_INSOLVENT
         - VAULT_UNTRACKED_BALANCE
+        - CORPORATE_ACTION_OVERDUE
     FindingSeverity:
       type: string
       enum:
@@ -3255,6 +3593,120 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/lifecycle:
+    get:
+      operationId: getAssetLifecycle
+      summary: Lifecycle kind, stage, flags and stage history
+      description: Read from the chain, never cached. An asset with no lifecycle record is a `fungible` asset in stage `active`. Anything but `active`, or a conversion flag, closes the asset's routes (`NOT_CONVERTIBLE`, `LIFECYCLE_BLOCKED`). Stage changes are entered by the registrar; delisting needs a second account.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetLifecycle"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/corporate-actions:
+    get:
+      operationId: getAssetCorporateActions
+      summary: Corporate actions of the asset's claim and each wrapper's multiplier schedule
+      description: "Read from the chain, never cached. Actions belong to the canonical claim and apply to every wrapper of it: `wrappers` says which have applied. Routes of the claim are closed during an approved action's freeze window (`CORPORATE_ACTION_FREEZE`) and until every live wrapper has applied a multiplier change (`CORPORATE_ACTION_PENDING`). The facts are entered by the registrar; evidence keeps its own provenance label and nothing here is verified."
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorporateActionList"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/nav:
+    get:
+      operationId: getAssetNav
+      summary: Current NAV strike and its window
+      description: "Read from the chain, never cached. `strike` is null for an asset that is not a NAV fund and for a fund with no strike yet. A fund converts only while `windowState` is `open`. The demo publishes simulated strikes only: `simulated` and `source` are shown as stored."
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetNav"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v1/compare:
     get:
       operationId: compareAssets
@@ -3514,7 +3966,7 @@ paths:
     post:
       operationId: createQuote
       summary: Request a parity-conversion quote
-      description: Refusals are `422` with a structured error whose `code` is the reason. Quotes expire after 60 seconds.
+      description: Refusals are `422` with a structured error whose `code` is the reason. Quotes expire after 60 seconds, or at the start of the next approved corporate-action freeze window of either claim if that comes sooner.
       tags:
         - Quotes
       requestBody:
@@ -3543,7 +3995,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "422":
-          description: "Request understood but refused. Codes: NOT_DIRECT_EQUIVALENT, RELATIONSHIP_SUSPENDED, ASSET_PAUSED, NOT_ELIGIBLE, INSUFFICIENT_INVENTORY, PRICE_DEVIATION, PRICE_STALE, PRICE_UNAVAILABLE, AMOUNT_BELOW_MIN, AMOUNT_ABOVE_MAX, WINDOW_LIMIT_EXCEEDED."
+          description: "Request understood but refused. Codes: NOT_DIRECT_EQUIVALENT, RELATIONSHIP_SUSPENDED, ASSET_PAUSED, NOT_ELIGIBLE, INSUFFICIENT_INVENTORY, PRICE_DEVIATION, PRICE_STALE, PRICE_UNAVAILABLE, AMOUNT_BELOW_MIN, AMOUNT_ABOVE_MAX, WINDOW_LIMIT_EXCEEDED, CORPORATE_ACTION_FREEZE, CORPORATE_ACTION_PENDING, EPOCH_MISMATCH, NOT_CONVERTIBLE, LIFECYCLE_BLOCKED, NAV_WINDOW_CLOSED."
           content:
             application/json:
               schema:
