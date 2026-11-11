@@ -79,3 +79,38 @@ export interface PlannedCustody {
   /** Makes pontis-core the token's only minter (the redemption burn needs it, ADR 0020 section 6). */
   gatedMint: boolean;
 }
+
+/** A redemption window: open while `(now - anchorMs) mod periodMs < lengthMs` (redemption_terms.rs). */
+export interface PlannedWindow {
+  anchorMs: number;
+  lengthMs: number;
+  periodMs: number;
+}
+
+/** Redemption terms of a representation, in whole tokens (the plan scales by the token's decimals). */
+export interface PlannedTerms {
+  representationId: string;
+  tier: CustodyTier;
+  minWhole: bigint;
+  /** 0 means no maximum. */
+  maxWhole: bigint;
+  feeBps: number;
+  /** `null`: always open. */
+  window: PlannedWindow | null;
+  acceptWithinMs: number;
+  settlementDays: number;
+}
+
+export const REDEMPTION_STATES = ["requested", "accepted", "fulfilled"] as const;
+export type RedemptionState = (typeof REDEMPTION_STATES)[number];
+
+/**
+ * A simulated redemption the seed leaves in a given state, through the same calls a user and the
+ * simulated issuer back-office make. Nothing is paid out: the issuer is a test account.
+ */
+export interface PlannedRedemption {
+  representationId: string;
+  tier: CustodyTier;
+  state: RedemptionState;
+  amountWhole: bigint;
+}
