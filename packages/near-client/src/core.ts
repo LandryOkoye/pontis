@@ -30,6 +30,32 @@ import {
   type ChainRouteGuards,
   type ChainRouteView,
 } from "./schemas.ts";
+import {
+  ChainCustodianSchema,
+  ChainCustodyLinkSchema,
+  ChainEscrowLedgerSchema,
+  ChainIssuerReliabilitySchema,
+  ChainMintHeadroomSchema,
+  ChainMintRequestSchema,
+  ChainRedemptionSchema,
+  ChainRedemptionTermsSchema,
+  ChainReserveRecordSchema,
+  ChainReserveStatusSchema,
+  ChainSupplySchema,
+  pagedOf,
+  type ChainCustodian,
+  type ChainCustodyLink,
+  type ChainEscrowLedger,
+  type ChainIssuerReliability,
+  type ChainMintHeadroom,
+  type ChainMintRequest,
+  type ChainPage,
+  type ChainRedemption,
+  type ChainRedemptionTerms,
+  type ChainReserveRecord,
+  type ChainReserveStatus,
+  type ChainSupply,
+} from "./custody-schemas.ts";
 
 const PAGE = 100;
 const amount = z.string().regex(/^(0|[1-9][0-9]*)$/);
@@ -148,6 +174,152 @@ export class CoreClient implements RegistrySource {
       representation_id: representationId,
     });
     return raw === null ? null : ChainNavStrikeSchema.parse(raw);
+  }
+
+  /** One page of a paged view (ADR 0020 section 0): `limit` 1 to 100, `total` counts everything stored. */
+  private async page<T>(
+    method: string,
+    args: Record<string, unknown>,
+    item: z.ZodType<T>,
+    fromIndex: number,
+    limit: number,
+  ): Promise<ChainPage<T>> {
+    const raw = await this.rpc.view(this.accountId, method, {
+      ...args,
+      from_index: fromIndex,
+      limit,
+    });
+    return pagedOf(item).parse(raw);
+  }
+
+  /** Registered custodians in registration order (ADR 0020 section 2). */
+  getCustodians = (fromIndex: number, limit: number) =>
+    this.page("get_custodians", {}, ChainCustodianSchema, fromIndex, limit);
+
+  async getCustodian(id: string): Promise<ChainCustodian | null> {
+    const raw = await this.rpc.view(this.accountId, "get_custodian", { id });
+    return raw === null ? null : ChainCustodianSchema.parse(raw);
+  }
+
+  /** How a representation's reserves are held and by whom; null until the registrar links it. */
+  async getCustodyLink(representationId: string): Promise<ChainCustodyLink | null> {
+    const raw = await this.rpc.view(this.accountId, "get_custody_link", {
+      representation_id: representationId,
+    });
+    return raw === null ? null : ChainCustodyLinkSchema.parse(raw);
+  }
+
+  /** The latest attestation of one custodian, or the newest across custodians when omitted (ADR 0020 section 3). */
+  async getReserveAttestation(
+    representationId: string,
+    custodianId?: string,
+  ): Promise<ChainReserveRecord | null> {
+    const raw = await this.rpc.view(this.accountId, "get_reserve_attestation", {
+      representation_id: representationId,
+      custodian_id: custodianId ?? null,
+    });
+    return raw === null ? null : ChainReserveRecordSchema.parse(raw);
+  }
+
+  /** The latest attestation of each linked custodian that has one. */
+  async getReserveAttestations(representationId: string): Promise<ChainReserveRecord[]> {
+    const raw = await this.rpc.view(this.accountId, "get_reserve_attestations", {
+      representation_id: representationId,
+    });
+    return z.array(ChainReserveRecordSchema).parse(raw);
+  }
+
+  /** The last 500 attestations of a representation by `seq`; older ones live in events and the indexer. */
+  getReserveHistory = (representationId: string, fromIndex: number, limit: number) =>
+    this.page(
+      "get_reserve_history",
+      { representation_id: representationId },
+      ChainReserveRecordSchema,
+      fromIndex,
+      limit,
+    );
+
+  /** Computed on every read from signed attestations and the supply counters; never a stored verdict. */
+  async getReserveStatus(representationId: string): Promise<ChainReserveStatus> {
+    const raw = await this.rpc.view(this.accountId, "get_reserve_status", {
+      representation_id: representationId,
+    });
+    return ChainReserveStatusSchema.parse(raw);
+  }
+
+  async getSupply(representationId: string): Promise<ChainSupply> {
+    const raw = await this.rpc.view(this.accountId, "get_supply", {
+      representation_id: representationId,
+    });
+    return ChainSupplySchema.parse(raw);
+  }
+
+  async getMintHeadroom(representationId: string): Promise<ChainMintHeadroom> {
+    const raw = await this.rpc.view(this.accountId, "get_mint_headroom", {
+      representation_id: representationId,
+    });
+    return ChainMintHeadroomSchema.parse(raw);
+  }
+
+  async getMintRequest(id: number): Promise<ChainMintRequest | null> {
+    const raw = await this.rpc.view(this.accountId, "get_mint_request", { id });
+    return raw === null ? null : ChainMintRequestSchema.parse(raw);
+  }
+
+  getMintRequests = (representationId: string, fromIndex: number, limit: number) =>
+    this.page(
+      "get_mint_requests",
+      { representation_id: representationId },
+      ChainMintRequestSchema,
+      fromIndex,
+      limit,
+    );
+
+  /** The enforced redemption terms of a representation, or null before the registrar sets them. */
+  async getRedemptionTerms(representationId: string): Promise<ChainRedemptionTerms | null> {
+    const raw = await this.rpc.view(this.accountId, "get_redemption_terms", {
+      representation_id: representationId,
+    });
+    return raw === null ? null : ChainRedemptionTermsSchema.parse(raw);
+  }
+
+  async getRedemption(id: number): Promise<ChainRedemption | null> {
+    const raw = await this.rpc.view(this.accountId, "get_redemption", { id });
+    return raw === null ? null : ChainRedemptionSchema.parse(raw);
+  }
+
+  getRedemptionsByUser = (accountId: string, fromIndex: number, limit: number) =>
+    this.page(
+      "get_redemptions_by_user",
+      { account_id: accountId },
+      ChainRedemptionSchema,
+      fromIndex,
+      limit,
+    );
+
+  /** The issuer queue of a representation; filter by status in the caller. */
+  getRedemptionsByRepresentation = (representationId: string, fromIndex: number, limit: number) =>
+    this.page(
+      "get_redemptions_by_representation",
+      { representation_id: representationId },
+      ChainRedemptionSchema,
+      fromIndex,
+      limit,
+    );
+
+  async getEscrowLedger(representationId: string): Promise<ChainEscrowLedger> {
+    const raw = await this.rpc.view(this.accountId, "get_escrow_ledger", {
+      representation_id: representationId,
+    });
+    return ChainEscrowLedgerSchema.parse(raw);
+  }
+
+  /** Counters of an issuer's redemption record; the score is derived by the caller, not stored. */
+  async getIssuerReliability(issuerId: string): Promise<ChainIssuerReliability> {
+    const raw = await this.rpc.view(this.accountId, "get_issuer_reliability", {
+      issuer_id: issuerId,
+    });
+    return ChainIssuerReliabilitySchema.parse(raw);
   }
 
   /** Live allowlist check: true if the representation needs no allowlist or the account is on it. */

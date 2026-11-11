@@ -111,6 +111,8 @@ describe("CoreClient quote-time views", () => {
     "not_convertible",
     "lifecycle_blocked",
     "nav_window_closed",
+    "reserve_restricted",
+    "reserve_stale",
   ])("accepts the %s refusal and the next freeze time", async (refusal) => {
     const view = { executable: false, refusal, terms: null, next_freeze_ms: 1_794_100_000_000 };
     const core = new CoreClient(fakeRpc(() => view).rpc, "core.testnet");
