@@ -9,6 +9,7 @@ import {
   feedConfigFor,
   signPoint,
   submitPriceArgs,
+  type FeedPoint,
   type RegistryRepresentation,
 } from "@pontis/market-data";
 
@@ -27,6 +28,8 @@ export function priceSubmissions(
   registry: readonly RegistryRepresentation[],
   nowMs: number,
   contract: string,
+  /** Test hook: change a point before it is signed, such as a scripted deviation in the e2e run. */
+  adjust: (point: FeedPoint) => FeedPoint = (point) => point,
 ): PriceSubmission[] {
   const feed = new SimulatedPriceFeed(feedConfigFor(registry));
   const key = devKey("price-publisher");
@@ -34,7 +37,7 @@ export function priceSubmissions(
   for (const id of feed.representationIds()) {
     const held = feed.latest(id, nowMs);
     if (!held) continue;
-    const point = { ...held, asOfMs: nowMs };
+    const point = adjust({ ...held, asOfMs: nowMs });
     out.push({
       representationId: id,
       args: submitPriceArgs(point, signPoint(key, point, contract)),

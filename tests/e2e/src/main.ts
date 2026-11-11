@@ -8,6 +8,7 @@ import { stuckSubmission } from "./scenarios/stuck.ts";
 import { replay } from "./scenarios/replay.ts";
 import { expiry } from "./scenarios/expiry.ts";
 import { history } from "./scenarios/history.ts";
+import { guards } from "./scenarios/guards.ts";
 import { refusals } from "./scenarios/refusals.ts";
 import { suspension } from "./scenarios/suspension.ts";
 import { startWorld } from "./world.ts";
@@ -26,6 +27,8 @@ try {
   const stuck = await stuckSubmission(world);
   await expiry(world);
   await reconciliation(world, settled, stuck);
+  // Last: a guard changes what every later quote must satisfy.
+  if (world.mode === "sandbox") await guards(world);
   console.log(`\nAll steps passed in ${Math.round((Date.now() - started) / 1000)}s.`);
 } catch (error) {
   failed = true;

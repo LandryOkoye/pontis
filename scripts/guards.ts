@@ -23,9 +23,12 @@ async function registry(chain: Chain) {
 }
 
 /** One relay round: every price the feed can make, newest first-come; a refusal is reported, not fatal. */
-async function publishOnce(chain: Chain): Promise<void> {
+export async function publishOnce(
+  chain: Chain,
+  adjust?: Parameters<typeof priceSubmissions>[3],
+): Promise<void> {
   const { coreId } = chain.config;
-  for (const s of priceSubmissions(await registry(chain), Date.now(), coreId)) {
+  for (const s of priceSubmissions(await registry(chain), Date.now(), coreId, adjust)) {
     try {
       await admin(chain, coreId, "submit_price", s.args);
       console.log(`${s.representationId}: published ${s.args.attestation.price} (simulated)`);
