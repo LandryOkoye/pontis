@@ -54,4 +54,4 @@ Judgement calls:
 - **Settlement is in whole days.** The fulfil deadline is therefore exercised in unit tests only; the sandbox covers the accept deadline (minimum 1 second).
 - **A late issuer cannot reject its way out of a miss.** Reject needs the current deadline not to have passed.
 
-Open risks: see threats T60 to T64. The escrow depends on the token accepting `minter_burn` and `ft_transfer`; a failing token strands it until it works.
+Open risks: see threats T90 to T94. The escrow depends on the token accepting `minter_burn` and `ft_transfer`; a failing token strands it until it works.
