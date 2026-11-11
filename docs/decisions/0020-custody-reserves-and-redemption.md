@@ -359,3 +359,17 @@ Unit tests per module (time through `testing_env!`; messages asserted in unit te
 - Redemption pays no value. Fee and net are figures the issuer simulator honours off-chain; nothing models a fiat or custody transfer, and the docs say so.
 - The history ring drops attestations older than the last 500 per representation on chain; the indexer keeps them.
 - A reserve policy set by the owner is a single point of trust until the multisig owner of phase 7.
+
+## Amendments (as built in `pontis-core` and `synthetic-token`)
+
+- **Extra views.** `get_reserve_policy(representation_id)`, `get_supply(representation_id) -> {ledger, pending, read, circulating}` and `get_mint_headroom` (which also carries `mint_paused`) are plain reads the API can use. Paged views are exactly as in section 0: `from_index: u64, limit: u64` returning `{items, total}`.
+- **`ratio_bps` is a `u64`**, saturating at `u64::MAX` (a tiny supply against large reserves), because JSON cannot carry a `u128` number.
+- **`refresh_supply` returns a promise** and its callback `on_supply_read` returns `true` when it stored a reading and `false` when the token call failed (nothing is stored then).
+- **`Redemption` has one extra field, `settling: bool`**, true while the token call of a fulfilment (burn) or a reclaim (return) is in flight. The escrow ledger counts a settling request as held, so `held == open_amount` holds at every point.
+- **Reject and expiry rules.** `reject_redemption` is refused once the request's current deadline has passed (the request can then only expire), so an issuer cannot reject its way out of a miss. `expire_redemption` panics with `nothing to expire` when no deadline has passed or the request is not `requested` or `accepted`.
+- **`reclaim_redemption`** panics with `the escrow is not reclaimable yet` unless the request is `rejected`, `expired` or overdue, with `only the redemption's user can reclaim` for another caller, and with `a token call is in flight` while `settling`.
+- **Settlement days are 1 to 30** and `accept_within_ms` is 1 000 ms to 30 days. A sandbox can therefore exercise the accept deadline; the fulfil deadline is exercised in unit tests.
+- **Mint calls attach 1 yoctoNEAR** to `minter_mint` and `minter_burn` (the token requires it); the core pays it.
+- **A suspended or retired custodian** lowers `attested_units` at once but emits no `reserve_status_changed` until the next `evaluate_reserve` or an attestation, mint, burn or supply read.
+- **Owner restrictions of the role registry.** An attester role cannot be granted to the owner, and `transfer_ownership` refuses an account that holds an attester role.
+- **Route refusals.** `RouteRefusal` gained `reserve_restricted` and `reserve_stale`; `RejectReason` gained `RESERVE_RESTRICTED` and `RESERVE_STALE`, appended after `NAV_WINDOW_CLOSED`.
