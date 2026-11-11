@@ -22,6 +22,19 @@ import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
 import type { CompareResponse, SearchResult } from "./discovery-types.ts";
 import type { AssetIssuerView, AssetMetadata } from "./detail-types.ts";
 import type { AssetLifecycle, AssetNav, CorporateActionList } from "./action-types.ts";
+import type {
+  AssetCustody,
+  AssetRedemptionTerms,
+  AssetReserves,
+  Custodian,
+  CustodianList,
+  IssuerReliability,
+  Redemption,
+  RedemptionList,
+  RedemptionSummary,
+  ReserveAttestation,
+  ReserveHistory,
+} from "./custody-types.ts";
 import type { RouteGuardsResponse } from "./guard-types.ts";
 import type { IssuerLeaderboard, Status } from "./status-types.ts";
 import type { AdminMetrics, Metric, ProtocolMetrics } from "./metrics-types.ts";
@@ -785,6 +798,205 @@ export const assetNav: AssetNav = {
     publisherKey: "ed25519:FgcwodK7aTtn3DgvqwPuSseKgTPcMpGmK6zdf7Ri9KXm",
     windowState: "open",
   },
+};
+
+// Custody, reserves and redemption (ADR 0020). The custodian and the issuer are simulators; every
+// figure is theirs and says so. Nothing here is custodied, backed or audited.
+const CUSTODY_NOTICE =
+  "Simulated test figures from a fictional custodian. Nothing is custodied, backed, audited or redeemable for value.";
+const custodyLabels = {
+  simulated: true,
+  sources: ["simulated_custodian"],
+  notice: CUSTODY_NOTICE,
+};
+const ATTESTER = "ed25519:6E8bAu1MUKRDM9dvKGbgYxEFJt4sr4Z5k1QYtUwrBXRp";
+
+export const custodian: Custodian = {
+  id: "vault-co-sim",
+  name: "Meridian Vault Co (SYNTHETIC)",
+  jurisdiction: "CH",
+  attesterKey: ATTESTER,
+  status: "active",
+  synthetic: true,
+  verificationStatus: "unverified",
+  evidence: [
+    {
+      uri: "docs/asset-dossiers/custodian-vault-co-sim.md",
+      sha256: SHA,
+      provenance: "issuer_provided",
+      description: "Synthetic test dossier, self-attested by the project.",
+      addedBy: OWNER,
+      addedAt: T0,
+    },
+  ],
+  registeredBy: "registrar.pontis.testnet",
+  registeredAt: T0,
+  ...custodyLabels,
+  sources: ["registrar_entry"],
+};
+
+export const custodianList: CustodianList = {
+  items: [custodian],
+  total: 1,
+  nextCursor: null,
+  ...custodyLabels,
+  sources: ["registrar_entry"],
+};
+
+export const assetCustody: AssetCustody = {
+  assetId: "tgold-a",
+  linked: true,
+  structure: "segregated",
+  custodians: [custodian],
+  linkedBy: "registrar.pontis.testnet",
+  linkedAt: T0,
+  ...custodyLabels,
+  sources: ["registrar_entry"],
+};
+
+const attestation: ReserveAttestation = {
+  seq: 0,
+  custodianId: "vault-co-sim",
+  reservedUnits: "1000000000000",
+  asOf: "2026-11-11T11:59:00.000Z",
+  submittedAt: "2026-11-11T11:59:02.000Z",
+  reportUri: "sim://reserves/tgold-a/2026-11",
+  reportHash: "b".repeat(64),
+  attesterKey: ATTESTER,
+  simulated: true,
+  source: "simulated_custodian",
+};
+
+export const assetReserves: AssetReserves = {
+  assetId: "tgold-a",
+  monitored: true,
+  state: "ok",
+  policy: { action: "restrict_conversions", toleranceBps: 0, maxReserveAgeMs: 86_400_000 },
+  attestedUnits: "1000000000000",
+  limitUnits: "1000000000000",
+  circulatingUnits: "800000000000",
+  headroomUnits: "200000000000",
+  ratioBps: 12_500,
+  ratioPercent: "125.00",
+  freshness: "fresh",
+  oldestAsOf: attestation.asOf,
+  ageMs: 60_000,
+  supplyReadAt: "2026-11-11T11:59:30.000Z",
+  restrictsConversions: false,
+  mintPaused: false,
+  custodians: [
+    {
+      custodianId: "vault-co-sim",
+      custodianName: custodian.name,
+      custodianStatus: "active",
+      counted: true,
+      latest: { ...attestation, ageMs: 60_000, fresh: true },
+    },
+  ],
+  explanation:
+    "The simulated custodian's latest signed figure covers the supply the contract tracks. This is a simulation: nothing is held, backed or audited.",
+  ...custodyLabels,
+};
+
+export const reserveHistory: ReserveHistory = {
+  assetId: "tgold-a",
+  items: [attestation],
+  total: 1,
+  nextCursor: null,
+  ...custodyLabels,
+};
+
+export const assetRedemptionTerms: AssetRedemptionTerms = {
+  assetId: "tgold-a",
+  description: "None. The claim cannot be redeemed.",
+  terms: {
+    minAmount: "1000000",
+    maxAmount: null,
+    feeBps: 25,
+    window: {
+      alwaysOpen: true,
+      anchorAt: null,
+      lengthMs: 0,
+      periodMs: 0,
+      open: true,
+      nextOpenAt: null,
+    },
+    acceptWithinMs: 86_400_000,
+    settlementDays: 3,
+  },
+  version: 2,
+  termsHash: "c".repeat(64),
+  setBy: "registrar.pontis.testnet",
+  setAt: T0,
+  ...custodyLabels,
+  sources: ["registrar_entry"],
+};
+
+export const issuerReliability: IssuerReliability = {
+  issuerId: "synthetic-issuer-a",
+  requested: 4,
+  accepted: 3,
+  fulfilled: 2,
+  rejected: 1,
+  expired: 0,
+  acceptMisses: 0,
+  fulfilMisses: 0,
+  reclaimed: 0,
+  lastMissAt: null,
+  score: {
+    fulfilmentRateBps: 5_000,
+    acceptMissRateBps: 0,
+    fulfilMissRateBps: 0,
+    avgAcceptLatencyMs: 600_000,
+    avgSettleLatencyMs: 129_600_000,
+  },
+  simulated: true,
+  sources: ["simulated_issuer"],
+  notice: CUSTODY_NOTICE,
+};
+
+const redemptionFields: RedemptionSummary = {
+  id: "1",
+  user: "alice.testnet",
+  assetId: "tgold-a",
+  issuerId: "synthetic-issuer-a",
+  amount: "5000000",
+  feeBps: 25,
+  feeUnits: "12500",
+  netUnits: "4987500",
+  termsHash: "c".repeat(64),
+  termsVersion: 2,
+  payoutInstructionHash: "d".repeat(64),
+  status: "accepted",
+  createdAt: "2026-11-11T11:00:00.000Z",
+  acceptDeadline: "2026-11-12T11:00:00.000Z",
+  acceptedAt: "2026-11-11T11:10:00.000Z",
+  fulfilDeadline: "2026-11-14T11:10:00.000Z",
+  resolvedAt: null,
+  fulfilmentEvidenceHash: null,
+  rejectReason: null,
+  miss: null,
+  settlementDays: 3,
+  reclaimable: false,
+  simulated: true,
+  sources: ["simulated_issuer"],
+  notice: CUSTODY_NOTICE,
+};
+
+export const redemption: Redemption = {
+  ...redemptionFields,
+  timeline: [
+    { event: "requested", at: redemptionFields.createdAt, txHash: null },
+    { event: "accepted", at: redemptionFields.acceptedAt, txHash: null },
+  ],
+};
+
+export const redemptionList: RedemptionList = {
+  items: [redemptionFields],
+  nextCursor: null,
+  simulated: true,
+  sources: ["simulated_issuer"],
+  notice: CUSTODY_NOTICE,
 };
 
 const metricsAsOf = "2026-11-11T12:00:00.000Z";
