@@ -342,6 +342,8 @@ mod lifecycle_tests;
 #[cfg(test)]
 mod math_tests;
 #[cfg(test)]
+mod mint_gate_tests;
+#[cfg(test)]
 mod nav_submit_tests;
 #[cfg(test)]
 mod nav_tests;
@@ -361,6 +363,8 @@ mod registry_tests;
 mod reserve_status_tests;
 #[cfg(test)]
 mod reserve_tests;
+#[cfg(test)]
+mod reserve_vector_tests;
 #[cfg(test)]
 mod roles_sep_tests;
 #[cfg(test)]
