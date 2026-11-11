@@ -45,6 +45,15 @@ import type {
   MarketOverview,
   Mover,
 } from "./overview-types.ts";
+import type {
+  IssuerRedemptionList,
+  MintIntent,
+  MintRequest,
+  MintRequestList,
+  PrepareRedemptionResponse,
+  RedemptionIntent,
+  ReserveMonitorReport,
+} from "./session-types.ts";
 import type { Quote, Transaction } from "./trading-types.ts";
 
 const T0 = "2026-11-07T18:00:00.000Z";
@@ -1066,4 +1075,131 @@ export const adminMetrics: AdminMetrics = {
     },
   ],
   requiresReconciliationQuoteIds: ["c6a9f0a4-2b8e-4a53-8f06-2b9a0a6f3e11"],
+};
+
+// Session endpoints (ADR 0020 section 10). Unsigned actions only: the wallet signs them, and
+// nothing here pays anything out.
+const issuerLabels = {
+  simulated: true,
+  sources: ["simulated_issuer"],
+  notice: CUSTODY_NOTICE,
+};
+const CORE = "core.pontis.testnet";
+
+export const prepareRedemptionResponse: PrepareRedemptionResponse = {
+  prepareId: "6f1c1f8e-3a52-4b0e-9d3e-5a2f0c7b8d11",
+  representationId: "tgold-a",
+  amount: "5000000",
+  termsHash: "c".repeat(64),
+  termsVersion: 2,
+  payoutInstructionHash: "d".repeat(64),
+  msg: `redeem:${"c".repeat(64)}:${"d".repeat(64)}`,
+  feeUnits: "12500",
+  netUnits: "4987500",
+  actions: [
+    {
+      receiverId: "tgold-a.pontis.testnet",
+      methodName: "ft_transfer_call",
+      args: {
+        receiver_id: CORE,
+        amount: "5000000",
+        msg: `redeem:${"c".repeat(64)}:${"d".repeat(64)}`,
+      },
+      gas: "100000000000000",
+      deposit: "1",
+    },
+  ],
+  ...issuerLabels,
+};
+
+export const redemptionIntent: RedemptionIntent = {
+  redemptionId: "1",
+  intent: "accept",
+  status: "requested",
+  actions: [
+    {
+      receiverId: CORE,
+      methodName: "accept_redemption",
+      args: { id: 1 },
+      gas: "80000000000000",
+      deposit: "1",
+    },
+  ],
+  ...issuerLabels,
+};
+
+export const issuerRedemptionList: IssuerRedemptionList = {
+  items: redemptionList.items,
+  issuerIds: ["synthetic-issuer-a"],
+  nextCursor: null,
+  ...issuerLabels,
+};
+
+export const mintRequest: MintRequest = {
+  id: "1",
+  assetId: "tgold-a",
+  recipient: "alice.testnet",
+  amount: "5000000",
+  reference: "sub-0001",
+  status: "requested",
+  requestedBy: "issuer-bo.testnet",
+  requestedAt: "2026-11-11T11:00:00.000Z",
+  resolvedAt: null,
+  failure: null,
+  ...issuerLabels,
+};
+
+export const mintRequestList: MintRequestList = {
+  items: [mintRequest],
+  issuerIds: ["synthetic-issuer-a"],
+  nextCursor: null,
+  ...issuerLabels,
+};
+
+export const mintIntent: MintIntent = {
+  intent: "execute",
+  requestId: "1",
+  assetId: "tgold-a",
+  amount: "5000000",
+  headroomUnits: "250000000",
+  actions: [
+    {
+      receiverId: CORE,
+      methodName: "execute_mint",
+      args: { request_id: 1 },
+      gas: "80000000000000",
+      deposit: "1",
+    },
+  ],
+  ...issuerLabels,
+};
+
+export const reserveMonitorReport: ReserveMonitorReport = {
+  status: "OK",
+  ranAt: "2026-11-11T12:00:00.000Z",
+  signer: "monitor.pontis.testnet",
+  entries: [
+    {
+      representationId: "tgold-a",
+      state: "ok",
+      action: "restrict_conversions",
+      attestedUnits: "1000000000000",
+      circulatingUnits: "750000000000",
+      limitUnits: "1000000000000",
+      ratioBps: 13_333,
+      ageMs: 3_600_000,
+      maxReserveAgeMs: 86_400_000,
+      refreshedSupply: true,
+      evaluated: true,
+      simulated: true,
+      sources: ["simulated_custodian"],
+      error: null,
+    },
+  ],
+  breaches: [],
+  stale: [],
+  failed: [],
+  simulated: true,
+  source: "reserve_monitor",
+  notice: CUSTODY_NOTICE,
 };
