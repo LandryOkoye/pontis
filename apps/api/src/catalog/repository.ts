@@ -1,6 +1,6 @@
 // Catalog reads: Postgres rows to the API shapes. `undefined` means "no such record" (404).
 
-import type { Asset, AssetSummary, Compatibility, Issuer, IssuerSummary } from "@pontis/api-types";
+import type { Asset, Compatibility, Issuer, IssuerSummary } from "@pontis/api-types";
 import { and, asc, eq, inArray, or } from "drizzle-orm";
 import type { Db } from "@pontis/db";
 import {
@@ -11,7 +11,7 @@ import {
   compatibilityReviews,
   issuers,
 } from "@pontis/db";
-import { asset, assetSummary } from "./asset-mappers.ts";
+import { asset } from "./asset-mappers.ts";
 import { compatibility } from "./compat-mapper.ts";
 import { issuer, issuerSummary } from "./mappers.ts";
 
@@ -33,16 +33,6 @@ export async function listIssuers(db: Db): Promise<IssuerSummary[]> {
 export async function getIssuer(db: Db, id: string): Promise<Issuer | undefined> {
   const [row] = await db.select().from(issuers).where(eq(issuers.id, id));
   return row ? issuer(row, await evidenceFor(db, "issuer", [id])) : undefined;
-}
-
-export async function listAssets(db: Db): Promise<AssetSummary[]> {
-  const rows = await db
-    .select({ rep: assetRepresentations, claim: canonicalAssets, issuer: issuers })
-    .from(assetRepresentations)
-    .innerJoin(canonicalAssets, eq(canonicalAssets.id, assetRepresentations.canonicalAssetId))
-    .innerJoin(issuers, eq(issuers.id, assetRepresentations.issuerId))
-    .orderBy(asc(assetRepresentations.id));
-  return rows.map((r) => assetSummary(r.rep, r.claim, r.issuer));
 }
 
 export async function getAsset(db: Db, id: string): Promise<Asset | undefined> {

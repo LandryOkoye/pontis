@@ -17,6 +17,19 @@ import type {
   Issuer,
   IssuerSummary,
 } from "./registry-types.ts";
+import type { NavChart, PriceChart, SupplyChart, VolumeChart } from "./chart-types.ts";
+import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
+import type { CompareResponse, SearchResult } from "./discovery-types.ts";
+import type { AssetIssuerView, AssetMetadata } from "./detail-types.ts";
+import type { IssuerLeaderboard, Status } from "./status-types.ts";
+import type { AdminMetrics, Metric, ProtocolMetrics } from "./metrics-types.ts";
+import type {
+  CategoryList,
+  ChainList,
+  MarketMovers,
+  MarketOverview,
+  Mover,
+} from "./overview-types.ts";
 import type { Quote, Transaction } from "./trading-types.ts";
 
 const T0 = "2026-11-07T18:00:00.000Z";
@@ -269,4 +282,442 @@ export const transactionSettled: Transaction = {
   createdAt: T0,
   submittedAt: "2026-11-07T18:00:20.000Z",
   settledAt: "2026-11-07T18:00:30.000Z",
+};
+
+// ---- market data (ADR 0015): every figure is simulated and says so ----
+
+const FROM = "2026-11-11T09:00:00.000Z";
+const TO = "2026-11-11T12:00:00.000Z";
+const hours = ["2026-11-11T09:00:00.000Z", "2026-11-11T10:00:00.000Z", "2026-11-11T11:00:00.000Z"];
+
+const marketA: MarketSnapshot = {
+  price: "2681.42585338",
+  currency: "USD",
+  priceAsOf: "2026-11-11T12:00:00.000Z",
+  change24hBps: 31,
+  change7dBps: 396,
+  change30dBps: -5,
+  supply: "12400000000",
+  marketCap: "33250000.5",
+  volume24h: "1250000.25",
+  tvl: "4100000",
+  rank: 1,
+  sources: ["simulated_feed"],
+  simulated: true,
+};
+
+const marketB: MarketSnapshot = {
+  ...marketA,
+  price: "268.01474754",
+  supply: "1240000000000",
+  marketCap: "3324000.1",
+  volume24h: "104000",
+  tvl: "410000",
+  rank: 2,
+};
+
+const sparkline = (points: string[]) => ({ interval: "4h" as const, points, simulated: true });
+
+const directoryFacts = {
+  category: "Synthetic commodity claim (test only)",
+  tags: ["synthetic", "gold", "commodity"],
+  chains: ["near-testnet"],
+  convertible: true,
+  bridgeable: false,
+};
+
+export const directoryItemA: AssetDirectoryItem = {
+  ...tgoldASummary,
+  ...directoryFacts,
+  market: marketA,
+  sparkline: sparkline(["2660.1", "2671.9", "2668.4", "2681.42585338"]),
+};
+
+export const directoryItemB: AssetDirectoryItem = {
+  ...tgoldBSummary,
+  ...directoryFacts,
+  market: marketB,
+  sparkline: sparkline(["266.0", "267.2", "266.8", "268.01474754"]),
+};
+
+export const assetDirectory = {
+  items: [directoryItemA, directoryItemB],
+  nextCursor: null,
+  total: 2,
+};
+
+const envelope = {
+  representationId: "tgold-a",
+  interval: "1h" as const,
+  from: FROM,
+  to: TO,
+  source: ["simulated_feed" as const],
+  simulated: true,
+};
+
+export const priceChart: PriceChart = {
+  ...envelope,
+  filledPoints: 1,
+  points: [
+    {
+      t: hours[0] as string,
+      simulated: true,
+      open: "2660.1",
+      high: "2672",
+      low: "2655.5",
+      close: "2671.9",
+      volumeBase: "5000000",
+      volumeQuote: "13359.5",
+      trades: 2,
+      filled: false,
+    },
+    {
+      t: hours[1] as string,
+      simulated: true,
+      open: "2671.9",
+      high: "2679",
+      low: "2664",
+      close: "2668.4",
+      volumeBase: "0",
+      volumeQuote: "0",
+      trades: 0,
+      filled: false,
+    },
+    {
+      t: hours[2] as string,
+      simulated: true,
+      open: "2668.4",
+      high: "2668.4",
+      low: "2668.4",
+      close: "2668.4",
+      volumeBase: "0",
+      volumeQuote: "0",
+      trades: 0,
+      filled: true,
+    },
+  ],
+};
+
+export const navChart: NavChart = {
+  ...envelope,
+  representationId: "tustb-h",
+  filledPoints: 0,
+  points: hours.map((t, i) => ({ t, simulated: true, nav: `1.0164${i}`, filled: false })),
+};
+
+export const supplyChart: SupplyChart = {
+  ...envelope,
+  filledPoints: 2,
+  points: hours.map((t, i) => ({ t, simulated: true, supply: "12400000000", filled: i > 0 })),
+};
+
+export const volumeChart: VolumeChart = {
+  ...envelope,
+  filledPoints: 0,
+  points: priceChart.points.map((p) => ({
+    t: p.t,
+    simulated: true,
+    volumeBase: p.volumeBase,
+    volumeQuote: p.volumeQuote,
+    trades: p.trades,
+    filled: false,
+  })),
+};
+
+const mover = (id: string, symbol: string, market: MarketSnapshot): Mover => ({
+  id,
+  symbol,
+  name: `SYNTHETIC TEST Gold ${symbol.slice(-1)}`,
+  price: market.price,
+  change24hBps: market.change24hBps,
+  marketCap: market.marketCap,
+  volume24h: market.volume24h,
+  tvl: market.tvl,
+  simulated: market.simulated,
+});
+
+const moverA = mover("tgold-a", "TGOLD-A", marketA);
+const moverB = mover("tgold-b", "TGOLD-B", marketB);
+
+export const marketOverview: MarketOverview = {
+  data: "all",
+  asOf: "2026-11-11T12:00:00.000Z",
+  assetCount: 2,
+  pricedAssetCount: 2,
+  issuerCount: 2,
+  chainCount: 1,
+  convertibleAssetCount: 2,
+  totalMarketCap: "36574000.6",
+  totalTvl: "4510000",
+  volume24h: "1354000.25",
+  change24hBps: 31,
+  simulated: true,
+  sources: ["simulated_feed"],
+};
+
+export const marketMovers: MarketMovers = {
+  data: "all",
+  gainers: [moverB, moverA],
+  losers: [],
+  topByVolume: [moverA, moverB],
+  topByTvl: [moverA, moverB],
+  newlyListed: [
+    { id: "tgold-b", symbol: "TGOLD-B", name: moverB.name, registeredAt: T0, market: moverB },
+    { id: "tgold-a", symbol: "TGOLD-A", name: moverA.name, registeredAt: T0, market: moverA },
+  ],
+};
+
+export const categoryList: CategoryList = {
+  data: "all",
+  items: [
+    {
+      category: "Synthetic commodity claim (test only)",
+      assetCount: 2,
+      marketCap: "36574000.6",
+      volume24h: "1354000.25",
+      tvl: "4510000",
+      simulated: true,
+      sources: ["simulated_feed"],
+    },
+  ],
+};
+
+export const chainList: ChainList = {
+  data: "all",
+  items: [
+    {
+      chain: "near-testnet",
+      assetCount: 2,
+      value: "36574000.6",
+      supplies: [
+        { id: "tgold-a", supply: "12400000000" },
+        { id: "tgold-b", supply: "1240000000000" },
+      ],
+      simulated: true,
+      sources: ["simulated_feed"],
+    },
+  ],
+};
+
+export const assetMetadata: AssetMetadata = {
+  id: "tgold-a",
+  canonicalAssetId: "syn-gold-oz",
+  category: "Synthetic commodity claim (test only)",
+  profile: {
+    description:
+      "A synthetic test token for one fictional troy ounce of gold. Not backed by anything.",
+    tags: ["synthetic", "gold", "commodity"],
+    sections: {
+      overview: "SYNTHETIC TEST ASSET. Issued by the project for the testnet demo.",
+      risk: "Not backed by any asset. Parity conversion says nothing about price.",
+    },
+    convertible: true,
+    bridgeable: false,
+    source: "simulated_feed",
+    simulated: true,
+    updatedAt: T0,
+  },
+};
+
+export const assetIssuerView: AssetIssuerView = {
+  issuer: issuerA,
+  assets: [{ id: "tgold-a", symbol: "TGOLD-A", name: "SYNTHETIC TEST Gold A", status: "active" }],
+};
+
+export const assetChainList = {
+  items: [
+    {
+      chain: "near-testnet",
+      contract: "tgold-a.pontis.testnet",
+      role: "native",
+      supply: "12400000000",
+      supplyAsOf: "2026-11-11T00:00:00.000Z",
+      simulated: true,
+    },
+  ],
+};
+
+export const assetDocumentList = {
+  items: [
+    {
+      title: "TGOLD-A dossier",
+      uri: "docs/asset-dossiers/TGOLD-A.md",
+      sha256: SHA,
+      origin: "registry_evidence" as const,
+      provenance: "issuer_provided" as const,
+    },
+  ],
+};
+
+export const activityList = {
+  items: [
+    {
+      kind: "conversion" as const,
+      at: "2026-11-11T10:20:00.000Z",
+      accountId: "sim-user-3.testnet",
+      fromId: "tgold-a",
+      toId: "tgold-b",
+      amountIn: "5000000",
+      amountOut: "4995000000",
+      fee: "5000000",
+      source: "simulated_feed" as const,
+      simulated: true,
+    },
+  ],
+  nextCursor: null,
+};
+
+export const compareResponse: CompareResponse = {
+  data: "all",
+  items: [directoryItemA, directoryItemB].map((i) => ({
+    id: i.id,
+    symbol: i.symbol,
+    name: i.name,
+    canonicalAssetId: i.canonicalAssetId,
+    issuer: i.issuer,
+    status: i.status,
+    verificationStatus: i.verificationStatus,
+    chains: i.chains,
+    convertible: i.convertible,
+    bridgeable: i.bridgeable,
+    market: i.market,
+    navPerToken: null,
+    premiumToNavBps: null,
+  })),
+  pairs: [
+    {
+      fromId: "tgold-a",
+      toId: "tgold-b",
+      parityRatio: "10",
+      impliedRatio: "10.00497222",
+      deviationBps: 4,
+      simulated: true,
+    },
+    {
+      fromId: "tgold-b",
+      toId: "tgold-a",
+      parityRatio: "0.1",
+      impliedRatio: "0.09995031",
+      deviationBps: -4,
+      simulated: true,
+    },
+  ],
+};
+
+export const searchResult: SearchResult = {
+  q: "gold",
+  assets: [tgoldASummary, tgoldBSummary].map((a) => ({
+    id: a.id,
+    symbol: a.symbol,
+    name: a.name,
+    canonicalAssetName: a.canonicalAssetName,
+    issuer: a.issuer,
+  })),
+  issuers: [],
+  chains: [],
+};
+
+export const issuerLeaderboard: IssuerLeaderboard = {
+  data: "all",
+  items: [
+    {
+      rank: 1,
+      issuer: issuerSummaryA,
+      assetCount: 1,
+      totalMarketCap: "33250000.5",
+      simulated: true,
+      reliabilityScore: null,
+    },
+    {
+      rank: 2,
+      issuer: issuerSummaryB,
+      assetCount: 1,
+      totalMarketCap: "3324000.1",
+      simulated: true,
+      reliabilityScore: null,
+    },
+  ],
+};
+
+export const status: Status = {
+  asOf: "2026-11-11T12:00:00.000Z",
+  health,
+  prices: {
+    real: { latestAt: null, ageSeconds: null, stale: true },
+    simulated: { latestAt: "2026-11-11T11:55:00.000Z", ageSeconds: 300, stale: false },
+  },
+  marketJobs: { latestAt: "2026-11-11T11:59:30.000Z", ageSeconds: 30, stale: false },
+  routes: { approved: 1, suspended: 0, proposed: 0 },
+  reserves: null,
+  bridge: null,
+  incidents: [],
+};
+
+const metricsAsOf = "2026-11-11T12:00:00.000Z";
+const publicMetrics: Metric[] = [
+  {
+    key: "conversion_success_rate",
+    unit: "ratio",
+    scope: "window",
+    available: true,
+    simulated: true,
+    values: { "24h": "0.950000", "7d": "0.975000", all: null },
+  },
+  {
+    key: "quote_to_settle_latency_seconds_p95",
+    unit: "seconds",
+    scope: "window",
+    available: true,
+    simulated: true,
+    values: { "24h": "41.250", "7d": "52.000", all: "52.000" },
+  },
+  {
+    key: "indexer_lag_blocks",
+    unit: "blocks",
+    scope: "now",
+    available: true,
+    simulated: false,
+    value: 2,
+  },
+  {
+    key: "representations_active",
+    unit: "count",
+    scope: "now",
+    available: true,
+    simulated: true,
+    value: 2,
+  },
+  { key: "volume_usd", unit: "usd", scope: "window", available: false, availableFrom: "phase 1" },
+];
+
+export const protocolMetrics: ProtocolMetrics = {
+  asOf: metricsAsOf,
+  windows: ["24h", "7d", "all"],
+  metrics: publicMetrics,
+};
+
+export const adminMetrics: AdminMetrics = {
+  asOf: metricsAsOf,
+  windows: ["24h", "7d", "all"],
+  metrics: [
+    ...publicMetrics,
+    {
+      key: "requires_reconciliation_open",
+      unit: "count",
+      scope: "now",
+      available: true,
+      simulated: true,
+      value: 1,
+    },
+  ],
+  breakdowns: [
+    {
+      key: "vault_inventory_base_units",
+      unit: "base_units",
+      scope: "now",
+      simulated: true,
+      value: { "tgold-a": "1000000", "tgold-b": "500000000" },
+    },
+  ],
+  requiresReconciliationQuoteIds: ["c6a9f0a4-2b8e-4a53-8f06-2b9a0a6f3e11"],
 };

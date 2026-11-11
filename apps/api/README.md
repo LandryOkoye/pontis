@@ -14,7 +14,15 @@ pnpm --filter @pontis/api start          # migrates, starts on :3000, syncs the 
 
 ## Endpoints
 
-`POST /v1/routes/compare`, `POST /v1/quotes` (201, or 422 with a reason code), `GET /v1/quotes/{id}`, `POST /v1/conversions` (needs an `Idempotency-Key` header), `POST /v1/conversions/{id}/submitted`, `GET /v1/transactions/{id}`, `GET /v1/transactions?account=`, `GET /v1/health`, `GET /v1/health/live`, `GET /v1/health/ready`, `/v1/issuers`, `/v1/issuers/{id}`, `/v1/assets`, `/v1/assets/{id}`, `/v1/assets/{id}/compatibility`. Paths and schemas come from `@pontis/api-types`, and each response is validated against its schema before it is sent. Errors are `{code, message, details?}`.
+`POST /v1/routes/compare`, `POST /v1/quotes` (201, or 422 with a reason code), `GET /v1/quotes/{id}`, `POST /v1/conversions` (needs an `Idempotency-Key` header), `POST /v1/conversions/{id}/submitted`, `GET /v1/transactions/{id}`, `GET /v1/transactions?account=`, `GET /v1/health`, `GET /v1/health/live`, `GET /v1/health/ready`, `/v1/issuers`, `/v1/issuers/{id}`, `/v1/assets`, `/v1/assets/{id}`, `/v1/assets/{id}/compatibility`, `GET /v1/metrics/protocol`, `GET /v1/admin/metrics`, `GET /metrics` (see Metrics below). Paths and schemas come from `@pontis/api-types`, and each response is validated against its schema before it is sent. Errors are `{code, message, details?}`.
+
+## Market reads
+
+`GET /v1/assets` is the asset directory: `q` (all words, matched against symbol, name, claim, issuer, category and tags), `category`, `issuerId`, `chain`, `verification`, `status`, `convertible`, `bridgeable`, `sort` (`id` by default, or `name`, `price`, `marketCap`, `tvl`, `volume24h`, `change24h`, `change7d`, `change30d`), `order`, `limit` (25, at most 100) and an opaque `cursor` that only works for the query it came from. Each row carries a `market` block and a 7 day `sparkline`; both are null for an asset with no price.
+
+`GET /v1/assets/{id}/charts/{price,nav,supply,volume}` take `interval` (`1m` to `1d`), `from`, `to` (at most 5000 buckets) and return `{points, interval, from, to, source, simulated, filledPoints}`.
+
+**Real and simulated data are never mixed in one figure.** `data=real|simulated|all` picks the class (`all` prefers real and falls back to simulated), and every `market` block, sparkline, chart and point says `simulated` and its `sources`. Today almost everything is simulated by [`apps/simulator`](../simulator/README.md). Screens, endpoints and caveats for the frontend are in [`docs/api/FRONTEND_HANDOFF.md`](../../docs/api/FRONTEND_HANDOFF.md); `API_MODE=fixtures` serves the example data with no chain or database. The reads are public and carry an `ETag` and `Cache-Control: public, max-age=5`; send `If-None-Match` to get a `304`.
 
 ## Quotes
 
@@ -89,6 +97,23 @@ The body:
 
 ```bash
 curl -s -H "Authorization: Bearer $ADMIN_API_KEY" $API/v1/admin/reconciliation
+```
+
+### Metrics
+
+Three endpoints serve the success metrics (`docs/success-metrics.md` on the docs branch), all from one query module set in `src/metrics/`, so they cannot disagree. Every number is computed from the database when asked; nothing is hand-entered, and nothing simulated becomes real by being counted (each metric says `simulated`).
+
+| Endpoint                   | Audience                                                                                                    | Cache                |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------- |
+| `GET /v1/metrics/protocol` | Public aggregates                                                                                           | `public, max-age=30` |
+| `GET /v1/admin/metrics`    | Admin key; adds per-representation amounts and the IDs of open `REQUIRES_RECONCILIATION` quotes             | `no-store`, audited  |
+| `GET /metrics`             | Prometheus text 0.0.4, admin key, `pontis_<key>` gauges with labels `window`, `representation`, `simulated` | `no-store`, audited  |
+
+`/metrics` takes the admin bearer key (use the scrape config's `authorization`) because it exports the per-representation amounts the public endpoint omits. Windows `24h` and `7d` roll back from `asOf`; `all` has no lower bound. Rates are decimal strings at 6 places, latencies seconds at 3 places, both from integer arithmetic; a rate with no denominator is `null`. `indexer_lag_blocks` reads the chain head and is `null` when the RPC fails. Metrics that need later-phase data are listed with `available: false` and `availableFrom`. Each metric's `note` records how an ambiguous formula was read.
+
+```bash
+curl -s $API/v1/metrics/protocol
+curl -s -H "Authorization: Bearer $ADMIN_API_KEY" $API/metrics
 ```
 
 ### Running with the indexer

@@ -1,8 +1,10 @@
 // Deploys synthetic-token twice (TGOLD-A, TGOLD-B) and pontis-core to sub-accounts of the
-// deployer and initialises them. Idempotent: an account whose contract already answers its owner
-// view is not re-initialised, and code is only replaced with --redeploy.
+// deployer and initialises them. With --catalogue it also deploys one synthetic-token per demo
+// catalogue representation (scripts/lib/catalogue.ts) on `<representation id>.<deployer>`.
+// Idempotent: an account whose contract already answers its owner view is not re-initialised,
+// and code is only replaced with --redeploy.
 //
-//   pnpm --filter @pontis/scripts deploy-testnet [--redeploy]
+//   pnpm --filter @pontis/scripts deploy-testnet [--redeploy] [--catalogue]
 //
 // Needs built wasm (scripts/build-contracts.sh) and DEPLOYER_ACCOUNT_ID plus a key; see
 // docs/architecture/deployments.md; the result is written to docs/architecture/deployment-record.md.
@@ -15,6 +17,7 @@ import { assertDeployerKey, connect, type Chain } from "./lib/chain.ts";
 import { loadConfig } from "./lib/config.ts";
 import { REPO_ROOT } from "./lib/evidence.ts";
 import {
+  catalogueTargets,
   fundingFor,
   renderDeployments,
   targets,
@@ -41,17 +44,24 @@ async function ensureAccount(chain: Chain, target: Target, funding: bigint): Pro
   console.log(`created ${target.accountId}`);
 }
 
-export async function deploy(chain: Chain, redeploy: boolean): Promise<void> {
+export async function deploy(
+  chain: Chain,
+  redeploy: boolean,
+  options: { catalogue?: boolean } = {},
+): Promise<void> {
   await assertDeployerKey(chain);
   const { config } = chain;
   const rows: { label: string; accountId: string; codeHash: string }[] = [];
   const provider = new JsonRpcProvider({ url: config.rpcUrl });
-  const labels = ["pontis-core", "TGOLD-A", "TGOLD-B"];
-  for (const [i, target] of targets(config.deployerId, {
-    core: config.coreId,
-    a: config.tokenAId,
-    b: config.tokenBId,
-  }).entries()) {
+  const plan = [
+    ...targets(config.deployerId, {
+      core: config.coreId,
+      a: config.tokenAId,
+      b: config.tokenBId,
+    }),
+    ...(options.catalogue ? catalogueTargets(config.deployerId) : []),
+  ];
+  for (const target of plan) {
     const code = readFileSync(wasmPath(target.wasm));
     await ensureAccount(chain, target, fundingFor(code.length));
     const owner = await chain
@@ -79,7 +89,7 @@ export async function deploy(chain: Chain, redeploy: boolean): Promise<void> {
       console.log(`${target.accountId} already initialised (owner ${owner}); init skipped`);
     }
     rows.push({
-      label: labels[i] as string,
+      label: target.label,
       accountId: target.accountId,
       codeHash: createHash("sha256").update(code).digest("hex"),
     });
@@ -96,5 +106,7 @@ export async function deploy(chain: Chain, redeploy: boolean): Promise<void> {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  await deploy(connect(loadConfig()), process.argv.includes("--redeploy"));
+  await deploy(connect(loadConfig()), process.argv.includes("--redeploy"), {
+    catalogue: process.argv.includes("--catalogue"),
+  });
 }

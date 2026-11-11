@@ -17,7 +17,7 @@ describe("openapi.yaml", () => {
     await expect(SwaggerParser.validate(specPath)).resolves.toBeTruthy();
   });
 
-  it("documents exactly the BuildPlan §8 endpoints plus the admin reconciliation endpoint", () => {
+  it("documents exactly the BuildPlan §8 endpoints plus the admin reconciliation and metrics endpoints", () => {
     const doc = buildOpenApiDocument();
     const actual = Object.entries(doc.paths ?? {})
       .flatMap(([path, item]) =>
@@ -34,6 +34,23 @@ describe("openapi.yaml", () => {
         "GET /v1/assets",
         "GET /v1/assets/{id}",
         "GET /v1/assets/{id}/compatibility",
+        "GET /v1/assets/{id}/charts/price",
+        "GET /v1/assets/{id}/charts/nav",
+        "GET /v1/assets/{id}/charts/supply",
+        "GET /v1/assets/{id}/charts/volume",
+        "GET /v1/assets/{id}/metadata",
+        "GET /v1/assets/{id}/issuer",
+        "GET /v1/assets/{id}/chains",
+        "GET /v1/assets/{id}/documents",
+        "GET /v1/assets/{id}/activity",
+        "GET /v1/compare",
+        "GET /v1/search",
+        "GET /v1/issuers/leaderboard",
+        "GET /v1/status",
+        "GET /v1/market/overview",
+        "GET /v1/market/movers",
+        "GET /v1/market/categories",
+        "GET /v1/market/chains",
         "POST /v1/routes/compare",
         "POST /v1/quotes",
         "GET /v1/quotes/{id}",
@@ -42,13 +59,21 @@ describe("openapi.yaml", () => {
         "GET /v1/transactions/{id}",
         "GET /v1/transactions",
         "GET /v1/admin/reconciliation",
+        "GET /v1/metrics/protocol",
+        "GET /v1/admin/metrics",
+        "GET /metrics",
       ].sort(),
     );
   });
 
   it("requires a header only where one is defined: Idempotency-Key on conversions, a bearer key on admin", () => {
     const withHeader = Object.values(ENDPOINTS).filter((e) => "headers" in e);
-    expect(withHeader.map((e) => e.path)).toEqual(["/v1/conversions", "/v1/admin/reconciliation"]);
+    expect(withHeader.map((e) => e.path)).toEqual([
+      "/v1/conversions",
+      "/v1/admin/reconciliation",
+      "/v1/admin/metrics",
+      "/metrics",
+    ]);
   });
 
   it("gives every endpoint a structured error response for failures, except declared failureResponses", () => {

@@ -4,6 +4,7 @@ import {
   CompatibilitySchema,
   IssuerSchema,
   IssuerSummarySchema,
+  ListAssetsQuerySchema,
 } from "@pontis/api-types";
 import { fixtureSource } from "@pontis/near-client/fixtures";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -11,9 +12,9 @@ import {
   getAsset,
   getAssetCompatibility,
   getIssuer,
-  listAssets,
   listIssuers,
 } from "../src/catalog/repository.ts";
+import { listDirectory } from "../src/market/directory.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
 import { createTestDb, type TestDb } from "@pontis/db/testing";
 
@@ -39,7 +40,9 @@ describe("catalog repository", () => {
   });
 
   it("lists assets with the embedded claim name and issuer, and details with exact amounts", async () => {
-    const list = await listAssets(t.db);
+    const list = (
+      await listDirectory(t.db, ListAssetsQuerySchema.parse({}), new Date("2026-11-11T12:00:00Z"))
+    ).items;
     list.forEach((a) => AssetSummarySchema.parse(a));
     expect(list.map((a) => [a.id, a.decimals, a.canonicalAssetName])).toEqual([
       ["tgold-a", 6, "Synthetic Gold, one troy ounce"],

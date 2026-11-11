@@ -277,10 +277,19 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/AssetSummary"
+            $ref: "#/components/schemas/AssetDirectoryItem"
+        nextCursor:
+          type:
+            - string
+            - "null"
+        total:
+          type: integer
+          minimum: 0
       required:
         - items
-    AssetSummary:
+        - nextCursor
+        - total
+    AssetDirectoryItem:
       type: object
       properties:
         id:
@@ -311,6 +320,24 @@ components:
           type: boolean
         verificationStatus:
           $ref: "#/components/schemas/VerificationStatus"
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        chains:
+          type: array
+          items:
+            type: string
+        convertible:
+          type: boolean
+        bridgeable:
+          type: boolean
+        market:
+          $ref: "#/components/schemas/MarketSnapshot"
+        sparkline:
+          $ref: "#/components/schemas/Sparkline"
       required:
         - id
         - symbol
@@ -325,6 +352,13 @@ components:
         - issuer
         - synthetic
         - verificationStatus
+        - category
+        - tags
+        - chains
+        - convertible
+        - bridgeable
+        - market
+        - sparkline
     Network:
       type: string
       enum:
@@ -345,6 +379,597 @@ components:
       example:
         num: "1000"
         den: "1"
+    MarketSnapshot:
+      type:
+        - object
+        - "null"
+      properties:
+        price:
+          $ref: "#/components/schemas/PriceString"
+        currency:
+          type: string
+        priceAsOf:
+          $ref: "#/components/schemas/Timestamp"
+        change24hBps:
+          type:
+            - integer
+            - "null"
+        change7dBps:
+          type:
+            - integer
+            - "null"
+        change30dBps:
+          type:
+            - integer
+            - "null"
+        supply:
+          $ref: "#/components/schemas/AmountString"
+        marketCap:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        volume24h:
+          $ref: "#/components/schemas/PriceString"
+        tvl:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        rank:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+      required:
+        - price
+        - currency
+        - priceAsOf
+        - change24hBps
+        - change7dBps
+        - change30dBps
+        - supply
+        - marketCap
+        - volume24h
+        - tvl
+        - rank
+        - sources
+        - simulated
+    PriceString:
+      type: string
+      pattern: ^(0|[1-9][0-9]*)(\.[0-9]{1,8})?$
+      description: "Decimal with up to 8 fractional digits: a price or a value in the quote currency. Never a float."
+      example: "2681.42585338"
+    AmountString:
+      type:
+        - string
+        - "null"
+      pattern: ^(0|[1-9][0-9]*)$
+      description: Non-negative integer in smallest token units, as a decimal string (max u128).
+      example: "1000000"
+    DataSource:
+      type: string
+      enum:
+        - pontis_trades
+        - simulated_feed
+      description: "`pontis_trades` is real testnet activity. `simulated_feed` is the labelled demo market."
+    Sparkline:
+      type:
+        - object
+        - "null"
+      properties:
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceString"
+        simulated:
+          type: boolean
+      required:
+        - interval
+        - points
+        - simulated
+    CandleInterval:
+      type: string
+      enum:
+        - 1m
+        - 5m
+        - 15m
+        - 1h
+        - 4h
+        - 1d
+    DataFilter:
+      type: string
+      enum:
+        - real
+        - simulated
+        - all
+      default: all
+      description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+    PriceChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/PricePoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    PricePoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        open:
+          $ref: "#/components/schemas/PriceString"
+        high:
+          $ref: "#/components/schemas/PriceString"
+        low:
+          $ref: "#/components/schemas/PriceString"
+        close:
+          $ref: "#/components/schemas/PriceString"
+        volumeBase:
+          $ref: "#/components/schemas/AmountString"
+        volumeQuote:
+          $ref: "#/components/schemas/PriceString"
+        trades:
+          type: integer
+          minimum: 0
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - open
+        - high
+        - low
+        - close
+        - volumeBase
+        - volumeQuote
+        - trades
+        - filled
+    NavChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/NavPoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    NavPoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        nav:
+          $ref: "#/components/schemas/PriceString"
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - nav
+        - filled
+    SupplyChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplyPoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    SupplyPoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        supply:
+          $ref: "#/components/schemas/AmountString"
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - supply
+        - filled
+    VolumeChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/VolumePoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    VolumePoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        volumeBase:
+          $ref: "#/components/schemas/AmountString"
+        volumeQuote:
+          $ref: "#/components/schemas/PriceString"
+        trades:
+          type: integer
+          minimum: 0
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - volumeBase
+        - volumeQuote
+        - trades
+        - filled
+    MarketOverview:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        assetCount:
+          type: integer
+          minimum: 0
+        pricedAssetCount:
+          type: integer
+          minimum: 0
+        issuerCount:
+          type: integer
+          minimum: 0
+        chainCount:
+          type: integer
+          minimum: 0
+        convertibleAssetCount:
+          type: integer
+          minimum: 0
+        totalMarketCap:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        totalTvl:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        volume24h:
+          $ref: "#/components/schemas/PriceString"
+        change24hBps:
+          type:
+            - integer
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+      required:
+        - data
+        - asOf
+        - assetCount
+        - pricedAssetCount
+        - issuerCount
+        - chainCount
+        - convertibleAssetCount
+        - totalMarketCap
+        - totalTvl
+        - volume24h
+        - change24hBps
+        - simulated
+        - sources
+    MarketMovers:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        gainers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mover"
+        losers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mover"
+        topByVolume:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mover"
+        topByTvl:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mover"
+        newlyListed:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              symbol:
+                type: string
+              name:
+                type: string
+              registeredAt:
+                $ref: "#/components/schemas/Timestamp"
+              market:
+                allOf:
+                  - $ref: "#/components/schemas/Mover"
+                  - type:
+                      - object
+                      - "null"
+            required:
+              - id
+              - symbol
+              - name
+              - registeredAt
+              - market
+      required:
+        - data
+        - gainers
+        - losers
+        - topByVolume
+        - topByTvl
+        - newlyListed
+    Mover:
+      type: object
+      properties:
+        id:
+          type: string
+        symbol:
+          type: string
+        name:
+          type: string
+        price:
+          $ref: "#/components/schemas/PriceString"
+        change24hBps:
+          type:
+            - integer
+            - "null"
+        marketCap:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        volume24h:
+          $ref: "#/components/schemas/PriceString"
+        tvl:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        simulated:
+          type: boolean
+      required:
+        - id
+        - symbol
+        - name
+        - price
+        - change24hBps
+        - marketCap
+        - volume24h
+        - tvl
+        - simulated
+    CategoryList:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryBreakdown"
+      required:
+        - data
+        - items
+    CategoryBreakdown:
+      type: object
+      properties:
+        category:
+          type: string
+        assetCount:
+          type: integer
+          minimum: 0
+        marketCap:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        volume24h:
+          $ref: "#/components/schemas/PriceString"
+        tvl:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+      required:
+        - category
+        - assetCount
+        - marketCap
+        - volume24h
+        - tvl
+        - simulated
+        - sources
+    ChainList:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChainBreakdown"
+      required:
+        - data
+        - items
+    ChainBreakdown:
+      type: object
+      properties:
+        chain:
+          type: string
+        assetCount:
+          type: integer
+          minimum: 0
+        value:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        supplies:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              supply:
+                $ref: "#/components/schemas/AmountString"
+            required:
+              - id
+              - supply
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+      required:
+        - chain
+        - assetCount
+        - value
+        - supplies
+        - simulated
+        - sources
     Asset:
       type: object
       properties:
@@ -490,11 +1115,6 @@ components:
         - lastReviewedAt
         - synthetic
         - verificationStatus
-    AmountString:
-      type: string
-      pattern: ^(0|[1-9][0-9]*)$
-      description: Non-negative integer in smallest token units, as a decimal string (max u128).
-      example: "1000000"
     CompatibilityList:
       type: object
       properties:
@@ -613,6 +1233,499 @@ components:
         - rejected
         - suspended
         - reapproved
+    AssetMetadata:
+      type: object
+      properties:
+        id:
+          type: string
+        canonicalAssetId:
+          type: string
+        category:
+          type: string
+        profile:
+          $ref: "#/components/schemas/AssetProfile"
+      required:
+        - id
+        - canonicalAssetId
+        - category
+        - profile
+    AssetProfile:
+      type:
+        - object
+        - "null"
+      properties:
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        sections:
+          type: object
+          additionalProperties:
+            type: string
+        convertible:
+          type: boolean
+        bridgeable:
+          type: boolean
+        source:
+          $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - description
+        - tags
+        - sections
+        - convertible
+        - bridgeable
+        - source
+        - simulated
+        - updatedAt
+    AssetIssuerView:
+      type: object
+      properties:
+        issuer:
+          $ref: "#/components/schemas/Issuer"
+        assets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              symbol:
+                type: string
+              name:
+                type: string
+              status:
+                type: string
+            required:
+              - id
+              - symbol
+              - name
+              - status
+      required:
+        - issuer
+        - assets
+    AssetChainList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetChain"
+      required:
+        - items
+    AssetChain:
+      type: object
+      properties:
+        chain:
+          type: string
+        contract:
+          type:
+            - string
+            - "null"
+        role:
+          type: string
+        supply:
+          $ref: "#/components/schemas/AmountString"
+        supplyAsOf:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type:
+            - boolean
+            - "null"
+      required:
+        - chain
+        - contract
+        - role
+        - supply
+        - supplyAsOf
+        - simulated
+    AssetDocumentList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetDocument"
+      required:
+        - items
+    AssetDocument:
+      type: object
+      properties:
+        title:
+          type: string
+        uri:
+          type: string
+        sha256:
+          type:
+            - string
+            - "null"
+        origin:
+          type: string
+          enum:
+            - dossier
+            - registry_evidence
+        provenance:
+          type:
+            - string
+            - "null"
+          enum:
+            - issuer_provided
+            - third_party_attested
+            - independently_verified
+            - null
+      required:
+        - title
+        - uri
+        - sha256
+        - origin
+        - provenance
+    ActivityList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+        nextCursor:
+          type:
+            - string
+            - "null"
+      required:
+        - items
+        - nextCursor
+    ActivityItem:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - conversion
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        fromId:
+          type: string
+        toId:
+          type: string
+        amountIn:
+          $ref: "#/components/schemas/AmountString"
+        amountOut:
+          $ref: "#/components/schemas/AmountString"
+        fee:
+          $ref: "#/components/schemas/AmountString"
+        source:
+          $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+      required:
+        - kind
+        - at
+        - accountId
+        - fromId
+        - toId
+        - amountIn
+        - amountOut
+        - fee
+        - source
+        - simulated
+    CompareResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompareItem"
+        pairs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParityPair"
+      required:
+        - data
+        - items
+        - pairs
+    CompareItem:
+      type: object
+      properties:
+        id:
+          type: string
+        symbol:
+          type: string
+        name:
+          type: string
+        canonicalAssetId:
+          type: string
+        issuer:
+          $ref: "#/components/schemas/IssuerSummary"
+        status:
+          $ref: "#/components/schemas/RecordStatus"
+        verificationStatus:
+          $ref: "#/components/schemas/VerificationStatus"
+        chains:
+          type: array
+          items:
+            type: string
+        convertible:
+          type: boolean
+        bridgeable:
+          type: boolean
+        market:
+          $ref: "#/components/schemas/MarketSnapshot"
+        navPerToken:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        premiumToNavBps:
+          type:
+            - integer
+            - "null"
+      required:
+        - id
+        - symbol
+        - name
+        - canonicalAssetId
+        - issuer
+        - status
+        - verificationStatus
+        - chains
+        - convertible
+        - bridgeable
+        - market
+        - navPerToken
+        - premiumToNavBps
+    ParityPair:
+      type: object
+      properties:
+        fromId:
+          type: string
+        toId:
+          type: string
+        parityRatio:
+          $ref: "#/components/schemas/PriceString"
+        impliedRatio:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        deviationBps:
+          type:
+            - integer
+            - "null"
+        simulated:
+          type:
+            - boolean
+            - "null"
+      required:
+        - fromId
+        - toId
+        - parityRatio
+        - impliedRatio
+        - deviationBps
+        - simulated
+    SearchResult:
+      type: object
+      properties:
+        q:
+          type: string
+        assets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              symbol:
+                type: string
+              name:
+                type: string
+              canonicalAssetName:
+                type: string
+              issuer:
+                $ref: "#/components/schemas/IssuerSummary"
+            required:
+              - id
+              - symbol
+              - name
+              - canonicalAssetName
+              - issuer
+        issuers:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssuerSummary"
+        chains:
+          type: array
+          items:
+            type: object
+            properties:
+              chain:
+                type: string
+              assetCount:
+                type: integer
+                minimum: 0
+            required:
+              - chain
+              - assetCount
+      required:
+        - q
+        - assets
+        - issuers
+        - chains
+    IssuerLeaderboard:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              rank:
+                type: integer
+                exclusiveMinimum: 0
+              issuer:
+                $ref: "#/components/schemas/IssuerSummary"
+              assetCount:
+                type: integer
+                minimum: 0
+              totalMarketCap:
+                allOf:
+                  - $ref: "#/components/schemas/PriceString"
+                  - type:
+                      - string
+                      - "null"
+              simulated:
+                type:
+                  - boolean
+                  - "null"
+              reliabilityScore:
+                type:
+                  - integer
+                  - "null"
+                minimum: 0
+                maximum: 100
+            required:
+              - rank
+              - issuer
+              - assetCount
+              - totalMarketCap
+              - simulated
+              - reliabilityScore
+      required:
+        - data
+        - items
+    Status:
+      type: object
+      properties:
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        health:
+          $ref: "#/components/schemas/Health"
+        prices:
+          type: object
+          properties:
+            real:
+              type: object
+              properties:
+                latestAt:
+                  $ref: "#/components/schemas/Timestamp"
+                ageSeconds:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 0
+                stale:
+                  type: boolean
+              required:
+                - latestAt
+                - ageSeconds
+                - stale
+            simulated:
+              type: object
+              properties:
+                latestAt:
+                  $ref: "#/components/schemas/Timestamp"
+                ageSeconds:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 0
+                stale:
+                  type: boolean
+              required:
+                - latestAt
+                - ageSeconds
+                - stale
+          required:
+            - real
+            - simulated
+        marketJobs:
+          type: object
+          properties:
+            latestAt:
+              $ref: "#/components/schemas/Timestamp"
+            ageSeconds:
+              type:
+                - integer
+                - "null"
+              minimum: 0
+            stale:
+              type: boolean
+          required:
+            - latestAt
+            - ageSeconds
+            - stale
+        routes:
+          type: object
+          properties:
+            approved:
+              type: integer
+              minimum: 0
+            suspended:
+              type: integer
+              minimum: 0
+            proposed:
+              type: integer
+              minimum: 0
+          required:
+            - approved
+            - suspended
+            - proposed
+        reserves:
+          type: "null"
+        bridge:
+          type: "null"
+        incidents:
+          type: array
+          items:
+            type: object
+            properties:
+              at:
+                $ref: "#/components/schemas/Timestamp"
+              summary:
+                type: string
+            required:
+              - at
+              - summary
+      required:
+        - asOf
+        - health
+        - prices
+        - marketJobs
+        - routes
+        - reserves
+        - bridge
+        - incidents
     CompareRoutesResponse:
       type: object
       properties:
@@ -1043,6 +2156,164 @@ components:
         - conversionId
         - reason
         - flaggedAt
+    ProtocolMetrics:
+      type: object
+      properties:
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricWindow"
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Metric"
+      required:
+        - asOf
+        - windows
+        - metrics
+    MetricWindow:
+      type: string
+      enum:
+        - 24h
+        - 7d
+        - all
+      description: Rolling window ending at `asOf`; `all` has no lower bound.
+    Metric:
+      type: object
+      properties:
+        key:
+          type: string
+        unit:
+          $ref: "#/components/schemas/MetricUnit"
+        scope:
+          type: string
+          enum:
+            - window
+            - now
+        available:
+          type: boolean
+        availableFrom:
+          type: string
+        simulated:
+          type: boolean
+        note:
+          type: string
+        values:
+          $ref: "#/components/schemas/WindowedValues"
+        value:
+          $ref: "#/components/schemas/MetricValue"
+      required:
+        - key
+        - unit
+        - scope
+        - available
+    MetricUnit:
+      type: string
+      enum:
+        - count
+        - ratio
+        - percent
+        - seconds
+        - blocks
+        - base_units
+        - usd
+        - bps
+      description: "`ratio` is a share from 0 to 1 and `percent` a share from 0 to 100, both with 6 decimals; `seconds` has 3 decimals."
+    WindowedValues:
+      type: object
+      properties:
+        24h:
+          $ref: "#/components/schemas/MetricValue"
+        7d:
+          $ref: "#/components/schemas/MetricValue"
+        all:
+          $ref: "#/components/schemas/MetricValue"
+      required:
+        - 24h
+        - 7d
+        - all
+    MetricValue:
+      anyOf:
+        - type: integer
+          minimum: 0
+        - type: string
+          pattern: ^[0-9]+\.[0-9]+$
+        - type: "null"
+      description: An integer count, or a decimal string for rates and latencies; null when it cannot be computed (no data in the window, or an unreachable chain head).
+    AdminMetrics:
+      type: object
+      properties:
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricWindow"
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Metric"
+        breakdowns:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricBreakdown"
+        requiresReconciliationQuoteIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/Uuid"
+      required:
+        - asOf
+        - windows
+        - metrics
+        - breakdowns
+        - requiresReconciliationQuoteIds
+    MetricBreakdown:
+      type: object
+      properties:
+        key:
+          type: string
+        unit:
+          type: string
+          enum:
+            - base_units
+        scope:
+          type: string
+          enum:
+            - window
+            - now
+        simulated:
+          type: boolean
+        note:
+          type: string
+        values:
+          type: object
+          properties:
+            24h:
+              $ref: "#/components/schemas/RepresentationAmounts"
+            7d:
+              $ref: "#/components/schemas/RepresentationAmounts"
+            all:
+              $ref: "#/components/schemas/RepresentationAmounts"
+          required:
+            - 24h
+            - 7d
+            - all
+        value:
+          $ref: "#/components/schemas/RepresentationAmounts"
+      required:
+        - key
+        - unit
+        - scope
+        - simulated
+    RepresentationAmounts:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/AmountString"
+    PrometheusText:
+      type: string
+      description: "Prometheus text exposition format 0.0.4: `# HELP` and `# TYPE` lines, then samples named `pontis_<key>` with labels `window`, `representation` and `simulated`."
   parameters: {}
 paths:
   /v1/health:
@@ -1194,10 +2465,112 @@ paths:
   /v1/assets:
     get:
       operationId: listAssets
-      summary: List asset representations
-      description: Each representation embeds its canonical claim name and issuer summary. Canonical claim and representation are separate records; use `GET /v1/assets/{id}` for the claim detail.
+      summary: "Asset directory: search, filter, sort, paginate"
+      description: One row per representation with its canonical claim name, issuer summary, filter facts, latest market figures and a 7 day sparkline. `market` is null when the asset has no price. Every market figure carries `simulated` and `sources`; `data` selects real rows, simulated rows, or real where they exist (`all`). Sorting by a figure that is null for some assets puts those last. Cursors are opaque and valid only for the same query.
       tags:
-        - Registry
+        - Market
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          required: false
+          name: q
+          in: query
+        - schema:
+            type: string
+            maxLength: 100
+          required: false
+          name: category
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: issuerId
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: chain
+          in: query
+        - schema:
+            type: string
+            enum:
+              - unverified
+              - issuer_attested
+              - third_party_attested
+              - independently_verified
+          required: false
+          name: verification
+          in: query
+        - schema:
+            $ref: "#/components/schemas/RecordStatus"
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: convertible
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: bridgeable
+          in: query
+        - schema:
+            type: string
+            enum:
+              - id
+              - name
+              - price
+              - marketCap
+              - tvl
+              - volume24h
+              - change24h
+              - change7d
+              - change30d
+            default: id
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: asc
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
       responses:
         "200":
           description: Success
@@ -1205,6 +2578,442 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/price:
+    get:
+      operationId: getAssetPriceChart
+      summary: OHLCV candles
+      description: "Candles in `[from, to)`, ascending. `from` defaults to a window of at most 500 buckets before `to`, `to` to now; a range of more than 5000 buckets is refused. A bucket without an observation repeats the previous close and has `filled: true`. Volume of parity conversions is units moved, not a market measure."
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/nav:
+    get:
+      operationId: getAssetNavChart
+      summary: NAV per token
+      description: "The last NAV before the end of each bucket, carried forward; `filled: true` when the bucket has no print of its own. Buckets before the first print are omitted, so an asset without a NAV has empty `points`. For `data=all` the real series is used when one exists, otherwise the simulated one."
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NavChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/supply:
+    get:
+      operationId: getAssetSupplyChart
+      summary: Circulating supply
+      description: "Supply summed over chains: the last snapshot before the end of each bucket, carried forward, `filled: true` when the bucket has none of its own. Smallest units. Series selection for `data=all` is as for NAV."
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplyChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/volume:
+    get:
+      operationId: getAssetVolumeChart
+      summary: Traded volume
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VolumeChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/market/overview:
+    get:
+      operationId: getMarketOverview
+      summary: Global market stats
+      description: Counts and totals over every asset. Totals include only assets that have the figure (an asset with no known supply has no market cap and is left out of `totalMarketCap`, not counted as zero). `change24hBps` is the market-cap-weighted mean of the assets' 24h changes. `simulated` is true when any included figure is simulated.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketOverview"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/market/movers:
+    get:
+      operationId: getMarketMovers
+      summary: Gainers, losers, top volume, top TVL, newly listed
+      description: Each list has at most `limit` entries and only includes assets with the relevant figure. Gainers have a positive 24h change and losers a negative one.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketMovers"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/market/categories:
+    get:
+      operationId: getMarketCategories
+      summary: Breakdown by category
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/market/chains:
+    get:
+      operationId: getMarketChains
+      summary: Breakdown by chain
+      description: Supply per chain valued at each asset's price. Only the NEAR testnet has real supply today; other chains appear when assets have profile entries or supply snapshots there.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChainList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "429":
           description: "Rate limited. Codes: RATE_LIMITED."
           content:
@@ -1279,6 +3088,377 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/metadata:
+    get:
+      operationId: getAssetMetadata
+      summary: Dossier metadata (overview, legal, custody, risk)
+      description: Off-chain dossier content, labelled with `source` and `simulated`. It never changes a verification status; `profile` is null when no dossier was loaded.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMetadata"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/issuer:
+    get:
+      operationId: getAssetIssuer
+      summary: The asset's issuer with its evidence and its other assets
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetIssuerView"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/chains:
+    get:
+      operationId: getAssetChains
+      summary: Where the asset exists, with supply per chain
+      description: The dossier's chain list plus the NEAR contract from the registry, each with the latest supply snapshot when one exists.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetChainList"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/documents:
+    get:
+      operationId: getAssetDocuments
+      summary: Dossier documents and registry evidence
+      description: Registry evidence keeps its provenance label; the API never upgrades it. Hashes are as recorded, not re-checked here.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetDocumentList"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/activity:
+    get:
+      operationId: getAssetActivity
+      summary: Recent conversions involving the asset
+      description: Newest first. Real rows are settled conversions on the testnet; simulated rows come from the demo simulator and say so. Cursors are opaque.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/compare:
+    get:
+      operationId: compareAssets
+      summary: Compare representations side by side
+      description: Two to six asset IDs. Each item carries price, NAV and premium to NAV; `pairs` gives, for assets that share a canonical claim, the parity ratio from the registry's unit definitions, the implied market ratio and the deviation between them. All figures are from the data class selected by `data` and say whether they are simulated.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[a-z0-9-]+(,[a-z0-9-]+){1,5}$
+          required: true
+          name: ids
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompareResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/search:
+    get:
+      operationId: search
+      summary: Search assets, issuers and chains
+      description: All words must match. Assets rank by exact symbol, then symbol prefix, then ID. At most 10 assets, 5 issuers and 5 chains.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          required: true
+          name: q
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuers/leaderboard:
+    get:
+      operationId: getIssuerLeaderboard
+      summary: Issuers ranked by market cap of their assets
+      description: "`reliabilityScore` is null until redemption and reserve data exist; no score is invented. Issuers without a known market cap rank after those with one."
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuerLeaderboard"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/status:
+    get:
+      operationId: getStatus
+      summary: "Transparency feed: indexer, price and job freshness, route health"
+      description: "`reserves` and `bridge` are null until those features exist. `stale` marks a price or job older than its threshold (15 minutes for prices, 5 minutes for the market jobs); simulated prices are reported apart from real ones."
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
         "429":
           description: "Rate limited. Codes: RATE_LIMITED."
           content:
@@ -1678,6 +3858,114 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReconciliationReport"
+        "401":
+          description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/metrics/protocol:
+    get:
+      operationId: getProtocolMetrics
+      summary: Protocol success metrics
+      description: "Public aggregates for the windows `24h`, `7d` and `all`, rolling from `asOf`. No account IDs, quote IDs or per-representation amounts. Metrics that need later-phase data are listed with `available: false` and `availableFrom`. Cached for 30 seconds."
+      tags:
+        - Metrics
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtocolMetrics"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/admin/metrics:
+    get:
+      operationId: getAdminMetrics
+      summary: Protocol success metrics, admin view
+      description: Admin only, audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.
+      tags:
+        - Admin
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <ADMIN_API_KEY>`."
+            example: Bearer 0123456789abcdef0123456789abcdef
+          required: true
+          description: "`Bearer <ADMIN_API_KEY>`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMetrics"
+        "401":
+          description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /metrics:
+    get:
+      operationId: getPrometheusMetrics
+      summary: Prometheus exposition of the metrics
+      description: Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same admin bearer key (Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.
+      tags:
+        - Admin
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <ADMIN_API_KEY>`."
+            example: Bearer 0123456789abcdef0123456789abcdef
+          required: true
+          description: "`Bearer <ADMIN_API_KEY>`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            text/plain; version=0.0.4:
+              schema:
+                $ref: "#/components/schemas/PrometheusText"
         "401":
           description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
           content:

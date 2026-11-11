@@ -4,7 +4,10 @@ import type { Db } from "@pontis/db";
 import type { TxVerifier } from "@pontis/near-client";
 import { errorHandler, notFoundHandler } from "./errors.ts";
 import { loggerOptions } from "./logging.ts";
+import { registerPublicCaching } from "./routes/caching.ts";
 import { registerCatalogRoutes } from "./routes/catalog.ts";
+import { registerMetricsRoutes } from "./routes/metrics.ts";
+import { registerMarketRoutes } from "./routes/market.ts";
 import type { ConversionChain } from "./conversions/chain.ts";
 import type { QuoteDeps } from "./quotes/service.ts";
 import { registerAdminRoutes } from "./routes/admin.ts";
@@ -25,6 +28,8 @@ export interface AppDeps {
   conversionChain: ConversionChain;
   /** Checks reported transaction hashes against the chain before they are shown as verified. */
   txVerifier: TxVerifier;
+  /** Clock for market reads (chart ranges, sparklines); tests pin it. */
+  now?: () => Date;
   /** Bearer key for the admin endpoints; without one they refuse everyone. */
   adminApiKey?: string;
   /** CORS origins and rate limits; see `registerSecurity`. */
@@ -46,7 +51,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // Queued after the security plugins, so their hooks cover every route below.
   app.register(async (scope) => {
     registerHealthRoute(scope, deps.db, deps.chainHeight, deps.health);
+    registerPublicCaching(scope);
     registerCatalogRoutes(scope, deps.db);
+    registerMarketRoutes(scope, {
+      db: deps.db,
+      chainHeight: deps.chainHeight,
+      ...(deps.health ? { health: deps.health } : {}),
+      ...(deps.now ? { now: deps.now } : {}),
+    });
     registerQuoteRoutes(scope, { db: deps.db, ...deps.quotes });
     registerConversionRoutes(scope, {
       db: deps.db,
@@ -56,6 +68,12 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       ...(deps.quotes.now ? { now: deps.quotes.now } : {}),
     });
     registerAdminRoutes(scope, deps.db, deps.adminApiKey);
+    registerMetricsRoutes(scope, {
+      db: deps.db,
+      chainHeight: deps.chainHeight,
+      adminApiKey: deps.adminApiKey,
+      ...(deps.now ? { now: deps.now } : {}),
+    });
   });
   return app;
 }
