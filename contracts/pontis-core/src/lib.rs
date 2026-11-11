@@ -36,6 +36,13 @@ mod nav;
 mod policy;
 mod price;
 mod quote;
+mod redemption;
+mod redemption_events;
+mod redemption_exit;
+mod redemption_flow;
+mod redemption_terms;
+mod redemption_types;
+mod redemption_views;
 mod registry;
 mod reserve;
 mod reserve_status;
@@ -66,6 +73,8 @@ pub use mint_types::{MintHeadroom, MintRequest, MintStatus};
 pub use nav::{NavAttestation, NavStrike, NAV_DOMAIN, NAV_VERSION};
 pub use price::{PriceAttestation, PriceRecord};
 pub use quote::{parse_nonce, ConversionMsg, QuoteInput, QUOTE_DOMAIN, QUOTE_VERSION};
+pub use redemption_events::RedemptionEvent;
+pub use redemption_types::*;
 pub use reserve_types::*;
 pub use route::{RouteRefusal, RouteTerms, RouteView};
 pub use signers::{SignerError, SignerEvent, SignerKey};
@@ -123,6 +132,13 @@ enum StorageKey {
     SupplyRead,
     MintRequests,
     MintByRep,
+    RedemptionTerms,
+    Redemptions,
+    RedemptionsByUser,
+    RedemptionsByRep,
+    RedemptionOpen,
+    EscrowTotals,
+    IssuerReliability,
 }
 
 #[derive(PanicOnDefault)]
@@ -218,6 +234,17 @@ pub struct Contract {
     mint_requests: LookupMap<u64, mint_types::MintRequest>,
     mint_seq: u64,
     mint_by_rep: LookupMap<String, Vec<u64>>,
+    /// Enforced redemption terms per representation (ADR 0020 section 7).
+    redemption_terms: LookupMap<String, redemption_types::TermsRecord>,
+    redemptions: LookupMap<u64, redemption_types::Redemption>,
+    redemption_seq: u64,
+    redemptions_by_user: LookupMap<AccountId, Vec<u64>>,
+    redemptions_by_rep: LookupMap<String, Vec<u64>>,
+    /// Requests per user that still hold escrow, for the cap of 20.
+    redemption_open: LookupMap<AccountId, u32>,
+    /// Tokens escrowed in, burned and returned, per representation.
+    escrow_totals: LookupMap<String, redemption_types::EscrowTotals>,
+    issuer_reliability: LookupMap<String, redemption_types::IssuerReliability>,
 }
 
 #[near]
@@ -281,6 +308,14 @@ impl Contract {
             mint_requests: LookupMap::new(StorageKey::MintRequests),
             mint_seq: 0,
             mint_by_rep: LookupMap::new(StorageKey::MintByRep),
+            redemption_terms: LookupMap::new(StorageKey::RedemptionTerms),
+            redemptions: LookupMap::new(StorageKey::Redemptions),
+            redemption_seq: 0,
+            redemptions_by_user: LookupMap::new(StorageKey::RedemptionsByUser),
+            redemptions_by_rep: LookupMap::new(StorageKey::RedemptionsByRep),
+            redemption_open: LookupMap::new(StorageKey::RedemptionOpen),
+            escrow_totals: LookupMap::new(StorageKey::EscrowTotals),
+            issuer_reliability: LookupMap::new(StorageKey::IssuerReliability),
         }
     }
 }
