@@ -10,11 +10,14 @@ import type { Candidate } from "./finding.ts";
 import { loadRun, storeRun, withFirstSeen } from "./report.ts";
 import { settlementCandidates, stuckCandidate, stuckQuotes } from "./settlement-checks.ts";
 import { actionCandidates, readLiveWrappers, type ActionChain } from "./actions.ts";
+import type { ReserveChain } from "../chain-views.ts";
+import { escrowCandidates, mirroredEscrow, overdueRedemptions } from "./redemptions.ts";
+import { reserveCandidates } from "./reserves.ts";
 import { readVaults, vaultCandidates, type VaultChain } from "./vaults.ts";
 
 export interface ReconcilerOptions {
   db: Db;
-  chain: VaultChain & ActionChain;
+  chain: VaultChain & ActionChain & ReserveChain;
   coreId: string;
   /** A submitted quote with no outcome event after this long is flagged. */
   stuckAfterMs: number;
@@ -27,6 +30,9 @@ export class Reconciler {
   // Vault findings must show in two consecutive runs: the core's inventory and its token balance
   // are separate reads and a conversion in flight moves them at different blocks.
   private vaultSuspects = new Set<string>();
+  // The same holds for reserve breaches and escrow: the mirror trails the chain by a few blocks.
+  private breachSuspects = new Set<string>();
+  private escrowSuspects = new Set<string>();
 
   constructor(private readonly options: ReconcilerOptions) {}
 
@@ -68,15 +74,38 @@ export class Reconciler {
       stuckCandidate(r.quote.id, minutes),
     );
     const settlement = await settlementCandidates(db, new Date(now.getTime() - lookbackMs));
-    const vaults = await readVaults(db, chain, coreId);
+    const { readings: vaults, escrowHeld } = await readVaults(db, chain, coreId);
     const suspects = vaultCandidates(vaults);
     const confirmed = suspects.filter((c) => this.vaultSuspects.has(c.key));
     this.vaultSuspects = new Set(suspects.map((c) => c.key));
 
     const actions = await actionCandidates(chain, await readLiveWrappers(db), now);
 
+    const reserves = await reserveCandidates(db, chain);
+    const confirmedBreaches = reserves.breaches.filter((c) => this.breachSuspects.has(c.key));
+    this.breachSuspects = new Set(reserves.breaches.map((c) => c.key));
+
+    const escrow = escrowCandidates(
+      vaults,
+      escrowHeld,
+      await mirroredEscrow(db),
+      new Set(suspects.map((c) => c.subject)),
+    );
+    const confirmedEscrow = escrow.filter((c) => this.escrowSuspects.has(c.key));
+    this.escrowSuspects = new Set(escrow.map((c) => c.key));
+    const overdue = await overdueRedemptions(db, now);
+
     const previous = await loadRun(db);
-    const candidates: Candidate[] = [...stuck, ...settlement, ...confirmed, ...actions];
+    const candidates: Candidate[] = [
+      ...stuck,
+      ...settlement,
+      ...confirmed,
+      ...actions,
+      ...confirmedBreaches,
+      ...reserves.stale,
+      ...overdue,
+      ...confirmedEscrow,
+    ];
     const run: ReconciliationRun = {
       ranAt: now.toISOString(),
       findings: withFirstSeen(candidates, previous, now),
