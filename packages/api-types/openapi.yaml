@@ -2156,6 +2156,164 @@ components:
         - conversionId
         - reason
         - flaggedAt
+    ProtocolMetrics:
+      type: object
+      properties:
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricWindow"
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Metric"
+      required:
+        - asOf
+        - windows
+        - metrics
+    MetricWindow:
+      type: string
+      enum:
+        - 24h
+        - 7d
+        - all
+      description: Rolling window ending at `asOf`; `all` has no lower bound.
+    Metric:
+      type: object
+      properties:
+        key:
+          type: string
+        unit:
+          $ref: "#/components/schemas/MetricUnit"
+        scope:
+          type: string
+          enum:
+            - window
+            - now
+        available:
+          type: boolean
+        availableFrom:
+          type: string
+        simulated:
+          type: boolean
+        note:
+          type: string
+        values:
+          $ref: "#/components/schemas/WindowedValues"
+        value:
+          $ref: "#/components/schemas/MetricValue"
+      required:
+        - key
+        - unit
+        - scope
+        - available
+    MetricUnit:
+      type: string
+      enum:
+        - count
+        - ratio
+        - percent
+        - seconds
+        - blocks
+        - base_units
+        - usd
+        - bps
+      description: "`ratio` is a share from 0 to 1 and `percent` a share from 0 to 100, both with 6 decimals; `seconds` has 3 decimals."
+    WindowedValues:
+      type: object
+      properties:
+        24h:
+          $ref: "#/components/schemas/MetricValue"
+        7d:
+          $ref: "#/components/schemas/MetricValue"
+        all:
+          $ref: "#/components/schemas/MetricValue"
+      required:
+        - 24h
+        - 7d
+        - all
+    MetricValue:
+      anyOf:
+        - type: integer
+          minimum: 0
+        - type: string
+          pattern: ^[0-9]+\.[0-9]+$
+        - type: "null"
+      description: An integer count, or a decimal string for rates and latencies; null when it cannot be computed (no data in the window, or an unreachable chain head).
+    AdminMetrics:
+      type: object
+      properties:
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricWindow"
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Metric"
+        breakdowns:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricBreakdown"
+        requiresReconciliationQuoteIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/Uuid"
+      required:
+        - asOf
+        - windows
+        - metrics
+        - breakdowns
+        - requiresReconciliationQuoteIds
+    MetricBreakdown:
+      type: object
+      properties:
+        key:
+          type: string
+        unit:
+          type: string
+          enum:
+            - base_units
+        scope:
+          type: string
+          enum:
+            - window
+            - now
+        simulated:
+          type: boolean
+        note:
+          type: string
+        values:
+          type: object
+          properties:
+            24h:
+              $ref: "#/components/schemas/RepresentationAmounts"
+            7d:
+              $ref: "#/components/schemas/RepresentationAmounts"
+            all:
+              $ref: "#/components/schemas/RepresentationAmounts"
+          required:
+            - 24h
+            - 7d
+            - all
+        value:
+          $ref: "#/components/schemas/RepresentationAmounts"
+      required:
+        - key
+        - unit
+        - scope
+        - simulated
+    RepresentationAmounts:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/AmountString"
+    PrometheusText:
+      type: string
+      description: "Prometheus text exposition format 0.0.4: `# HELP` and `# TYPE` lines, then samples named `pontis_<key>` with labels `window`, `representation` and `simulated`."
   parameters: {}
 paths:
   /v1/health:
@@ -3700,6 +3858,114 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReconciliationReport"
+        "401":
+          description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/metrics/protocol:
+    get:
+      operationId: getProtocolMetrics
+      summary: Protocol success metrics
+      description: "Public aggregates for the windows `24h`, `7d` and `all`, rolling from `asOf`. No account IDs, quote IDs or per-representation amounts. Metrics that need later-phase data are listed with `available: false` and `availableFrom`. Cached for 30 seconds."
+      tags:
+        - Metrics
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtocolMetrics"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/admin/metrics:
+    get:
+      operationId: getAdminMetrics
+      summary: Protocol success metrics, admin view
+      description: Admin only, audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.
+      tags:
+        - Admin
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <ADMIN_API_KEY>`."
+            example: Bearer 0123456789abcdef0123456789abcdef
+          required: true
+          description: "`Bearer <ADMIN_API_KEY>`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMetrics"
+        "401":
+          description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /metrics:
+    get:
+      operationId: getPrometheusMetrics
+      summary: Prometheus exposition of the metrics
+      description: Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same admin bearer key (Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.
+      tags:
+        - Admin
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <ADMIN_API_KEY>`."
+            example: Bearer 0123456789abcdef0123456789abcdef
+          required: true
+          description: "`Bearer <ADMIN_API_KEY>`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            text/plain; version=0.0.4:
+              schema:
+                $ref: "#/components/schemas/PrometheusText"
         "401":
           description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
           content:

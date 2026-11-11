@@ -55,6 +55,11 @@ import {
   SearchQuerySchema,
   SearchResultSchema,
 } from "./discovery-types.ts";
+import {
+  AdminMetricsSchema,
+  PrometheusTextSchema,
+  ProtocolMetricsSchema,
+} from "./metrics-types.ts";
 import { IssuerLeaderboardSchema, LeaderboardQuerySchema, StatusSchema } from "./status-types.ts";
 
 export const IssuerListSchema = z
@@ -85,9 +90,12 @@ interface Endpoint {
     | "Quotes"
     | "Conversions"
     | "Transactions"
+    | "Metrics"
     | "Admin";
   readonly status: number;
   readonly response: z.ZodType;
+  /** Media type of the success response; JSON unless set. */
+  readonly contentType?: string;
   /** Error codes this endpoint can return, with their HTTP status. */
   readonly errors: Readonly<Record<number, readonly z.infer<typeof ErrorCodeSchema>[]>>;
   readonly params?: z.ZodObject;
@@ -515,6 +523,42 @@ export const ENDPOINTS = {
     description:
       "Admin only. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.",
   },
+  getProtocolMetrics: {
+    method: "get",
+    path: "/v1/metrics/protocol",
+    summary: "Protocol success metrics",
+    tag: "Metrics",
+    status: 200,
+    response: ProtocolMetricsSchema,
+    errors: { ...COMMON },
+    description:
+      "Public aggregates for the windows `24h`, `7d` and `all`, rolling from `asOf`. No account IDs, quote IDs or per-representation amounts. Metrics that need later-phase data are listed with `available: false` and `availableFrom`. Cached for 30 seconds.",
+  },
+  getAdminMetrics: {
+    method: "get",
+    path: "/v1/admin/metrics",
+    summary: "Protocol success metrics, admin view",
+    tag: "Admin",
+    status: 200,
+    response: AdminMetricsSchema,
+    headers: AdminAuthHeaderSchema,
+    errors: { 401: ["UNAUTHORIZED"], ...COMMON },
+    description:
+      "Admin only, audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.",
+  },
+  getPrometheusMetrics: {
+    method: "get",
+    path: "/metrics",
+    summary: "Prometheus exposition of the metrics",
+    tag: "Admin",
+    status: 200,
+    response: PrometheusTextSchema,
+    contentType: "text/plain; version=0.0.4",
+    headers: AdminAuthHeaderSchema,
+    errors: { 401: ["UNAUTHORIZED"], ...COMMON },
+    description:
+      "Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same admin bearer key (Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.",
+  },
 } as const satisfies Record<string, Endpoint>;
 
 export type OperationId = keyof typeof ENDPOINTS;
@@ -560,7 +604,7 @@ export function buildRegistry(): OpenAPIRegistry {
       responses: {
         [e.status]: {
           description: "Success",
-          content: { "application/json": { schema: e.response } },
+          content: { [e.contentType ?? "application/json"]: { schema: e.response } },
         },
         ...Object.fromEntries(
           Object.entries(e.failureResponses ?? {}).map(([status, r]) => [
