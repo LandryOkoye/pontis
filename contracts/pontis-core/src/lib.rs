@@ -393,6 +393,10 @@ mod price_tests;
 #[cfg(test)]
 mod quote_tests;
 #[cfg(test)]
+mod redemption_expiry_tests;
+#[cfg(test)]
+mod redemption_fixture;
+#[cfg(test)]
 mod registry_tests;
 #[cfg(test)]
 mod reserve_status_tests;
