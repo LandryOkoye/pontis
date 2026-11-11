@@ -54,6 +54,18 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **Separation is per account.** A registrar cannot hold an attester role and the owner holds none, but one operator can run two accounts. The rule shows the mechanism, not an organisation.
 - **Issuer onboarding is not built** ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)). No issuer is `third_party_attested`, and attester roles sign reserves, custody and bridge attestations only, never issuer claims.
 
+## Custody, reserves and the gated mint (contract, phase 4)
+
+The contract side of [ADR 0020](decisions/0020-custody-reserves-and-redemption.md) sections 2 to 6. Nothing is custodied, backed, audited or regulated; every figure is `simulated`.
+
+- **A reserve attestation is a signed figure, not a bank balance.** The simulator custodian signs whatever the demo script says, with a published dev key. The contract proves who signed and when, never that the reserves exist.
+- **Supply is trusted through a ledger and a read.** The core counts what its gate minted and what redemption burned, and `refresh_supply` reads the token. A token the owner can still mint from shows up only after a read, and the owner can clear the minter.
+- **The status is computed on read.** Staleness changes with time, so `reserve_status_changed` is emitted only when someone calls `evaluate_reserve` (the monitor does, each minute); the route gate never depends on that call.
+- **Headroom ignores tolerance.** `tolerance_bps` widens the invariant, not the amount that may be minted. Under `warn` and `restrict_conversions` a stale attestation still caps mint at its last figure; only `pause_mint` refuses.
+- **A suspended custodian lowers reserves at once** but emits no status event until the next evaluation.
+- **The back office is a claim.** `controlled_accounts` of the issuer decides who may mint; proof of control was cut ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)).
+- **The history ring holds the last 500 attestations per representation** on chain; the indexer keeps the rest.
+
 ## Corporate actions, lifecycle and NAV strikes (contract, phase 2)
 
 The contract side of [ADR 0017](decisions/0017-corporate-actions-and-multiplier-epochs.md) and [0018](decisions/0018-asset-lifecycle-and-nav-strikes.md), and its API, scripts and indexer mirrors ([phase 2 actions API](progress/phase-2-actions-api.md)). The web mirror is separate work.
