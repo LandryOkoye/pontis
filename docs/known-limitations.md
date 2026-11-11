@@ -66,6 +66,18 @@ The contract side of [ADR 0020](decisions/0020-custody-reserves-and-redemption.m
 - **The back office is a claim.** `controlled_accounts` of the issuer decides who may mint; proof of control was cut ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)).
 - **The history ring holds the last 500 attestations per representation** on chain; the indexer keeps the rest.
 
+## Redemption (contract, phase 4)
+
+The contract side of [ADR 0020](decisions/0020-custody-reserves-and-redemption.md) section 7. A redemption pays nothing: it moves the user's tokens into escrow and burns or returns them.
+
+- **No value moves.** `fee_units` and `net_units` are figures the simulated issuer is meant to honour off chain; nothing models a fiat payout, a custody release or a legal claim.
+- **Fulfilment is the issuer's word.** The back office posts an evidence hash; the contract checks its shape, not what it points to. A fulfilment burns the escrow whether or not any payout happened.
+- **Reliability is a counter, not a score.** The contract counts requests, accepts, fulfilments, rejections, misses and latency; the API derives a score and labels it `simulated`.
+- **Settlement days are whole days.** At least one day to fulfil after accepting, so the fulfil deadline is only reached in unit tests; the accept deadline can be seconds.
+- **A redeeming holder is not checked for eligibility.** Redemption is an exit, so there is no allowlist check.
+- **The escrow needs a working token.** A burn or return that fails leaves the tokens in the core and the request in its earlier state until a retry succeeds.
+- **The core's token balance now includes escrow.** The vault check compares `get_inventory` with `ft_balance_of(core)`; with redemptions the balance also covers `get_escrow_ledger(...).held`, so a reconciler must add it to the expected balance or it reports a surplus.
+
 ## Corporate actions, lifecycle and NAV strikes (contract, phase 2)
 
 The contract side of [ADR 0017](decisions/0017-corporate-actions-and-multiplier-epochs.md) and [0018](decisions/0018-asset-lifecycle-and-nav-strikes.md), and its API, scripts and indexer mirrors ([phase 2 actions API](progress/phase-2-actions-api.md)). The web mirror is separate work.
