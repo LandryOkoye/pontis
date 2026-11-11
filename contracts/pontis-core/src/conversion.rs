@@ -30,12 +30,16 @@ pub struct ConversionPlan {
 pub struct Rejection {
     pub reason: RejectReason,
     pub nonce: Option<String>,
+    /// Set when the refusal was a price deviation: the pair `ft_on_transfer` reports to the
+    /// circuit breaker, which needs `&mut self` and so runs outside validation.
+    pub price_pair: Option<(String, String)>,
 }
 
 fn reject(reason: RejectReason) -> Rejection {
     Rejection {
         reason,
         nonce: None,
+        price_pair: None,
     }
 }
 
@@ -43,6 +47,10 @@ fn route_reason(refusal: RouteRefusal) -> RejectReason {
     match refusal {
         RouteRefusal::RelationshipSuspended => RejectReason::RelationshipSuspended,
         RouteRefusal::AssetPaused | RouteRefusal::AssetNotActive => RejectReason::AssetPaused,
+        RouteRefusal::PriceDeviation => RejectReason::PriceDeviation,
+        RouteRefusal::PriceStale => RejectReason::PriceStale,
+        RouteRefusal::PriceMissing => RejectReason::PriceMissing,
+        RouteRefusal::PriceUnavailable => RejectReason::PriceUnavailable,
         _ => RejectReason::NotDirectEquivalent,
     }
 }
@@ -67,6 +75,7 @@ impl Contract {
         let fail = |reason| Rejection {
             reason,
             nonce: Some(q.nonce.clone()),
+            price_pair: None,
         };
 
         if q.version != QUOTE_VERSION {
@@ -92,16 +101,21 @@ impl Contract {
             return Err(fail(RejectReason::AmountMismatch));
         }
 
-        let terms = self
-            .check_route(from_id, to_id)
-            .map_err(|r| fail(route_reason(r)))?;
+        let terms = self.check_route(from_id, to_id).map_err(|r| {
+            let mut rejection = fail(route_reason(r));
+            if r == RouteRefusal::PriceDeviation {
+                rejection.price_pair = Some((from_id.clone(), to_id.clone()));
+            }
+            rejection
+        })?;
         if terms.compatibility_version != q.compatibility_version {
             return Err(fail(RejectReason::CompatibilityChanged));
         }
         if terms.policy_version != q.policy_version {
             return Err(fail(RejectReason::PolicyChanged));
         }
-        if self.fee_bps != q.fee_bps {
+        let fee_bps = self.effective_fee_bps(from_id, to_id, &terms, amount.0);
+        if fee_bps != q.fee_bps {
             return Err(fail(RejectReason::FeeChanged));
         }
         for rep in [from_id, to_id] {
@@ -110,7 +124,9 @@ impl Contract {
             }
         }
 
-        let amounts = compute_amounts(amount.0, terms.ratio, self.fee_bps)
+        self.check_guard_limits(from_id, to_id, amount.0)
+            .map_err(fail)?;
+        let amounts = compute_amounts(amount.0, terms.ratio, fee_bps)
             .ok_or(fail(RejectReason::OutputMismatch))?;
         if (amounts.gross, amounts.fee, amounts.net)
             != (q.amount_out_gross.0, q.fee.0, q.amount_out.0)
@@ -184,6 +200,7 @@ impl Contract {
         }
         // `validate_conversion` checked the output is covered, in this same call.
         self.debit_inventory(&plan.to_id, plan.amounts.net);
+        self.consume_window(&plan.from_id, &plan.to_id, q.amount_in.0);
         self.add_pending_inbound(&plan.from_id, q.amount_in.0);
         self.used_nonces.insert(plan.nonce);
 

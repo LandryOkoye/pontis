@@ -179,6 +179,10 @@ impl Contract {
             .unwrap_or_else(|| near_sdk::env::panic_str("relationship not found"));
         let reapproval = rel.status == RelationshipStatus::Suspended;
         check(
+            !self.breakers.get(&id).is_some_and(|b| b.tripped),
+            "suspended by the circuit breaker: use reset_circuit_breaker",
+        );
+        check(
             reapproval || rel.status == RelationshipStatus::Proposed,
             "only a proposed or suspended relationship can be approved",
         );

@@ -372,6 +372,8 @@ pub enum ReviewAction {
     Rejected,
     Suspended,
     Reapproved,
+    /// A route guard was set or replaced (ADR 0016); the terms changed, so the version moves.
+    GuardSet,
 }
 
 /// One immutable entry of a relationship's append-only history. `version` equals the entry's
@@ -455,4 +457,11 @@ pub enum RejectReason {
     AmountTooSmall,
     InsufficientInventory,
     NonceUsed,
+    PriceDeviation,
+    PriceStale,
+    PriceMissing,
+    PriceUnavailable,
+    AmountBelowMin,
+    AmountAboveMax,
+    WindowLimitExceeded,
 }

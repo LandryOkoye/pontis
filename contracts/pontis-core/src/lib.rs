@@ -5,22 +5,32 @@
 //! 1 yoctoNEAR (so restricted access keys cannot call it), checks the caller's role and the
 //! pause state, and emits an event.
 
+mod breaker;
+mod breaker_reset;
 mod compatibility;
 mod config;
 mod conversion;
 mod events;
+mod guard;
+mod guard_exec;
+mod guard_math;
 mod math;
 mod policy;
+mod price;
 mod quote;
 mod registry;
 mod roles;
 mod route;
+mod route_guards;
 mod types;
 mod vault;
+mod wide;
 
 pub use conversion::{ConversionPlan, ConversionRecord, Rejection};
 pub use events::{CoreEvent, PauseScope, RoleName};
+pub use guard::{RouteGuard, StalePolicy};
 pub use math::{compute_amounts, Amounts, MAX_FEE_BPS};
+pub use price::{PriceAttestation, PriceRecord};
 pub use quote::{parse_nonce, ConversionMsg, QuoteInput, QUOTE_DOMAIN, QUOTE_VERSION};
 pub use route::{RouteRefusal, RouteTerms, RouteView};
 pub use types::*;
@@ -45,6 +55,13 @@ enum StorageKey {
     UsedNonces,
     PendingConversions,
     PendingInbound,
+    PricePublishers,
+    Prices,
+    Guards,
+    Breakers,
+    Windows,
+    InventoryRef,
+    PairsByRep,
 }
 
 #[derive(PanicOnDefault)]
@@ -85,6 +102,19 @@ pub struct Contract {
     /// move to `inventory` on a successful payout and stay out of it on a failed one so the
     /// token's resolver can refund them to the sender.
     pending_inbound: LookupMap<String, u128>,
+    /// ed25519 keys whose signatures `submit_price` accepts (ADR 0016).
+    price_publishers: IterableSet<PublicKey>,
+    /// Latest accepted price per representation ID.
+    prices: LookupMap<String, price::PriceRecord>,
+    /// Route guard per pair key; absent means unguarded (the MVP behaviour).
+    guards: LookupMap<String, guard::RouteGuard>,
+    breakers: LookupMap<String, breaker::BreakerState>,
+    /// Tumbling window usage, keyed `"{pair}|{from_id}"`.
+    windows: LookupMap<String, guard::WindowState>,
+    /// Peak spendable inventory per representation, the denominator of the fee skew.
+    inventory_ref: LookupMap<String, u128>,
+    /// Pair keys of the guarded relationships each representation takes part in.
+    pairs_by_rep: LookupMap<String, Vec<String>>,
 }
 
 #[near]
@@ -115,6 +145,13 @@ impl Contract {
             used_nonces: LookupSet::new(StorageKey::UsedNonces),
             pending_conversions: LookupMap::new(StorageKey::PendingConversions),
             pending_inbound: LookupMap::new(StorageKey::PendingInbound),
+            price_publishers: IterableSet::new(StorageKey::PricePublishers),
+            prices: LookupMap::new(StorageKey::Prices),
+            guards: LookupMap::new(StorageKey::Guards),
+            breakers: LookupMap::new(StorageKey::Breakers),
+            windows: LookupMap::new(StorageKey::Windows),
+            inventory_ref: LookupMap::new(StorageKey::InventoryRef),
+            pairs_by_rep: LookupMap::new(StorageKey::PairsByRep),
         }
     }
 }
@@ -140,9 +177,23 @@ mod conversion_state_tests;
 #[cfg(test)]
 mod conversion_tests;
 #[cfg(test)]
+mod guard_breaker_tests;
+#[cfg(test)]
+mod guard_fee_tests;
+#[cfg(test)]
+mod guard_limits_tests;
+#[cfg(test)]
+mod guard_math_tests;
+#[cfg(test)]
+mod guard_route_tests;
+#[cfg(test)]
 mod math_tests;
 #[cfg(test)]
 mod policy_tests;
+#[cfg(test)]
+mod price_submit_tests;
+#[cfg(test)]
+mod price_tests;
 #[cfg(test)]
 mod quote_tests;
 #[cfg(test)]
