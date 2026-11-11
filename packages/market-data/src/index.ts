@@ -9,3 +9,4 @@ export * from "./jobs.ts";
 export * from "./feed/attestation.ts";
 export * from "./feed/prng.ts";
 export * from "./feed/types.ts";
+export * from "./feed/series.ts";
