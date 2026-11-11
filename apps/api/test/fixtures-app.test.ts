@@ -69,4 +69,14 @@ describe("fixtures mode", () => {
     expect((await app.inject({ method: "GET", url: "/v1/assets?limit=0" })).statusCode).toBe(400);
     expect((await app.inject({ method: "GET", url: "/v1/assets/ghost" })).statusCode).toBe(404);
   });
+
+  it("serves the public metrics fixture and refuses the admin-keyed metrics endpoints", async () => {
+    const pub = await app.inject({ method: "GET", url: "/v1/metrics/protocol" });
+    expect([pub.statusCode, pub.headers["x-pontis-mode"]]).toEqual([200, "fixtures"]);
+    expect(pub.json().metrics.length).toBeGreaterThan(0);
+    for (const url of ["/v1/admin/metrics", "/metrics"]) {
+      const res = await app.inject({ method: "GET", url });
+      expect([url, res.statusCode]).toEqual([url, 404]);
+    }
+  });
 });

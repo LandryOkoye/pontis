@@ -12,7 +12,11 @@ export function adminActor(key: string): string {
 export interface AdminAuditEntry {
   /** `adminActor(key)` for an authorized call, `anonymous` for a refused one. */
   actor: string;
-  action: "admin.reconciliation.read" | "admin.auth_failed";
+  action:
+    | "admin.reconciliation.read"
+    | "admin.metrics.read"
+    | "admin.prometheus.read"
+    | "admin.auth_failed";
   subject: string;
 }
 
