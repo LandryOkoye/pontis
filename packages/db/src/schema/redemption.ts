@@ -16,6 +16,7 @@ import {
   text,
   timestamp,
   unique,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 const at = (name: string) => timestamp(name, { withTimezone: true, mode: "date" });
@@ -36,7 +37,10 @@ export type RedemptionEventKind =
   | "reclaimed"
   | "reclaim_failed";
 
-/** Keyed by the contract's `u64` id. `execute_mint` emits no event, so `minting` is never seen here. */
+/**
+ * Keyed by the contract's `u64` id. `execute_mint` emits no event, so the indexer reads the chain
+ * to see `minting` and to close a request whose completion event it missed.
+ */
 export const mintRequests = pgTable(
   "mint_requests",
   {
@@ -156,3 +160,53 @@ export const issuerReliability = pgTable("issuer_reliability", {
   needsRefresh: boolean().notNull().default(true),
   refreshedAt: at("refreshed_at"),
 });
+
+/**
+ * The encrypted payout instruction of a redemption, stored exactly as the client sent it and never
+ * read (ADR 0020 section 10): the demo has nothing to pay and no key to open it with. Only
+ * `payout_instruction_hash` (SHA-256 of the decoded ciphertext) goes on chain. No endpoint lists
+ * or returns the ciphertext. `redemption_id` is set by the indexer when the matching
+ * `redemption_requested` event arrives; a row that never gets one is a prepared request the user
+ * did not send.
+ */
+export const redemptionPayoutInstructions = pgTable(
+  "redemption_payout_instructions",
+  {
+    /** The prepare id: what `POST /v1/redemptions/prepare` stored this under. */
+    id: uuid().primaryKey().defaultRandom(),
+    accountId: text().notNull(),
+    representationId: text().notNull(),
+    amount: u128("amount").notNull(),
+    termsHash: text().notNull(),
+    payoutInstructionHash: text().notNull(),
+    /** Base64 of the ciphertext, as sent. */
+    ciphertext: text().notNull(),
+    createdAt: at("created_at").notNull().defaultNow(),
+    redemptionId: bigint({ mode: "number" }),
+  },
+  (t) => [
+    index("redemption_payout_hash_idx").on(t.accountId, t.payoutInstructionHash),
+    index("redemption_payout_redemption_idx").on(t.redemptionId),
+  ],
+);
+
+/** One row per `redemption_refused` event: the escrow came straight back and no redemption exists. */
+export const redemptionRefusals = pgTable(
+  "redemption_refusals",
+  {
+    id: serial().primaryKey(),
+    receiptId: text().notNull(),
+    logIndex: integer().notNull(),
+    blockHeight: bigint({ mode: "number" }).notNull(),
+    /** `UNKNOWN_TOKEN`, `INVALID_MSG`, `PAUSED`, `TERMS_CHANGED`, `BELOW_MIN`, ... as the contract names it. */
+    reason: text().notNull(),
+    senderId: text().notNull(),
+    token: text().notNull(),
+    amount: u128("amount").notNull(),
+    at: at("at").notNull(),
+  },
+  (t) => [
+    unique("redemption_refusals_receipt_log_key").on(t.receiptId, t.logIndex),
+    index("redemption_refusals_sender_idx").on(t.senderId, t.at),
+  ],
+);

@@ -168,6 +168,16 @@ export const redemptionRequested = (over: Record<string, unknown> = {}) =>
     ...over,
   });
 
+export const redemptionRefused = (over: Record<string, unknown> = {}) =>
+  ev("redemption_refused", {
+    reason: "TERMS_CHANGED",
+    sender_id: "alice.testnet",
+    token: "a.pontis.testnet",
+    amount: "5000000",
+    timestamp_ms: T0 + 5_000,
+    ...over,
+  });
+
 export const redemptionAccepted = (over: Record<string, unknown> = {}) =>
   ev("redemption_accepted", {
     id: 1,

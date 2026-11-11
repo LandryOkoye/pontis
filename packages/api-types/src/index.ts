@@ -12,5 +12,6 @@ export * from "./market-types.ts";
 export * from "./metrics-types.ts";
 export * from "./overview-types.ts";
 export * from "./registry-types.ts";
+export * from "./session-types.ts";
 export * from "./status-types.ts";
 export * from "./trading-types.ts";

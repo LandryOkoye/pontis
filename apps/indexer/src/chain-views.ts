@@ -2,7 +2,12 @@
 // issuer reliability. Validated at runtime so a contract and an indexer that drift apart fail
 // loudly. These are local to the indexer until near-client grows typed wrappers for them.
 
-import { ChainEvidenceSchema, type RpcClient } from "@pontis/near-client";
+import {
+  ChainEvidenceSchema,
+  ChainMintRequestSchema,
+  type ChainMintRequest,
+  type RpcClient,
+} from "@pontis/near-client";
 import { z } from "zod";
 
 const accountId = z.string().min(2).max(64);
@@ -72,12 +77,15 @@ export type ChainCustodian = z.infer<typeof ChainCustodianSchema>;
 export type ChainReserveStatus = z.infer<typeof ChainReserveStatusSchema>;
 export type ChainEscrowLedger = z.infer<typeof ChainEscrowLedgerSchema>;
 export type ChainIssuerReliability = z.infer<typeof ChainIssuerReliabilitySchema>;
+export type { ChainMintRequest };
 
 /** What the mirror refresh reads from the chain. */
 export interface MirrorChain {
   custodian(id: string): Promise<ChainCustodian | null>;
   reserveStatus(representationId: string): Promise<ChainReserveStatus>;
   issuerReliability(issuerId: string): Promise<ChainIssuerReliability>;
+  /** `get_mint_request`: `execute_mint` emits no event, so the mirror reads this to see `minting` and to close a request whose completion event it missed. */
+  mintRequest(id: number): Promise<ChainMintRequest | null>;
 }
 
 /** What the reconciler's reserve and escrow rules read from the chain. */
@@ -111,6 +119,11 @@ export class CustodyViews implements MirrorChain, ReserveChain {
       issuer_id: issuerId,
     });
     return ChainIssuerReliabilitySchema.parse(raw);
+  }
+
+  async mintRequest(id: number): Promise<ChainMintRequest | null> {
+    const raw = await this.rpc.view(this.coreId, "get_mint_request", { id });
+    return z.nullable(ChainMintRequestSchema).parse(raw);
   }
 
   async escrowHeld(representationId: string): Promise<string> {

@@ -38,3 +38,31 @@ export async function newestFirst<T>(
     nextCursor: start > floor ? encodeCursor(start, opts.query) : null,
   };
 }
+
+/**
+ * The newest items of a paged view that satisfy `keep` and have an id below `before`, newest
+ * first, scanning at most `cap` items from the newest end in pages of 100. Ids of the contract's
+ * counters only grow, so "below `before`" is a stable cursor. `capped` is true when the scan
+ * stopped at the cap with older items unseen.
+ */
+export async function scanNewest<T extends { id: number }>(
+  fetch: (fromIndex: number, limit: number) => Promise<ChainPage<T>>,
+  opts: { want: number; cap: number; before?: number | undefined; keep: (item: T) => boolean },
+): Promise<{ items: T[]; capped: boolean }> {
+  const PAGE = 100;
+  const total = (await fetch(0, 1)).total;
+  const items: T[] = [];
+  let end = total;
+  let scanned = 0;
+  while (end > 0 && items.length < opts.want && scanned < opts.cap) {
+    const start = Math.max(0, end - PAGE);
+    const page = await fetch(start, end - start);
+    scanned += end - start;
+    for (const item of [...page.items].reverse()) {
+      if (opts.before !== undefined && item.id >= opts.before) continue;
+      if (opts.keep(item) && items.length < opts.want) items.push(item);
+    }
+    end = start;
+  }
+  return { items, capped: end > 0 && items.length < opts.want };
+}
