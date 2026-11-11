@@ -47,7 +47,14 @@ impl Contract {
         }
         match self.validate_conversion(&token, &sender_id, amount, &msg) {
             Ok(plan) => self.execute_conversion(plan),
-            Err(Rejection { reason, nonce }) => {
+            Err(Rejection {
+                reason,
+                nonce,
+                price_pair,
+            }) => {
+                if let Some((from_id, to_id)) = price_pair {
+                    self.record_deviation_refusal(&from_id, &to_id);
+                }
                 self.refuse(reason, nonce, sender_id, token, amount)
             }
         }
@@ -139,6 +146,7 @@ impl Contract {
             .checked_add(amount)
             .unwrap_or_else(|| env::panic_str("inventory overflow"));
         self.inventory.insert(rep_id.to_string(), inventory);
+        self.raise_inventory_reference(rep_id);
     }
 
     /// Removes from spendable inventory. Underflow is a broken invariant and aborts.
@@ -192,6 +200,7 @@ impl Contract {
         let inventory = self.get_inventory(representation_id.clone()).0;
         check(inventory >= amount.0, "insufficient inventory");
         self.debit_inventory(&representation_id, amount.0);
+        self.clamp_inventory_reference(&representation_id);
         ext_ft::ext(token)
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .with_static_gas(GAS_FT_TRANSFER)

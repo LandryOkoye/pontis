@@ -41,6 +41,14 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **The directory sorts and filters in memory** over the joined catalogue, and its cursor is an offset tied to the query. Fine for a few thousand assets; a row inserted between pages can shift one.
 - **Holders, TVL beyond the vault, pools, reserves, premium and parity-deviation charts, and realtime streams are not built yet.** Each arrives with the phase that creates its data ([handoff](api/FRONTEND_HANDOFF.md)).
 
+## Price guards (contract, phase 2)
+
+- **A relationship has no guard until a compat approver sets one.** Unguarded pairs convert at the fixed ratio as before, whatever the market says. The seed sets guards on the demo pairs.
+- **The reference price is a signed attestation, not a market.** Nothing but the simulator publishes prices, with a key anyone can recompute. The guard shows the mechanism works; it says nothing about any real price.
+- **Limits are tumbling windows.** Up to twice the window limit can pass across a boundary. A payout failure does not give the allowance back.
+- **The breaker counts evaluations.** Every price submission evaluates the pair, so a deviation counts once per submission that leaves it in place, including one for the other leg.
+- **Corporate actions, lifecycle and NAV windows are not part of this change** ([ADR 0017](decisions/0017-corporate-actions-and-multiplier-epochs.md), [0018](decisions/0018-asset-lifecycle-and-nav-strikes.md)).
+
 ## Contract behaviour worth knowing
 
 - A quote lives 60 seconds. A transaction that lands after expiry is refused and refunded.

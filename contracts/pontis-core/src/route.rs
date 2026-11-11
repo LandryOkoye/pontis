@@ -21,6 +21,10 @@ pub enum RouteRefusal {
     RelationshipNotApproved,
     RelationshipSuspended,
     NotDirectEquivalent,
+    PriceDeviation,
+    PriceStale,
+    PriceMissing,
+    PriceUnavailable,
 }
 
 /// What a quote and its execution must be bound to.
@@ -31,6 +35,8 @@ pub struct RouteTerms {
     pub ratio: Ratio,
     pub compatibility_version: u64,
     pub policy_version: u64,
+    /// Added to the fee when a stale or missing price is tolerated (`fail_open_with_wider_fee`).
+    pub extra_fee_bps: u16,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -109,10 +115,15 @@ impl Contract {
                 den: rel.ratio.num,
             }
         };
+        let extra_fee_bps = match self.check_price_guard(from_id, to_id, ratio)? {
+            crate::guard::PriceOutcome::Ok => 0,
+            crate::guard::PriceOutcome::Degraded { extra_fee_bps } => extra_fee_bps,
+        };
         Ok(RouteTerms {
             ratio,
             compatibility_version: rel.version,
             policy_version: self.policy_version,
+            extra_fee_bps,
         })
     }
 }

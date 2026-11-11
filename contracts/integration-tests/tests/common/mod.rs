@@ -133,11 +133,13 @@ impl Env {
 }
 
 mod checks;
+mod guards;
 mod ops;
 mod quotes;
 mod setup;
 
 #[allow(unused_imports)] // each test binary uses a subset
 pub use checks::{assert_refunded, funded};
+pub use guards::E8;
 pub use quotes::events;
 mod pending;
