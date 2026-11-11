@@ -264,6 +264,8 @@ mod nav_submit_tests;
 #[cfg(test)]
 mod nav_tests;
 #[cfg(test)]
+mod nav_vector_tests;
+#[cfg(test)]
 mod policy_tests;
 #[cfg(test)]
 mod price_submit_tests;
