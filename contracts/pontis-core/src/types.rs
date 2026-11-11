@@ -374,6 +374,10 @@ pub enum ReviewAction {
     Reapproved,
     /// A route guard was set or replaced (ADR 0016); the terms changed, so the version moves.
     GuardSet,
+    /// A multiplier epoch was applied to a representation of the pair (ADR 0017).
+    MultiplierEpoch,
+    /// A representation's lifecycle kind or flags changed (ADR 0018).
+    LifecycleFlags,
 }
 
 /// One immutable entry of a relationship's append-only history. `version` equals the entry's
@@ -464,4 +468,10 @@ pub enum RejectReason {
     AmountBelowMin,
     AmountAboveMax,
     WindowLimitExceeded,
+    CorporateActionFreeze,
+    CorporateActionPending,
+    EpochMismatch,
+    NotConvertible,
+    LifecycleBlocked,
+    NavWindowClosed,
 }
