@@ -9,6 +9,7 @@
     "deploy-testnet": "tsx --env-file-if-exists=.env deploy-testnet.ts",
     "seed": "tsx --env-file-if-exists=.env seed-testnet.ts",
     "seed-catalogue": "tsx --env-file-if-exists=.env seed-catalogue.ts",
+    "seed-profiles": "tsx --env-file-if-exists=.env seed-profiles.ts",
     "allowlist": "tsx --env-file-if-exists=.env allowlist.ts",
     "ops": "tsx --env-file-if-exists=.env ops.ts",
     "lint": "eslint .",
@@ -16,8 +17,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@pontis/db": "workspace:*",
     "@pontis/domain": "workspace:*",
     "@pontis/near-client": "workspace:*",
+    "drizzle-orm": "^0.45.4",
     "near-api-js": "^7.4.0"
   },
   "devDependencies": {
