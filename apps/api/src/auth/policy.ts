@@ -56,3 +56,44 @@ export const ADMIN_POLICY: Record<AdminOperation, AdminPolicy> = {
     action: "admin.prometheus.read",
   },
 };
+
+export type SessionOperation = Extract<
+  OperationId,
+  | "prepareRedemption"
+  | "reclaimRedemptionIntent"
+  | "listIssuerRedemptions"
+  | "acceptRedemption"
+  | "rejectRedemption"
+  | "fulfilRedemption"
+  | "listIssuerMintRequests"
+  | "createIssuerMintRequest"
+  | "executeIssuerMintRequest"
+>;
+
+/**
+ * Who may call each session endpoint (ADR 0020 section 10). Not an admin policy: there is no
+ * break-glass key here, because every call is made as an account.
+ *
+ * - `account`: any signed-in account, acting on its own records (the redemption's owner).
+ * - `issuer`: an account in the `controlled_accounts` of the issuer of the record, read from the
+ *   chain on each call. It is the check the contract makes on `accept_redemption` and the rest,
+ *   so the API refuses what the chain would.
+ * - `issuer_or_operator`: as `issuer`, and an operator role may also read (never act): the queue
+ *   is public chain data, and an operator watching it needs no key of the issuer.
+ */
+export interface SessionPolicy {
+  access: "account" | "issuer" | "issuer_or_operator";
+  action: Extract<AdminAuditEntry["action"], `session.${string}` | `issuer.${string}`>;
+}
+
+export const SESSION_POLICY: Record<SessionOperation, SessionPolicy> = {
+  prepareRedemption: { access: "account", action: "session.redemption.prepare" },
+  reclaimRedemptionIntent: { access: "account", action: "session.redemption.reclaim_intent" },
+  listIssuerRedemptions: { access: "issuer_or_operator", action: "issuer.redemptions.read" },
+  acceptRedemption: { access: "issuer", action: "issuer.redemption.accept" },
+  rejectRedemption: { access: "issuer", action: "issuer.redemption.reject" },
+  fulfilRedemption: { access: "issuer", action: "issuer.redemption.fulfil" },
+  listIssuerMintRequests: { access: "issuer_or_operator", action: "issuer.mint_requests.read" },
+  createIssuerMintRequest: { access: "issuer", action: "issuer.mint_request.create" },
+  executeIssuerMintRequest: { access: "issuer", action: "issuer.mint_request.execute" },
+};
