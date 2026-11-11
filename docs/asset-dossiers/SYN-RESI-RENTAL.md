@@ -54,4 +54,21 @@ Residential real estate as a fund unit: divisible, in contrast to the single-fla
 | -------------- | --------------------- | -------- | ---------------- | ---------------------------- | ------------- | ------------------------------------------------ |
 | `tresi-r`      | `rheinkontor-digital` | 6        | 1 canonical unit | `1 / 10^6`                   | `active`      | [RHEINKONTOR-DIGITAL.md](RHEINKONTOR-DIGITAL.md) |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `tresi-r`
+
+| Field                | Value                                                                       |
+| -------------------- | --------------------------------------------------------------------------- |
+| Custodian (invented) | Wexcombe Property SPV Registry (SIMULATED), `wexcombe-spv-registry-sim`, DE |
+| Structure            | `segregated`                                                                |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`                         |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d                        |
+| Simulated cover      | 10150 bps of supply, signed by the public dev key                           |
+| Seeded by            | `--catalogue=full`                                                          |
+| Redemption terms     | none: not redeemable in this demo                                           |
+
 This claim has one representation, so no relationship exists for it.

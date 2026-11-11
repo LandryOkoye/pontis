@@ -59,7 +59,7 @@ export const STORY_PRESETS: Record<
 export const NQ = "northquay-custody-sim";
 export const LH = "lindenhall-vaults-sim";
 export const OB = "orrinvale-bullion-sim";
-export const QF = "quillfeather-vault-sim";
+export const QF = "ferncliff-vault-sim";
 export const MG = "mossgrove-registry-sim";
 
 export function row(

@@ -42,13 +42,14 @@ describe("custodian records", () => {
     }
   });
 
-  it("do not reuse the name of a catalogue issuer", () => {
-    const issuers = new Set(
-      catalogueFor("full").issuers.map((i) => i.name.toLowerCase().replace(/[^a-z0-9]+/g, " ")),
+  it("do not reuse a name already in the catalogue (an issuer, a claim or a token)", () => {
+    const data = catalogueFor("full");
+    const taken = norm(
+      [...data.issuers, ...data.claims, ...data.representations].map((x) => x.name).join(" "),
     );
     for (const c of CUSTODIANS) {
-      const bare = c.name.replace(/\(SIMULATED\)/, "").toLowerCase();
-      expect(issuers.has(bare.replace(/[^a-z0-9]+/g, " ").trim()), c.id).toBe(false);
+      const brand = c.name.split(" ")[0]!;
+      expect(taken.includes(norm(brand)), `${c.id}: ${brand}`).toBe(false);
     }
   });
 

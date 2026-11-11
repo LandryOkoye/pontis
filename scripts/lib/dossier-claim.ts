@@ -12,6 +12,7 @@ import {
   table,
   unitsPerTokenText,
 } from "./dossier-format.ts";
+import { custodySection } from "./dossier-custody.ts";
 import type { CatalogueData } from "./catalogue-tiers.ts";
 import type { RichClaim } from "./catalogue-rich-types.ts";
 
@@ -109,6 +110,8 @@ ${table(
     ];
   }),
 )}
+
+${custodySection(reps)}
 ${
   pairs.length === 0
     ? "\nThis claim has one representation, so no relationship exists for it.\n"

@@ -55,6 +55,35 @@ Wrapped by a German manager and a Cayman sponsor. The pair was approved while th
 | `tcrel-r`      | `rheinkontor-digital`       | 6        | 1 canonical unit | `1 / 10^6`                   | `active`      | [RHEINKONTOR-DIGITAL.md](RHEINKONTOR-DIGITAL.md)             |
 | `tcrel-t`      | `kittiwake-cayman-partners` | 8        | 1 canonical unit | `1 / 10^8`                   | `active`      | [KITTIWAKE-CAYMAN-PARTNERS.md](KITTIWAKE-CAYMAN-PARTNERS.md) |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `tcrel-r`
+
+| Field                | Value                                                                       |
+| -------------------- | --------------------------------------------------------------------------- |
+| Custodian (invented) | Wexcombe Property SPV Registry (SIMULATED), `wexcombe-spv-registry-sim`, DE |
+| Structure            | `segregated`                                                                |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`                         |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d                        |
+| Simulated cover      | 10050 bps of supply, signed by the public dev key                           |
+| Seeded by            | `--catalogue=full`                                                          |
+| Redemption terms     | none: not redeemable in this demo                                           |
+
+### `tcrel-t`
+
+| Field                | Value                                                                       |
+| -------------------- | --------------------------------------------------------------------------- |
+| Custodian (invented) | Wexcombe Property SPV Registry (SIMULATED), `wexcombe-spv-registry-sim`, DE |
+| Structure            | `segregated`                                                                |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`                         |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d                        |
+| Simulated cover      | 10000 bps of supply, signed by the public dev key                           |
+| Seeded by            | `--catalogue=full`                                                          |
+| Redemption terms     | none: not redeemable in this demo                                           |
+
 ## Relationships
 
 A shared `canonical_asset_id` is a candidate association only. Only an approved `DIRECT_EQUIVALENT` relationship enables parity conversion, and only while both issuers are `active`. Ratios are output smallest units of the second token per smallest unit of the first, derived from the unit multipliers (ADR 0001).

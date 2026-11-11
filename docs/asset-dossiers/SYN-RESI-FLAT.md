@@ -55,4 +55,17 @@ Residential real estate as a single record, from the same house as the canvas. I
 | -------------- | ---------------------------- | -------- | ---------------- | ---------------------------- | ------------- | -------------------------------------------------------------- |
 | `tflat-m`      | `maison-quillon-collections` | 0        | 1 canonical unit | `1`                          | `active`      | [MAISON-QUILLON-COLLECTIONS.md](MAISON-QUILLON-COLLECTIONS.md) |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `tflat-m`
+
+No custody is recorded for `tflat-m`: the custody screens show their empty state, which is intended.
+
+| Field            | Value                             |
+| ---------------- | --------------------------------- |
+| Redemption terms | none: not redeemable in this demo |
+
 This claim has one representation, so no relationship exists for it.

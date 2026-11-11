@@ -55,6 +55,31 @@ A yen stable-value token in two wrappers: one token is one yen, the other is one
 | `tjpy-s`       | `sakura-meadow-trust`   | 2        | 1 canonical unit   | `1 / 10^2`                   | `active`      | [SAKURA-MEADOW-TRUST.md](SAKURA-MEADOW-TRUST.md)     |
 | `tjpy-m`       | `merlion-harbour-trust` | 6        | 100 canonical unit | `1 / 10^4`                   | `active`      | [MERLION-HARBOUR-TRUST.md](MERLION-HARBOUR-TRUST.md) |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `tjpy-s`
+
+No custody is recorded for `tjpy-s`: the custody screens show their empty state, which is intended.
+
+| Field            | Value                             |
+| ---------------- | --------------------------------- |
+| Redemption terms | none: not redeemable in this demo |
+
+### `tjpy-m`
+
+| Field                | Value                                                                |
+| -------------------- | -------------------------------------------------------------------- |
+| Custodian (invented) | Tamarisk Reserve Trust (SIMULATED), `tamarisk-reserve-trust-sim`, KY |
+| Structure            | `segregated`                                                         |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`                  |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d                 |
+| Simulated cover      | 10200 bps of supply, signed by the public dev key                    |
+| Seeded by            | `--catalogue=full`                                                   |
+| Redemption terms     | none: not redeemable in this demo                                    |
+
 ## Relationships
 
 A shared `canonical_asset_id` is a candidate association only. Only an approved `DIRECT_EQUIVALENT` relationship enables parity conversion, and only while both issuers are `active`. Ratios are output smallest units of the second token per smallest unit of the first, derived from the unit multipliers (ADR 0001).

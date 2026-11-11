@@ -55,6 +55,27 @@ Wrapped by the sponsor and by a feeder in another country. The parity pair is on
 | `tpef-t`       | `kittiwake-cayman-partners` | 6        | 1 canonical unit | `1 / 10^6`                   | `active`      | [KITTIWAKE-CAYMAN-PARTNERS.md](KITTIWAKE-CAYMAN-PARTNERS.md) |
 | `tpef-c`       | `cobaltine-fund-services`   | 8        | 1 canonical unit | `1 / 10^8`                   | `active`      | [COBALTINE-FUND-SERVICES.md](COBALTINE-FUND-SERVICES.md)     |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `tpef-t`
+
+No custody is recorded for `tpef-t`: the custody screens show their empty state, which is intended.
+
+| Field            | Value                             |
+| ---------------- | --------------------------------- |
+| Redemption terms | none: not redeemable in this demo |
+
+### `tpef-c`
+
+No custody is recorded for `tpef-c`: the custody screens show their empty state, which is intended.
+
+| Field            | Value                             |
+| ---------------- | --------------------------------- |
+| Redemption terms | none: not redeemable in this demo |
+
 ## Relationships
 
 A shared `canonical_asset_id` is a candidate association only. Only an approved `DIRECT_EQUIVALENT` relationship enables parity conversion, and only while both issuers are `active`. Ratios are output smallest units of the second token per smallest unit of the first, derived from the unit multipliers (ADR 0001).

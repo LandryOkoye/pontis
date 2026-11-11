@@ -55,4 +55,21 @@ A term note from a Canadian lender, the longest-dated instrument in the catalogu
 | -------------- | --------------------- | -------- | ---------------- | ---------------------------- | ------------- | ------------------------------------------------ |
 | `tsme-b`       | `boreal-larch-credit` | 6        | 1 canonical unit | `1 / 10^6`                   | `active`      | [BOREAL-LARCH-CREDIT.md](BOREAL-LARCH-CREDIT.md) |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `tsme-b`
+
+| Field                | Value                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Custodian (invented) | Northquay Securities Custody (SIMULATED), `northquay-custody-sim`, LU                                                                       |
+| Structure            | `segregated`                                                                                                                                |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`                                                                                         |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d                                                                                        |
+| Simulated cover      | 10250 bps of supply, signed by the public dev key                                                                                           |
+| Seeded by            | `--catalogue=full`                                                                                                                          |
+| Redemption terms     | at least 500 and no maximum whole tokens, fee 120 bps, open 5 d in every 91 d, issuer accepts within 3 d and settles within 7 d (simulated) |
+
 This claim has one representation, so no relationship exists for it.

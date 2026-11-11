@@ -28,8 +28,8 @@ export const CUSTODIANS: readonly PlannedCustodian[] = [
     tier: "demo",
   },
   {
-    id: "quillfeather-vault-sim",
-    name: "Quillfeather On-Chain Vault (SIMULATED)",
+    id: "ferncliff-vault-sim",
+    name: "Ferncliff On-Chain Vault (SIMULATED)",
     jurisdiction: "KY",
     kind: "On-chain vault: the reserve is a simulated pool, not an account at a firm",
     tier: "demo",
