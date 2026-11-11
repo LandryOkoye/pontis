@@ -16,7 +16,9 @@ Implements [ADR 0016](../decisions/0016-price-reference-and-route-guards.md) in 
 
 ## Verification
 
-`cargo test -p pontis-core` passes (unit and property tests), `cargo clippy --all-targets -D warnings` is clean. Sandbox scenario tests are listed in the final section when they land.
+- `cargo test -p pontis-core`: 246 unit and property tests pass; `cargo clippy --all-targets -D warnings` and `cargo fmt --check` are clean.
+- Shared vectors: `test-vectors/route-guard.json` (deviation, skew, effective fee, limits; computed with unbounded Python integers and the documented 256-bit refusal rules) is reproduced by Rust (`guard_vector_tests.rs`) and TypeScript (`@pontis/quote-engine`, 75 tests). `test-vectors/price-attestation.json` is reproduced by Rust and an independent Python Borsh and ed25519 rebuild; the TypeScript attestation (`@pontis/market-data`) moves to this layout on the mirror branch.
+- Sandbox (`contracts/integration-tests/tests/guards.rs`, real wasm): parity prices open a guarded pair and a conversion settles; a deviating price closes it with `price_deviation`; refused conversions return the input and trip the breaker; the proposer cannot reset it, the second approver can only after prices recover; the reset voids older quotes (`COMPATIBILITY_CHANGED`); the skew fee equals an independent calculation and a quote with the old fee is refused (`FEE_CHANGED`); minimum and maximum are refused with their own reasons; an unguarded pair ignores prices. A host panic shows as a wasm trap in the sandbox, so refusal wording is asserted in unit tests.
 
 ## Open risks
 
