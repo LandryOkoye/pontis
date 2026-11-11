@@ -1,10 +1,11 @@
 // Deploys synthetic-token twice (TGOLD-A, TGOLD-B) and pontis-core to sub-accounts of the
-// deployer and initialises them. With --catalogue it also deploys one synthetic-token per demo
-// catalogue representation (scripts/lib/catalogue.ts) on `<representation id>.<deployer>`.
+// deployer and initialises them. With --catalogue[=mvp|demo|full] it also deploys one
+// synthetic-token per representation of that catalogue tier (scripts/lib/catalogue-tiers.ts) on
+// `<representation id>.<deployer>`; a bare --catalogue means `demo`, no flag means `mvp` (none).
 // Idempotent: an account whose contract already answers its owner view is not re-initialised,
 // and code is only replaced with --redeploy.
 //
-//   pnpm --filter @pontis/scripts deploy-testnet [--redeploy] [--catalogue]
+//   pnpm --filter @pontis/scripts deploy-testnet [--redeploy] [--catalogue[=mvp|demo|full]]
 //
 // Needs built wasm (scripts/build-contracts.sh) and DEPLOYER_ACCOUNT_ID plus a key; see
 // docs/architecture/deployments.md; the result is written to docs/architecture/deployment-record.md.
@@ -15,6 +16,7 @@ import { pathToFileURL } from "node:url";
 import { Account, KeyPair, JsonRpcProvider } from "near-api-js";
 import { assertDeployerKey, connect, type Chain } from "./lib/chain.ts";
 import { loadConfig } from "./lib/config.ts";
+import { catalogueFor, tierFromArgs, type CatalogueTier } from "./lib/catalogue-tiers.ts";
 import { REPO_ROOT } from "./lib/evidence.ts";
 import {
   catalogueTargets,
@@ -47,7 +49,7 @@ async function ensureAccount(chain: Chain, target: Target, funding: bigint): Pro
 export async function deploy(
   chain: Chain,
   redeploy: boolean,
-  options: { catalogue?: boolean } = {},
+  options: { catalogue?: CatalogueTier } = {},
 ): Promise<void> {
   await assertDeployerKey(chain);
   const { config } = chain;
@@ -59,7 +61,7 @@ export async function deploy(
       a: config.tokenAId,
       b: config.tokenBId,
     }),
-    ...(options.catalogue ? catalogueTargets(config.deployerId) : []),
+    ...catalogueTargets(config.deployerId, catalogueFor(options.catalogue ?? "mvp")),
   ];
   for (const target of plan) {
     const code = readFileSync(wasmPath(target.wasm));
@@ -107,6 +109,6 @@ export async function deploy(
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await deploy(connect(loadConfig()), process.argv.includes("--redeploy"), {
-    catalogue: process.argv.includes("--catalogue"),
+    catalogue: tierFromArgs(process.argv.slice(2), "mvp"),
   });
 }

@@ -52,6 +52,30 @@ export function signPoint(key: QuoteKey, point: FeedPoint, contract: string): Pr
   };
 }
 
+/**
+ * The same attestation as `signPoint`, signed on the libuv threadpool instead of the main thread.
+ * Ed25519 is deterministic, so the bytes are identical; this only lets a backfill of tens of
+ * thousands of points use several cores.
+ */
+export function signPointAsync(
+  key: QuoteKey,
+  point: FeedPoint,
+  contract: string,
+): Promise<PriceAttestation> {
+  return new Promise((resolve, reject) => {
+    sign(null, attestationMessage(point, contract), key.privateKey, (error, signature) => {
+      if (error) return reject(error);
+      resolve({
+        domain: PRICE_ATTESTATION_DOMAIN,
+        version: PRICE_ATTESTATION_VERSION,
+        contract,
+        publisherKey: key.publicKey,
+        signature: signature.toString("base64"),
+      });
+    });
+  });
+}
+
 const SPKI_ED25519_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 
 function publicKeyObject(encoded: string): KeyObject {

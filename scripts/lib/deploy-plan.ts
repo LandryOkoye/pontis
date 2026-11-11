@@ -1,6 +1,7 @@
 // What to deploy where, and the deployments record (BuildPlan B8).
 
-import { REPRESENTATIONS, tokenAccount } from "./catalogue.ts";
+import { tokenAccount } from "./catalogue.ts";
+import { BASE_CATALOGUE, type CatalogueData } from "./catalogue-tiers.ts";
 import { REPO_ROOT } from "./evidence.ts";
 
 const NEAR = 10n ** 24n;
@@ -58,9 +59,15 @@ export function targets(deployerId: string, ids: { core: string; a: string; b: s
   ];
 }
 
-/** One `synthetic-token` per catalogue representation, on `<representation id>.<deployer>`. */
-export function catalogueTargets(deployerId: string): Target[] {
-  return REPRESENTATIONS.map((rep) => ({
+/**
+ * One `synthetic-token` per representation of `data`, on `<representation id>.<deployer>`: the
+ * phase 1 catalogue unless a tier's data (catalogue-tiers.ts) is given.
+ */
+export function catalogueTargets(
+  deployerId: string,
+  data: CatalogueData = BASE_CATALOGUE,
+): Target[] {
+  return data.representations.map((rep) => ({
     label: rep.symbol,
     accountId: tokenAccount(rep.id, deployerId),
     wasm: "synthetic_token",
