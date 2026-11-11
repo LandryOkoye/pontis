@@ -318,6 +318,10 @@ mod conversion_state_tests;
 #[cfg(test)]
 mod conversion_tests;
 #[cfg(test)]
+mod custody_fixture;
+#[cfg(test)]
+mod custody_tests;
+#[cfg(test)]
 mod epochs_tests;
 #[cfg(test)]
 mod guard_breaker_tests;
