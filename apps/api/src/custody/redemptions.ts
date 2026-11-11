@@ -17,13 +17,14 @@ const labels = { simulated: true, sources: [ISSUER_SOURCE], notice: CUSTODY_NOTI
 
 /** Rejected and expired requests can be reclaimed; so can one whose deadline has passed (it expires first). */
 export function isReclaimable(r: ChainRedemption, nowMs: number): boolean {
+  if (r.settling) return false;
   if (r.status === "rejected" || r.status === "expired") return true;
   if (r.status === "requested") return nowMs > r.accept_deadline_ms;
   if (r.status === "accepted") return r.fulfil_deadline_ms !== null && nowMs > r.fulfil_deadline_ms;
   return false;
 }
 
-function summary(r: ChainRedemption, nowMs: number): RedemptionSummary {
+export function redemptionSummary(r: ChainRedemption, nowMs: number): RedemptionSummary {
   return {
     id: String(r.id),
     user: r.user,
@@ -79,7 +80,7 @@ export async function getRedemption(
 ): Promise<Redemption> {
   const r = await chain.getRedemption(Number(id));
   if (!r) throw notFound(`Redemption ${id}`);
-  return { ...summary(r, now.getTime()), timeline: timeline(r) };
+  return { ...redemptionSummary(r, now.getTime()), timeline: timeline(r) };
 }
 
 export interface RedemptionFilter extends PageRequest {
@@ -121,7 +122,7 @@ export async function listRedemptions(
           (status === undefined || r.status === status) &&
           (representationId === undefined || r.representation_id === representationId),
       )
-      .map((r) => summary(r, now.getTime())),
+      .map((r) => redemptionSummary(r, now.getTime())),
     nextCursor: page.nextCursor,
     ...labels,
   };
