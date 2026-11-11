@@ -298,6 +298,8 @@ mod route_tests;
 #[cfg(test)]
 mod signers_tests;
 #[cfg(test)]
+mod signers_verify_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod vault_tests;
