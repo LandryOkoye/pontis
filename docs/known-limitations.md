@@ -33,6 +33,14 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **Issuer metadata is enforced only as far as a registrar's entries go.** A representation needs an issuer whose `authorized_categories` include the canonical asset's category and, if `controlled_accounts` is non-empty, whose list includes the token account. An empty `controlled_accounts` means no constraint. The contract cannot prove the issuer controls those accounts or may issue that category.
 - **Real RWA onboarding needs more:** signed issuer and verifier attestations, proof of account control, evidence content checked by someone other than the issuer, eligibility enforcement per asset, and separate registrar, attester and approver roles. None is built ([ADR 0009](decisions/0009-synthetic-evidence-labelling.md)).
 
+## Price guards (contract, phase 2)
+
+- **A relationship has no guard until a compat approver sets one.** Unguarded pairs convert at the fixed ratio as before, whatever the market says. The seed sets guards on the demo pairs.
+- **The reference price is a signed attestation, not a market.** Nothing but the simulator publishes prices, with a key anyone can recompute. The guard shows the mechanism works; it says nothing about any real price.
+- **Limits are tumbling windows.** Up to twice the window limit can pass across a boundary. A payout failure does not give the allowance back.
+- **The breaker counts evaluations.** Every price submission evaluates the pair, so a deviation counts once per submission that leaves it in place, including one for the other leg.
+- **Corporate actions, lifecycle and NAV windows are not part of this change** ([ADR 0017](decisions/0017-corporate-actions-and-multiplier-epochs.md), [0018](decisions/0018-asset-lifecycle-and-nav-strikes.md)).
+
 ## Contract behaviour worth knowing
 
 - A quote lives 60 seconds. A transaction that lands after expiry is refused and refunded.
