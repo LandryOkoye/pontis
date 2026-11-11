@@ -1,0 +1,316 @@
+{
+  "description": "Reserve status vectors, computed with unbounded Python integers from the formulas of ADR 0020 section 5 (limit = attested + attested * tolerance_bps / 10000, floor; breached when circulating > limit; stale when now - oldest as_of > max_reserve_age_ms; breached wins over stale; ratio_bps = floor(attested * 10000 / circulating), null at zero supply; headroom = attested - circulating floored at 0). Amounts are decimal strings. Rust (reserve_vector_tests.rs) reproduces each case.",
+  "now_ms": 1790000000000,
+  "cases": [
+    {
+      "name": "exactly at the limit is ok",
+      "attestations": [
+        {
+          "units": "1000000",
+          "as_of_ms": 1789999999000
+        }
+      ],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "1000000",
+      "expected": {
+        "state": "ok",
+        "attested_units": "1000000",
+        "limit_units": "1000000",
+        "headroom_units": "0",
+        "ratio_bps": 10000,
+        "age_ms": 1000
+      }
+    },
+    {
+      "name": "one unit over is breached",
+      "attestations": [
+        {
+          "units": "1000000",
+          "as_of_ms": 1789999999000
+        }
+      ],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "1000001",
+      "expected": {
+        "state": "breached",
+        "attested_units": "1000000",
+        "limit_units": "1000000",
+        "headroom_units": "0",
+        "ratio_bps": 9999,
+        "age_ms": 1000
+      }
+    },
+    {
+      "name": "tolerance allows the limit",
+      "attestations": [
+        {
+          "units": "1000000",
+          "as_of_ms": 1789999999000
+        }
+      ],
+      "tolerance_bps": 50,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "1005000",
+      "expected": {
+        "state": "ok",
+        "attested_units": "1000000",
+        "limit_units": "1005000",
+        "headroom_units": "0",
+        "ratio_bps": 9950,
+        "age_ms": 1000
+      }
+    },
+    {
+      "name": "tolerance plus one is breached",
+      "attestations": [
+        {
+          "units": "1000000",
+          "as_of_ms": 1789999999000
+        }
+      ],
+      "tolerance_bps": 50,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "1005001",
+      "expected": {
+        "state": "breached",
+        "attested_units": "1000000",
+        "limit_units": "1005000",
+        "headroom_units": "0",
+        "ratio_bps": 9950,
+        "age_ms": 1000
+      }
+    },
+    {
+      "name": "zero supply is ok with the full headroom",
+      "attestations": [
+        {
+          "units": "1000000",
+          "as_of_ms": 1789999999000
+        }
+      ],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "0",
+      "expected": {
+        "state": "ok",
+        "attested_units": "1000000",
+        "limit_units": "1000000",
+        "headroom_units": "1000000",
+        "ratio_bps": null,
+        "age_ms": 1000
+      }
+    },
+    {
+      "name": "age equal to the maximum is fresh",
+      "attestations": [
+        {
+          "units": "1000000",
+          "as_of_ms": 1789996400000
+        }
+      ],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "500000",
+      "expected": {
+        "state": "ok",
+        "attested_units": "1000000",
+        "limit_units": "1000000",
+        "headroom_units": "500000",
+        "ratio_bps": 20000,
+        "age_ms": 3600000
+      }
+    },
+    {
+      "name": "one ms past the maximum is stale",
+      "attestations": [
+        {
+          "units": "1000000",
+          "as_of_ms": 1789996399999
+        }
+      ],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "500000",
+      "expected": {
+        "state": "stale",
+        "attested_units": "1000000",
+        "limit_units": "1000000",
+        "headroom_units": "500000",
+        "ratio_bps": 20000,
+        "age_ms": 3600001
+      }
+    },
+    {
+      "name": "two custodians add and the oldest sets the age",
+      "attestations": [
+        {
+          "units": "600000",
+          "as_of_ms": 1789999999990
+        },
+        {
+          "units": "400000",
+          "as_of_ms": 1789996399995
+        }
+      ],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "900000",
+      "expected": {
+        "state": "stale",
+        "attested_units": "1000000",
+        "limit_units": "1000000",
+        "headroom_units": "100000",
+        "ratio_bps": 11111,
+        "age_ms": 3600005
+      }
+    },
+    {
+      "name": "two custodians fresh",
+      "attestations": [
+        {
+          "units": "600000",
+          "as_of_ms": 1789999999990
+        },
+        {
+          "units": "400000",
+          "as_of_ms": 1789999999980
+        }
+      ],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "1000000",
+      "expected": {
+        "state": "ok",
+        "attested_units": "1000000",
+        "limit_units": "1000000",
+        "headroom_units": "0",
+        "ratio_bps": 10000,
+        "age_ms": 20
+      }
+    },
+    {
+      "name": "breached wins over stale",
+      "attestations": [
+        {
+          "units": "1000000",
+          "as_of_ms": 1789992800000
+        }
+      ],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "2000000",
+      "expected": {
+        "state": "breached",
+        "attested_units": "1000000",
+        "limit_units": "1000000",
+        "headroom_units": "0",
+        "ratio_bps": 5000,
+        "age_ms": 7200000
+      }
+    },
+    {
+      "name": "no attestation",
+      "attestations": [],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "0",
+      "expected": {
+        "state": "no_attestation",
+        "attested_units": "0",
+        "limit_units": "0",
+        "headroom_units": "0",
+        "ratio_bps": null,
+        "age_ms": null
+      }
+    },
+    {
+      "name": "no attestation with supply",
+      "attestations": [],
+      "tolerance_bps": 100,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "5",
+      "expected": {
+        "state": "no_attestation",
+        "attested_units": "0",
+        "limit_units": "0",
+        "headroom_units": "0",
+        "ratio_bps": 0,
+        "age_ms": null
+      }
+    },
+    {
+      "name": "ratio rounds down",
+      "attestations": [
+        {
+          "units": "2000000",
+          "as_of_ms": 1789999999995
+        }
+      ],
+      "tolerance_bps": 0,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "3000000",
+      "expected": {
+        "state": "breached",
+        "attested_units": "2000000",
+        "limit_units": "2000000",
+        "headroom_units": "0",
+        "ratio_bps": 6666,
+        "age_ms": 5
+      }
+    },
+    {
+      "name": "largest attestation with the largest tolerance",
+      "attestations": [
+        {
+          "units": "1267650600228229401496703205376",
+          "as_of_ms": 1789999999995
+        }
+      ],
+      "tolerance_bps": 1000,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "1394415660251052341646373525913",
+      "expected": {
+        "state": "ok",
+        "attested_units": "1267650600228229401496703205376",
+        "limit_units": "1394415660251052341646373525913",
+        "headroom_units": "0",
+        "ratio_bps": 9090,
+        "age_ms": 5
+      }
+    },
+    {
+      "name": "four custodians at the cap",
+      "attestations": [
+        {
+          "units": "1267650600228229401496703205376",
+          "as_of_ms": 1789999999995
+        },
+        {
+          "units": "1267650600228229401496703205376",
+          "as_of_ms": 1789999999995
+        },
+        {
+          "units": "1267650600228229401496703205376",
+          "as_of_ms": 1789999999995
+        },
+        {
+          "units": "1267650600228229401496703205376",
+          "as_of_ms": 1789999999995
+        }
+      ],
+      "tolerance_bps": 1000,
+      "max_reserve_age_ms": 3600000,
+      "circulating": "5070602400912917605986812821504",
+      "expected": {
+        "state": "ok",
+        "attested_units": "5070602400912917605986812821504",
+        "limit_units": "5577662641004209366585494103654",
+        "headroom_units": "0",
+        "ratio_bps": 10000,
+        "age_ms": 5
+      }
+    }
+  ]
+}
