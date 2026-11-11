@@ -66,6 +66,10 @@ describe("openapi.yaml", () => {
         "GET /v1/metrics/protocol",
         "GET /v1/admin/metrics",
         "GET /metrics",
+        "POST /v1/auth/challenge",
+        "POST /v1/auth/verify",
+        "POST /v1/auth/logout",
+        "GET /v1/auth/me",
       ].sort(),
     );
   });
@@ -77,6 +81,8 @@ describe("openapi.yaml", () => {
       "/v1/admin/reconciliation",
       "/v1/admin/metrics",
       "/metrics",
+      "/v1/auth/logout",
+      "/v1/auth/me",
     ]);
   });
 
