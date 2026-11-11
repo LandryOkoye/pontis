@@ -10,6 +10,8 @@ import { randomBytes } from "node:crypto";
 export interface User {
   accountId: string;
   wallet: Account;
+  /** `ed25519:<base58>`, for the sign-in scenario. A throwaway key of a throwaway account. */
+  secretKey: string;
 }
 
 const NEAR = 10n ** 24n;
@@ -55,6 +57,7 @@ export async function createUser(
   return {
     accountId,
     wallet: new Account(accountId, provider, key.toString() as `ed25519:${string}`),
+    secretKey: key.toString(),
   };
 }
 

@@ -132,6 +132,7 @@ components:
         - UNAUTHORIZED
         - RATE_LIMITED
         - INTERNAL
+        - FORBIDDEN
     Liveness:
       type: object
       properties:
@@ -2750,6 +2751,131 @@ components:
     PrometheusText:
       type: string
       description: "Prometheus text exposition format 0.0.4: `# HELP` and `# TYPE` lines, then samples named `pontis_<key>` with labels `window`, `representation` and `simulated`."
+    AuthChallengeResponse:
+      type: object
+      properties:
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        nonce:
+          type: string
+          pattern: ^[A-Za-z0-9+/]{43}=$
+          description: 32 random bytes, base64 (44 characters).
+        recipient:
+          type: string
+        message:
+          type: string
+        expiresAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - accountId
+        - nonce
+        - recipient
+        - message
+        - expiresAt
+      description: Call the wallet's NEP-413 `signMessage({ message, recipient, nonce })` with `nonce` decoded from base64 to its 32 bytes, then send the result to `POST /v1/auth/verify`.
+    AuthChallengeRequest:
+      type: object
+      properties:
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+      required:
+        - accountId
+    AuthVerifyResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        tokenType:
+          type: string
+          enum:
+            - Bearer
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleName"
+        keyType:
+          $ref: "#/components/schemas/AuthKeyType"
+        expiresAt:
+          $ref: "#/components/schemas/Timestamp"
+        maxExpiresAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - token
+        - tokenType
+        - accountId
+        - roles
+        - keyType
+        - expiresAt
+        - maxExpiresAt
+    RoleName:
+      type: string
+      enum:
+        - owner
+        - registrar
+        - compat_approver
+        - pauser
+        - attester
+        - reserve_attester
+        - bridge_attester
+      description: A role held on pontis-core. `owner` is listed when the account is the contract owner.
+    AuthKeyType:
+      type: string
+      enum:
+        - full_access
+        - function_call
+      description: The kind of access key that signed. NEP-413 asks for a full-access key; a function-call key proves the account issued it, and is accepted but recorded.
+    AuthVerifyRequest:
+      type: object
+      properties:
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        publicKey:
+          type: string
+          pattern: ^ed25519:[1-9A-HJ-NP-Za-km-z]{32,64}$
+          example: ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y
+        signature:
+          type: string
+          pattern: ^[A-Za-z0-9+/]{86}==$
+          description: Base64 of the 64-byte ed25519 signature.
+        nonce:
+          type: string
+          pattern: ^[A-Za-z0-9+/]{43}=$
+          description: 32 random bytes, base64 (44 characters).
+        callbackUrl:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      required:
+        - accountId
+        - publicKey
+        - signature
+        - nonce
+    AuthLogoutResponse:
+      type: object
+      properties:
+        revoked:
+          type: boolean
+          enum:
+            - true
+      required:
+        - revoked
+    AuthMeResponse:
+      type: object
+      properties:
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleName"
+        expiresAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - accountId
+        - roles
+        - expiresAt
   parameters: {}
 paths:
   /v1/health:
@@ -4444,16 +4570,16 @@ paths:
     get:
       operationId: getReconciliation
       summary: Latest reconciliation findings
-      description: Admin only. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.
+      description: "Operators only: a session whose account holds the owner, registrar, compat_approver or pauser role (re-read from the chain on every call), or the break-glass admin key. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`."
       tags:
         - Admin
       parameters:
         - schema:
             type: string
-            description: "`Bearer <ADMIN_API_KEY>`."
-            example: Bearer 0123456789abcdef0123456789abcdef
+            description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
           required: true
-          description: "`Bearer <ADMIN_API_KEY>`."
+          description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
           name: authorization
           in: header
       responses:
@@ -4464,7 +4590,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReconciliationReport"
         "401":
-          description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
           content:
             application/json:
               schema:
@@ -4511,16 +4643,16 @@ paths:
     get:
       operationId: getAdminMetrics
       summary: Protocol success metrics, admin view
-      description: Admin only, audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.
+      description: Operators only (any of owner, registrar, compat_approver, pauser; roles cached for 60 seconds), or the break-glass admin key; audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.
       tags:
         - Admin
       parameters:
         - schema:
             type: string
-            description: "`Bearer <ADMIN_API_KEY>`."
-            example: Bearer 0123456789abcdef0123456789abcdef
+            description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
           required: true
-          description: "`Bearer <ADMIN_API_KEY>`."
+          description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
           name: authorization
           in: header
       responses:
@@ -4531,7 +4663,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminMetrics"
         "401":
-          description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
           content:
             application/json:
               schema:
@@ -4552,16 +4690,16 @@ paths:
     get:
       operationId: getPrometheusMetrics
       summary: Prometheus exposition of the metrics
-      description: Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same admin bearer key (Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.
+      description: Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same credentials (for a scraper use the break-glass admin bearer key; a session expires; Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.
       tags:
         - Admin
       parameters:
         - schema:
             type: string
-            description: "`Bearer <ADMIN_API_KEY>`."
-            example: Bearer 0123456789abcdef0123456789abcdef
+            description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
           required: true
-          description: "`Bearer <ADMIN_API_KEY>`."
+          description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
           name: authorization
           in: header
       responses:
@@ -4572,7 +4710,177 @@ paths:
               schema:
                 $ref: "#/components/schemas/PrometheusText"
         "401":
-          description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/auth/challenge:
+    post:
+      operationId: authChallenge
+      summary: Start a wallet sign-in
+      description: Returns a single-use nonce (5 minutes), the `recipient` and the exact `message` for the wallet's NEP-413 `signMessage`. Rate limited per client address. Not available in fixtures mode.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthChallengeRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthChallengeResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/auth/verify:
+    post:
+      operationId: authVerify
+      summary: Finish a wallet sign-in and open a session
+      description: "Checks the NEP-413 signature, that the key is an access key of the account (over RPC), consumes the nonce and returns a session token: 15 minutes, renewed by use up to 8 hours. An account that holds no role may sign in; it holds no admin rights. The signed message authorises a session only, never a chain transaction."
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthVerifyRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthVerifyResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/auth/logout:
+    post:
+      operationId: authLogout
+      summary: End the session
+      description: Revokes the session at once.
+      tags:
+        - Auth
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthLogoutResponse"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/auth/me:
+    get:
+      operationId: authMe
+      summary: The signed-in account and its roles
+      description: Roles are read from the contract and cached for 60 seconds. Using the session renews it.
+      tags:
+        - Auth
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMeResponse"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
           content:
             application/json:
               schema:

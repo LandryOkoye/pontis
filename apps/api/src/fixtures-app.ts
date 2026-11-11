@@ -86,6 +86,10 @@ export const UNAVAILABLE_IN_FIXTURES: readonly OperationId[] = [
   "getReconciliation",
   "getAdminMetrics",
   "getPrometheusMetrics",
+  "authChallenge",
+  "authVerify",
+  "authLogout",
+  "authMe",
 ];
 
 export function buildFixturesApp(security: SecurityOptions = { corsOrigins: [] }): FastifyInstance {

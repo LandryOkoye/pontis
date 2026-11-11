@@ -2,6 +2,7 @@
 // `API_MODE=fixtures` skips all of that and serves the example data instead (fixtures-app.ts).
 
 import { CoreClient, RpcClient, RpcTxVerifier, TokenClient } from "@pontis/near-client";
+import { rpcAuthChain } from "./auth/types.ts";
 import { parseSecretKey } from "@pontis/quote-engine";
 import { buildApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
@@ -55,6 +56,11 @@ const app = buildApp({
       (await new TokenClient(rpc, tokenId).storageBalanceOf(account)) !== null,
   },
   txVerifier: new RpcTxVerifier(rpc),
+  auth: {
+    chain: rpcAuthChain(rpc, core),
+    recipient: config.AUTH_RECIPIENT ?? `pontis-api.${config.NEAR_NETWORK_ID}`,
+    networkId: config.NEAR_NETWORK_ID,
+  },
   ...(config.ADMIN_API_KEY ? { adminApiKey: config.ADMIN_API_KEY } : {}),
   security: {
     corsOrigins: config.CORS_ORIGIN,

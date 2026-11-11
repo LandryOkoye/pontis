@@ -12,7 +12,9 @@ import type { ConversionChain } from "./conversions/chain.ts";
 import type { ActionsChain } from "./actions/chain.ts";
 import type { QuoteDeps } from "./quotes/service.ts";
 import { registerActionRoutes } from "./routes/actions.ts";
+import type { AuthDeps } from "./auth/types.ts";
 import { registerAdminRoutes } from "./routes/admin.ts";
+import { registerAuthRoutes } from "./routes/auth.ts";
 import { registerConversionRoutes } from "./routes/conversions.ts";
 import { registerHealthRoute, type HealthOptions } from "./routes/health.ts";
 import { registerQuoteRoutes } from "./routes/quotes.ts";
@@ -34,7 +36,9 @@ export interface AppDeps {
   txVerifier: TxVerifier;
   /** Clock for market reads (chart ranges, sparklines); tests pin it. */
   now?: () => Date;
-  /** Bearer key for the admin endpoints; without one they refuse everyone. */
+  /** Wallet sign-in: the chain reads behind it, the NEP-413 recipient and the network. */
+  auth: AuthDeps;
+  /** Break-glass bearer key for the admin endpoints (labelled `legacy-admin-key`); unset turns it off. */
   adminApiKey?: string;
   /** CORS origins and rate limits; see `registerSecurity`. */
   security?: SecurityOptions;
@@ -76,11 +80,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       coreId: deps.quotes.coreId,
       ...(deps.quotes.now ? { now: deps.quotes.now } : {}),
     });
-    registerAdminRoutes(scope, deps.db, deps.adminApiKey);
+    const authContext = { db: deps.db, auth: deps.auth, adminApiKey: deps.adminApiKey };
+    registerAuthRoutes(scope, authContext);
+    registerAdminRoutes(scope, authContext);
     registerMetricsRoutes(scope, {
       db: deps.db,
       chainHeight: deps.chainHeight,
       adminApiKey: deps.adminApiKey,
+      auth: deps.auth,
       ...(deps.now ? { now: deps.now } : {}),
     });
   });
