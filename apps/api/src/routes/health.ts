@@ -55,17 +55,17 @@ export function indexerHealth(
   return { state, lagBlocks, lastHeartbeatAt: cursor.updatedAt.toISOString(), heartbeatAgeMs };
 }
 
-export function registerHealthRoute(
-  app: FastifyInstance,
+/** The combined health probe, reusable by the status feed. Never throws. */
+export function makeHealthCheck(
   db: Db,
   chainHeight: () => Promise<number>,
   options: HealthOptions = {},
-): void {
+): () => Promise<Health> {
   const staleAfterMs = options.staleAfterMs ?? DEFAULT_INDEXER_STALE_AFTER_MS;
   const maxLagBlocks = options.maxLagBlocks ?? DEFAULT_INDEXER_MAX_LAG_BLOCKS;
   const now = options.now ?? (() => new Date());
 
-  async function check(): Promise<Health> {
+  return async () => {
     const [probe, height] = await Promise.all([
       attempt(() => db.execute(sql`select 1`)),
       attempt(chainHeight),
@@ -87,7 +87,16 @@ export function registerHealthRoute(
       rpc: height !== null,
       indexer,
     });
-  }
+  };
+}
+
+export function registerHealthRoute(
+  app: FastifyInstance,
+  db: Db,
+  chainHeight: () => Promise<number>,
+  options: HealthOptions = {},
+): void {
+  const check = makeHealthCheck(db, chainHeight, options);
 
   app.get(ENDPOINTS.getHealthLive.path, async () =>
     ENDPOINTS.getHealthLive.response.parse({ status: "ok" }),

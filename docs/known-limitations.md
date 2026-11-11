@@ -33,6 +33,14 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **Issuer metadata is enforced only as far as a registrar's entries go.** A representation needs an issuer whose `authorized_categories` include the canonical asset's category and, if `controlled_accounts` is non-empty, whose list includes the token account. An empty `controlled_accounts` means no constraint. The contract cannot prove the issuer controls those accounts or may issue that category.
 - **Real RWA onboarding needs more:** signed issuer and verifier attestations, proof of account control, evidence content checked by someone other than the issuer, eligibility enforcement per asset, and separate registrar, attester and approver roles. None is built ([ADR 0009](decisions/0009-synthetic-evidence-labelling.md)).
 
+## Market data (expansion)
+
+- **Almost all market data is simulated.** Prices, NAV, supply and most trade flow come from `apps/simulator`, flagged `simulated: true` ([ADR 0015](decisions/0015-market-data-platform.md)). Only conversions settled on the testnet are real, and they do not have a real price: a candle exists only where a price point does, so real conversion volume does not reach the charts today.
+- **Candle volume of a parity conversion is units moved**, not a market measure; one-minute and five-minute candles cover the last two days only and are mostly filled carry-forwards.
+- **Price attestations are not verified on chain.** The simulator signs each price with a key derived from a public label; nothing checks it until the price guard exists.
+- **The directory sorts and filters in memory** over the joined catalogue, and its cursor is an offset tied to the query. Fine for a few thousand assets; a row inserted between pages can shift one.
+- **Holders, TVL beyond the vault, pools, reserves, premium and parity-deviation charts, and realtime streams are not built yet.** Each arrives with the phase that creates its data ([handoff](api/FRONTEND_HANDOFF.md)).
+
 ## Contract behaviour worth knowing
 
 - A quote lives 60 seconds. A transaction that lands after expiry is refused and refunded.

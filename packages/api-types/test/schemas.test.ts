@@ -1,6 +1,21 @@
 import { describe, expect, it } from "vitest";
 import {
   ApiErrorSchema,
+  ActivityListSchema,
+  AssetChainListSchema,
+  AssetDocumentListSchema,
+  AssetIssuerViewSchema,
+  AssetListSchema,
+  AssetMetadataSchema,
+  CategoryListSchema,
+  CompareQuerySchema,
+  CompareResponseSchema,
+  IssuerLeaderboardSchema,
+  SearchResultSchema,
+  StatusSchema,
+  ChainListSchema,
+  MarketMoversSchema,
+  MarketOverviewSchema,
   AssetSchema,
   AssetSummarySchema,
   CompareRoutesRequestSchema,
@@ -12,6 +27,12 @@ import {
   HealthSchema,
   IssuerSchema,
   ListTransactionsQuerySchema,
+  ListAssetsQuerySchema,
+  NavChartSchema,
+  PriceChartSchema,
+  PriceString,
+  SupplyChartSchema,
+  VolumeChartSchema,
   QuoteSchema,
   ReconciliationFindingSchema,
   ReconciliationReportSchema,
@@ -32,6 +53,24 @@ describe("fixtures round-trip through the schemas", () => {
     ["quote", QuoteSchema, fx.quote],
     ["settled transaction", TransactionSchema, fx.transactionSettled],
     ["health", HealthSchema, fx.health],
+    ["asset directory", AssetListSchema, fx.assetDirectory],
+    ["price chart", PriceChartSchema, fx.priceChart],
+    ["NAV chart", NavChartSchema, fx.navChart],
+    ["supply chart", SupplyChartSchema, fx.supplyChart],
+    ["volume chart", VolumeChartSchema, fx.volumeChart],
+    ["market overview", MarketOverviewSchema, fx.marketOverview],
+    ["market movers", MarketMoversSchema, fx.marketMovers],
+    ["category breakdown", CategoryListSchema, fx.categoryList],
+    ["chain breakdown", ChainListSchema, fx.chainList],
+    ["asset metadata", AssetMetadataSchema, fx.assetMetadata],
+    ["asset issuer view", AssetIssuerViewSchema, fx.assetIssuerView],
+    ["asset chains", AssetChainListSchema, fx.assetChainList],
+    ["asset documents", AssetDocumentListSchema, fx.assetDocumentList],
+    ["asset activity", ActivityListSchema, fx.activityList],
+    ["compare", CompareResponseSchema, fx.compareResponse],
+    ["search", SearchResultSchema, fx.searchResult],
+    ["issuer leaderboard", IssuerLeaderboardSchema, fx.issuerLeaderboard],
+    ["status", StatusSchema, fx.status],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));
@@ -246,5 +285,45 @@ describe("transaction hashes", () => {
       expect(TransactionSchema.safeParse({ ...unverified, txHashStatus: status }).success).toBe(
         true,
       );
+  });
+});
+
+describe("market strings and queries", () => {
+  it("accepts decimal prices with up to eight places", () => {
+    for (const price of ["0", "1", "2681.42585338", "0.00000001", "100.5"]) {
+      expect(PriceString.safeParse(price).success, price).toBe(true);
+    }
+  });
+
+  it.each(["", "-1", "01", "1.", ".5", "1e3", "1.123456789", " 1", "NaN"])(
+    "rejects price %j",
+    (price) => {
+      expect(PriceString.safeParse(price).success).toBe(false);
+    },
+  );
+
+  it("rejects a JSON number for a price", () => {
+    expect(PriceString.safeParse(2681.4).success).toBe(false);
+  });
+
+  it("defaults the directory query and bounds the page size", () => {
+    expect(ListAssetsQuerySchema.parse({})).toMatchObject({
+      sort: "id",
+      order: "asc",
+      limit: 25,
+      data: "all",
+    });
+    expect(ListAssetsQuerySchema.parse({ limit: "100" }).limit).toBe(100);
+    expect(ListAssetsQuerySchema.safeParse({ limit: "101" }).success).toBe(false);
+    expect(ListAssetsQuerySchema.safeParse({ sort: "rank" }).success).toBe(false);
+    expect(ListAssetsQuerySchema.safeParse({ data: "fake" }).success).toBe(false);
+  });
+
+  it("accepts two to six comma-separated asset IDs to compare, and nothing else", () => {
+    expect(CompareQuerySchema.parse({ ids: "a-1,b-2" }).data).toBe("all");
+    expect(CompareQuerySchema.safeParse({ ids: "a,b,c,d,e,f" }).success).toBe(true);
+    for (const ids of ["a", "a,b,c,d,e,f,g", "a,,b", "A,b", "a b"]) {
+      expect(CompareQuerySchema.safeParse({ ids }).success, ids).toBe(false);
+    }
   });
 });
