@@ -156,6 +156,8 @@ export const ROUTE_REFUSALS = [
   "not_convertible",
   "lifecycle_blocked",
   "nav_window_closed",
+  "reserve_restricted",
+  "reserve_stale",
 ] as const;
 export type RouteRefusal = (typeof ROUTE_REFUSALS)[number];
 

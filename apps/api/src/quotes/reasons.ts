@@ -33,6 +33,10 @@ export function refusalCode(refusal: RouteRefusal): RefusalCode | "NOT_FOUND" {
       return "LIFECYCLE_BLOCKED";
     case "nav_window_closed":
       return "NAV_WINDOW_CLOSED";
+    case "reserve_restricted":
+      return "RESERVE_RESTRICTED";
+    case "reserve_stale":
+      return "RESERVE_STALE";
     default:
       return "NOT_DIRECT_EQUIVALENT";
   }
@@ -67,6 +71,10 @@ const EXPLANATIONS: Record<RouteRefusal, string> = {
     "One of the assets is past its active life (matured, redeeming, redeemed or delisted), so it cannot be converted.",
   nav_window_closed:
     "A fund converts only inside the window of its latest NAV strike, and that window is closed or no strike has been published.",
+  reserve_restricted:
+    "The supply of one of the assets is above the reserves its simulated custodian has attested, and the asset's reserve policy closes its routes until that is put right. Reserve figures are simulated and nothing is backed.",
+  reserve_stale:
+    "The reserve attestations of one of the assets are missing or older than its policy allows, and the policy closes its routes until a fresh one arrives. Reserve figures are simulated and nothing is backed.",
 };
 
 export const explain = (refusal: RouteRefusal): string => EXPLANATIONS[refusal];
@@ -108,6 +116,12 @@ export function checkRefusal(check: {
       return "LIFECYCLE_BLOCKED";
     case "nav_window_closed":
       return "NAV_WINDOW_CLOSED";
+    case "reserves":
+      // `<representation>: <state>, ratio <bps>`: an over-supplied asset is restricted, one with
+      // missing or old attestations is stale (ADR 0020 section 5).
+      return /: (stale|no_attestation)\b/.test(check.detail)
+        ? "RESERVE_STALE"
+        : "RESERVE_RESTRICTED";
     case "amount_limits":
       return check.detail === "AmountBelowMin"
         ? "AMOUNT_BELOW_MIN"
@@ -143,6 +157,8 @@ const STALE_EXPLANATIONS: Partial<Record<RefusalCode, string>> = {
   NOT_CONVERTIBLE: EXPLANATIONS.not_convertible,
   LIFECYCLE_BLOCKED: EXPLANATIONS.lifecycle_blocked,
   NAV_WINDOW_CLOSED: EXPLANATIONS.nav_window_closed,
+  RESERVE_RESTRICTED: EXPLANATIONS.reserve_restricted,
+  RESERVE_STALE: EXPLANATIONS.reserve_stale,
 };
 
 /**

@@ -12,6 +12,8 @@ import type { ConversionChain } from "./conversions/chain.ts";
 import type { ActionsChain } from "./actions/chain.ts";
 import type { QuoteDeps } from "./quotes/service.ts";
 import { registerActionRoutes } from "./routes/actions.ts";
+import type { CustodyRepository, ReserveRelayer } from "./custody/chain.ts";
+import { registerCustodyRoutes } from "./routes/custody.ts";
 import type { AuthDeps } from "./auth/types.ts";
 import { registerAdminRoutes } from "./routes/admin.ts";
 import { registerAuthRoutes } from "./routes/auth.ts";
@@ -30,6 +32,10 @@ export interface AppDeps {
   quotes: Omit<QuoteDeps, "db">;
   /** Corporate action, lifecycle and NAV strike reads for the asset endpoints. */
   actionsChain: ActionsChain;
+  /** Custody, reserve, redemption and reliability reads. */
+  custodyChain: CustodyRepository;
+  /** Sends relayed reserve attestations; without it the relay endpoint answers 404. */
+  reserveRelayer?: ReserveRelayer;
   /** Token registration reads for the wallet plan. */
   conversionChain: ConversionChain;
   /** Checks reported transaction hashes against the chain before they are shown as verified. */
@@ -71,6 +77,13 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     registerActionRoutes(scope, {
       db: deps.db,
       chain: deps.actionsChain,
+      ...(deps.now ? { now: deps.now } : {}),
+    });
+    registerCustodyRoutes(scope, {
+      db: deps.db,
+      chain: deps.custodyChain,
+      relayer: deps.reserveRelayer,
+      coreId: deps.quotes.coreId,
       ...(deps.now ? { now: deps.now } : {}),
     });
     registerConversionRoutes(scope, {

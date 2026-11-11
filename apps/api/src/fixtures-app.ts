@@ -71,6 +71,18 @@ const HANDLERS: Partial<Record<OperationId, Handler>> = {
     p.id === fx.assetNav.assetId
       ? fx.assetNav
       : { assetId: fixtureAsset(p).id, kind: "fungible", strike: null },
+  listCustodians: () => fx.custodianList,
+  getCustodian: (p) => byId([fx.custodian], p.id as string, "Custodian"),
+  getAssetCustody: (p) => ({ ...fx.assetCustody, assetId: fixtureAsset(p).id }),
+  getAssetReserves: (p) => ({ ...fx.assetReserves, assetId: fixtureAsset(p).id }),
+  getAssetReserveHistory: (p) => ({ ...fx.reserveHistory, assetId: fixtureAsset(p).id }),
+  getAssetRedemptionTerms: (p) => ({ ...fx.assetRedemptionTerms, assetId: fixtureAsset(p).id }),
+  getIssuerReliability: (p) => ({
+    ...fx.issuerReliability,
+    issuerId: byId([fx.issuerA, fx.issuerB], p.id as string, "Issuer").id,
+  }),
+  listRedemptions: () => fx.redemptionList,
+  getRedemption: (p) => byId([fx.redemption], p.id as string, "Redemption"),
   getProtocolMetrics: () => fx.protocolMetrics,
   createQuote: () => fx.quote,
   getQuote: () => fx.quote,
@@ -81,6 +93,7 @@ const HANDLERS: Partial<Record<OperationId, Handler>> = {
 /** Operations that need a live chain, a signer or a database; fixtures mode refuses them. */
 export const UNAVAILABLE_IN_FIXTURES: readonly OperationId[] = [
   "compareRoutes",
+  "submitReserveAttestation",
   "createConversion",
   "markConversionSubmitted",
   "getReconciliation",
