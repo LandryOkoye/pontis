@@ -13,7 +13,7 @@
 | market data     | `RICH_CLAIMS` price and NAV profiles for the 27 claims, merged with `DEFAULT_CLAIMS` (unchanged: same seed, same series) as `SIMULATED_CLAIMS`; supply start, growth and hourly flow tables per claim in `apps/simulator`.                                                                   |
 | backfill speed  | Async ed25519 signing on the libuv threadpool, concurrent per-representation writes, JSON-parameter bulk inserts for prices, NAV and candles, narrower candle reads. Rows written are identical.                                                                                             |
 | cost and loader | `catalogue-plan` prices each tier; `pnpm demo:seed` deploys, seeds, mirrors the registry, writes profiles and backfills the market in one command.                                                                                                                                           |
-| docs            | `known-limitations`, `deliberately-mocked`, threat T50, `local-setup`, `deployments`, a [runbook](../runbooks/seed-demo.md), the simulator README.                                                                                                                                           |
+| docs            | `known-limitations`, `deliberately-mocked`, threat T80, `local-setup`, `deployments`, a [runbook](../runbooks/seed-demo.md), the simulator README.                                                                                                                                           |
 
 ## The catalogue
 
