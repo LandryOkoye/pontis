@@ -1,5 +1,5 @@
-// The issuer back-office (ADR 0020 section 10): the redemption queue and the unsigned accept,
-// reject and fulfil. Every handler
+// The issuer back-office (ADR 0020 section 10): the redemption and mint queues, the unsigned
+// accept, reject and fulfil, and the unsigned request and execute of a gated mint. Every handler
 // authenticates a wallet session; whether the account may touch the record is decided from the
 // chain's `controlled_accounts` (see `custody/issuer-access.ts`). Nothing is signed or sent here.
 
@@ -7,6 +7,8 @@ import { ENDPOINTS } from "@pontis/api-types";
 import { auditSessionCall, authenticateRequest } from "../auth/authorize.ts";
 import { issuerRedemptionIntent } from "../custody/issuer-intents.ts";
 import { issuerRedemptionQueue } from "../custody/issuer-queue.ts";
+import { mintExecuteIntent, mintRequestIntent } from "../custody/mint-intents.ts";
+import { issuerMintQueue } from "../custody/mint-queue.ts";
 import {
   callerOf,
   clockOf,
@@ -57,4 +59,34 @@ export const registerIssuerRoutes: Register = (app, deps) => {
       return endpoint.response.parse(result);
     });
   }
+
+  app.get(route(e.listIssuerMintRequests.path), async (req) => {
+    const who = await authenticateRequest(auth, req);
+    const q = e.listIssuerMintRequests.query.parse(req.query);
+    const result = await issuerMintQueue(queueDeps(who, req), q);
+    await auditSessionCall(auth, who, "listIssuerMintRequests", req, {
+      issuerIds: result.issuerIds,
+    });
+    return e.listIssuerMintRequests.response.parse(result);
+  });
+
+  app.post(route(e.createIssuerMintRequest.path), async (req) => {
+    const who = await authenticateRequest(auth, req);
+    const body = e.createIssuerMintRequest.body.parse(req.body);
+    const result = await mintRequestIntent(intentDepsOf(deps, who, req), body);
+    await auditSessionCall(auth, who, "createIssuerMintRequest", req, {
+      representationId: body.representationId,
+      recipient: body.recipient,
+      amount: body.amount,
+    });
+    return e.createIssuerMintRequest.response.parse(result);
+  });
+
+  app.post(route(e.executeIssuerMintRequest.path), async (req) => {
+    const who = await authenticateRequest(auth, req);
+    const { id } = e.executeIssuerMintRequest.params.parse(req.params);
+    const result = await mintExecuteIntent(intentDepsOf(deps, who, req), id);
+    await auditSessionCall(auth, who, "executeIssuerMintRequest", req, { requestId: id });
+    return e.executeIssuerMintRequest.response.parse(result);
+  });
 };

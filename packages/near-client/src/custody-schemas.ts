@@ -98,6 +98,8 @@ export const ChainMintHeadroomSchema = z.object({
   circulating_units: amount,
   attested_units: amount,
   state: z.enum(RESERVE_STATES),
+  /** The reserve action `pause_mint` refuses minting while the state is breached, stale or missing (ADR 0020 amendments). */
+  mint_paused: z.boolean(),
 });
 
 export const ChainMintRequestSchema = z.object({
