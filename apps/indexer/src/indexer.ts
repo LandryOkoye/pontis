@@ -6,6 +6,8 @@ import type { TxVerifier } from "@pontis/near-client";
 import { applyExecutions } from "./apply.ts";
 import type { ChainSource } from "./chain-source.ts";
 import { createCursor, readCursor, rewindCursor, touchCursor, writeCursor } from "./cursor.ts";
+import type { MirrorChain } from "./chain-views.ts";
+import { refreshMirrors } from "./mirror/refresh.ts";
 import { backoffMs, sleep as realSleep } from "./retry.ts";
 import { verifyReportedHashes, type VerifyHashesResult } from "./verify-hashes.ts";
 
@@ -21,6 +23,8 @@ export interface IndexerOptions {
   verifier: TxVerifier;
   /** The core contract the conversion transfers must be sent to. */
   coreId: string;
+  /** Reads the chain views that complete mirror rows (custodians, issuer counters, reserve status); without it the rows stay marked for a refresh. */
+  mirror?: MirrorChain | undefined;
   log: Logger;
   /** First block to read when there is no cursor; default is the newest block that is safe to read. */
   startHeight?: number | undefined;
@@ -38,6 +42,8 @@ export interface Pass {
   stored: number;
   duplicates: number;
   hashes: VerifyHashesResult;
+  /** Mirror rows completed from chain views after the blocks were applied. */
+  refreshed: number;
 }
 
 export const DEFAULT_CONFIRMATIONS = 3;
@@ -59,6 +65,7 @@ export async function indexOnce(options: IndexerOptions): Promise<Pass> {
     stored: 0,
     duplicates: 0,
     hashes: { verified: 0, rejected: 0, inconclusive: 0 },
+    refreshed: 0,
   };
   if (cursor === undefined) await createCursor(db, from - 1);
   for (let height = from; height <= target; height++) {
@@ -76,6 +83,10 @@ export async function indexOnce(options: IndexerOptions): Promise<Pass> {
     coreId: options.coreId,
     log: options.log,
   });
+  if (options.mirror) {
+    const done = await refreshMirrors({ db, chain: options.mirror, log: options.log });
+    pass.refreshed = done.custodians + done.issuers + done.reserveStatuses;
+  }
   // Only reached when every read above succeeded.
   if (from > target) await touchCursor(db);
   return pass;
@@ -100,7 +111,8 @@ export async function runIndexer(options: RunOptions): Promise<void> {
     try {
       const pass = await indexOnce(options);
       failures = 0;
-      if (pass.stored > 0 || pass.duplicates > 0) log.info("indexed", { ...pass });
+      if (pass.stored > 0 || pass.duplicates > 0 || pass.refreshed > 0)
+        log.info("indexed", { ...pass });
       else if (pass.hashes.verified + pass.hashes.rejected > 0)
         log.info("hashes", { ...pass.hashes });
       await wait(pollMs);

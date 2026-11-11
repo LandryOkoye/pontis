@@ -96,4 +96,22 @@ describe("loadConfig", () => {
     const docs = readFileSync(new URL("../../../docs/local-setup.md", import.meta.url), "utf8");
     expect(docs).toContain(`\`${value}\``);
   });
+
+  it("takes the relayer account and key together, or neither", () => {
+    expect(loadConfig(base).PONTIS_RELAYER_ACCOUNT_ID).toBeUndefined();
+    const both = {
+      PONTIS_RELAYER_ACCOUNT_ID: "relayer.testnet",
+      PONTIS_RELAYER_SECRET_KEY: "ed25519:abc",
+    };
+    expect(loadConfig({ ...base, ...both })).toMatchObject(both);
+    expect(() => loadConfig({ ...base, PONTIS_RELAYER_ACCOUNT_ID: "relayer.testnet" })).toThrow(
+      /set together/,
+    );
+    expect(() => loadConfig({ ...base, PONTIS_RELAYER_SECRET_KEY: "ed25519:abc" })).toThrow(
+      /set together/,
+    );
+    expect(() => loadConfig({ ...base, ...both, PONTIS_RELAYER_SECRET_KEY: "not-a-key" })).toThrow(
+      /PONTIS_RELAYER_SECRET_KEY/,
+    );
+  });
 });

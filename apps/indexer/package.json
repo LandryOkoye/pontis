@@ -18,6 +18,7 @@
     "@pontis/market-data": "workspace:*",
     "@pontis/near-client": "workspace:*",
     "drizzle-orm": "^0.45.4",
+    "near-api-js": "^7.4.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

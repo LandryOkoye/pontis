@@ -135,16 +135,32 @@ export const REFUSAL_CODES = [
   "NOT_CONVERTIBLE",
   "LIFECYCLE_BLOCKED",
   "NAV_WINDOW_CLOSED",
+  /** Reserves (ADR 0020): a leg's supply exceeds its attested reserves, or its attestations are stale or missing. */
+  "RESERVE_RESTRICTED",
+  "RESERVE_STALE",
 ] as const;
 export type RefusalCode = (typeof REFUSAL_CODES)[number];
+
+/** Why a redemption request is refused before it reaches the chain (ADR 0020 section 10). */
+export const REDEMPTION_ERROR_CODES = [
+  "REDEMPTION_WINDOW_CLOSED",
+  "REDEMPTION_BELOW_MIN",
+  "REDEMPTION_ABOVE_MAX",
+  "REDEMPTION_TERMS_CHANGED",
+] as const;
+export type RedemptionErrorCode = (typeof REDEMPTION_ERROR_CODES)[number];
 
 /** BuildPlan §8. */
 export const ERROR_CODES = [
   "VALIDATION_ERROR",
   "NOT_FOUND",
   ...REFUSAL_CODES,
+  /** Redemption requests (ADR 0020): the stored terms refuse the amount or the moment. */
+  ...REDEMPTION_ERROR_CODES,
   "QUOTE_EXPIRED",
   "QUOTE_ALREADY_USED",
+  /** A relayed reserve attestation that the contract refused (ADR 0020 section 3). */
+  "ATTESTATION_REJECTED",
   "UNAUTHORIZED",
   "RATE_LIMITED",
   "INTERNAL",
@@ -200,8 +216,58 @@ export const RECONCILIATION_KINDS = [
   "VAULT_UNTRACKED_BALANCE",
   /** An approved corporate action took effect over 10 minutes ago and a live wrapper has not applied it. */
   "CORPORATE_ACTION_OVERDUE",
+  /** The chain's reserve status is breached and the mirror has not recorded a breach (ADR 0020 section 5). */
+  "RESERVE_BREACH",
+  /** A monitored representation's attestations are older than its policy allows (ADR 0020 section 5). */
+  "RESERVE_STALE",
+  /** A redemption is still requested or accepted well past its deadline; anyone can expire it (ADR 0020 section 7). */
+  "REDEMPTION_OVERDUE",
+  /** Open redemption escrows, vault inventory and pending input do not add up to the core's token balance (ADR 0020 section 7). */
+  "ESCROW_MISMATCH",
 ] as const;
 export type ReconciliationKind = (typeof RECONCILIATION_KINDS)[number];
 
 export const FINDING_SEVERITIES = ["critical", "warning"] as const;
 export type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
+
+/** How a representation's reserves are held (ADR 0020 section 2). */
+export const CUSTODY_STRUCTURES = ["segregated", "omnibus", "on_chain_vault"] as const;
+export type CustodyStructure = (typeof CUSTODY_STRUCTURES)[number];
+
+/** `active <-> suspended`, either to `retired` (terminal). Only an active custodian's attestations count. */
+export const CUSTODIAN_STATUSES = ["active", "suspended", "retired"] as const;
+export type CustodianStatus = (typeof CUSTODIAN_STATUSES)[number];
+
+/**
+ * Computed on read from signed attestations and the supply counters (ADR 0020 section 5).
+ * `unmonitored`: the representation has no reserve policy, so nothing is enforced.
+ */
+export const RESERVE_STATES = ["ok", "breached", "stale", "no_attestation", "unmonitored"] as const;
+export type ReserveState = (typeof RESERVE_STATES)[number];
+
+/** What a breached, stale or unattested representation costs (ADR 0020 section 5). */
+export const RESERVE_POLICY_ACTIONS = ["warn", "restrict_conversions", "pause_mint"] as const;
+export type ReservePolicyAction = (typeof RESERVE_POLICY_ACTIONS)[number];
+
+export const REDEMPTION_STATUSES = [
+  "requested",
+  "accepted",
+  "fulfilled",
+  "rejected",
+  "expired",
+  "reclaimed",
+] as const;
+export type RedemptionStatus = (typeof REDEMPTION_STATUSES)[number];
+
+/** Which deadline an issuer missed when a redemption expired. */
+export const REDEMPTION_MISSES = ["accept", "fulfil"] as const;
+export type RedemptionMiss = (typeof REDEMPTION_MISSES)[number];
+
+export const MINT_REQUEST_STATUSES = [
+  "requested",
+  "minting",
+  "minted",
+  "failed",
+  "cancelled",
+] as const;
+export type MintRequestStatus = (typeof MINT_REQUEST_STATUSES)[number];

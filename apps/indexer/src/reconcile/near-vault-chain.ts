@@ -1,4 +1,5 @@
 import { CoreClient, TokenClient, type RpcClient } from "@pontis/near-client";
+import { CustodyViews, type ReserveChain } from "../chain-views.ts";
 import type { ActionChain } from "./actions.ts";
 import type { VaultChain } from "./vaults.ts";
 
@@ -9,9 +10,15 @@ import type { VaultChain } from "./vaults.ts";
  * between the two reads can only make the sum look smaller, which is a warning, never a false
  * insolvency.
  */
-export function nearVaultChain(rpc: RpcClient, coreId: string): VaultChain & ActionChain {
+export function nearVaultChain(
+  rpc: RpcClient,
+  coreId: string,
+): VaultChain & ActionChain & ReserveChain {
   const core = new CoreClient(rpc, coreId);
+  const custody = new CustodyViews(rpc, coreId);
   return {
+    reserveStatus: (representationId) => custody.reserveStatus(representationId),
+    escrowHeld: (representationId) => custody.escrowHeld(representationId),
     corporateActions: (assetId) => core.getCorporateActions(assetId),
     inventory: async (representationId) => {
       const spendable = await core.getInventory(representationId);

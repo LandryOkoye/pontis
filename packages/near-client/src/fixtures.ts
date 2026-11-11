@@ -10,6 +10,16 @@ import type {
   ChainPolicy,
   ChainRepresentation,
 } from "./schemas.ts";
+import type {
+  ChainCustodian,
+  ChainCustodyLink,
+  ChainEscrowLedger,
+  ChainIssuerReliability,
+  ChainRedemption,
+  ChainRedemptionTerms,
+  ChainReserveRecord,
+  ChainReserveStatus,
+} from "./custody-schemas.ts";
 import type { ExpectedConversionTx, TxFacts } from "./transaction-check.ts";
 
 const T0 = 1_794_074_400_000; // 2026-11-07T17:20:00Z
@@ -185,3 +195,127 @@ export function conversionTxFacts(
     ...over,
   };
 }
+
+// Custody, reserves and redemption as the views return them (ADR 0020). Every figure is the
+// simulated custodian's and says so; nothing here is custodied, backed or audited.
+
+const T1 = T0 + 60_000;
+
+export const fixtureCustodian: ChainCustodian = {
+  id: "vault-co-sim",
+  name: "Meridian Vault Co (SYNTHETIC)",
+  jurisdiction: "CH",
+  attester_key: "ed25519:6E8bAu1MUKRDM9dvKGbgYxEFJt4sr4Z5k1QYtUwrBXRp",
+  status: "active",
+  synthetic: true,
+  verification_status: "unverified",
+  evidence: [evidence("custodian-vault-co-sim")],
+  registered_by: "registrar.pontis.testnet",
+  registered_at_ms: T0,
+};
+
+export const fixtureCustodyLink: ChainCustodyLink = {
+  representation_id: "tgold-a",
+  structure: "segregated",
+  custodian_ids: ["vault-co-sim"],
+  linked_by: "registrar.pontis.testnet",
+  linked_at_ms: T0,
+};
+
+export const fixtureReserveRecord: ChainReserveRecord = {
+  seq: 0,
+  custodian_id: "vault-co-sim",
+  reserved_units: "1000000000000",
+  as_of_ms: T1,
+  submitted_ms: T1 + 2_000,
+  report_hash: "b".repeat(64),
+  report_uri: "sim://reserves/tgold-a/2026-11",
+  simulated: true,
+  source: "simulated_custodian",
+  attester_key: fixtureCustodian.attester_key,
+};
+
+export const fixtureReserveStatus: ChainReserveStatus = {
+  monitored: true,
+  state: "ok",
+  action: "restrict_conversions",
+  tolerance_bps: 0,
+  max_reserve_age_ms: 86_400_000,
+  attested_units: "1000000000000",
+  limit_units: "1000000000000",
+  circulating_units: "800000000000",
+  headroom_units: "200000000000",
+  ratio_bps: 12_500,
+  oldest_as_of_ms: T1,
+  age_ms: 30_000,
+  supply_read_ms: T1,
+  restricts_conversions: false,
+  mint_paused: false,
+  simulated: true,
+  sources: ["simulated_custodian"],
+};
+
+export const fixtureRedemptionTerms: ChainRedemptionTerms = {
+  terms: {
+    min_amount: "1000000",
+    max_amount: "0",
+    fee_bps: 25,
+    window_anchor_ms: 0,
+    window_length_ms: 0,
+    window_period_ms: 0,
+    accept_within_ms: 86_400_000,
+    settlement_days: 3,
+  },
+  version: 2,
+  terms_hash: "c".repeat(64),
+  set_by: "registrar.pontis.testnet",
+  set_ms: T0,
+};
+
+export const fixtureRedemption: ChainRedemption = {
+  id: 1,
+  user: "alice.testnet",
+  representation_id: "tgold-a",
+  issuer_id: "synthetic-issuer-a",
+  amount: "5000000",
+  fee_bps: 25,
+  fee_units: "12500",
+  net_units: "4987500",
+  terms_hash: fixtureRedemptionTerms.terms_hash,
+  terms_version: 2,
+  payout_instruction_hash: "d".repeat(64),
+  status: "accepted",
+  created_ms: T1,
+  accept_deadline_ms: T1 + 86_400_000,
+  accepted_ms: T1 + 600_000,
+  fulfil_deadline_ms: T1 + 600_000 + 3 * 86_400_000,
+  resolved_ms: null,
+  fulfilment_evidence_hash: null,
+  reject_reason: null,
+  miss: null,
+  settlement_days: 3,
+};
+
+export const fixtureEscrowLedger: ChainEscrowLedger = {
+  escrowed_in: "5000000",
+  burned: "0",
+  returned: "0",
+  held: "5000000",
+  open_amount: "5000000",
+};
+
+export const fixtureIssuerReliability: ChainIssuerReliability = {
+  issuer_id: "synthetic-issuer-a",
+  requested: 4,
+  accepted: 3,
+  fulfilled: 2,
+  rejected: 1,
+  expired: 0,
+  accept_misses: 0,
+  fulfil_misses: 0,
+  reclaimed: 0,
+  accept_latency_ms_total: "1800000",
+  settle_latency_ms_total: "259200000",
+  last_miss_ms: null,
+  simulated: true,
+};

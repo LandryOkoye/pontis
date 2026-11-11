@@ -13,6 +13,22 @@ export interface Parsed {
   flags: Map<string, string | true>;
 }
 
+/** Pulls every `--name value` out of `argv` (for options that may repeat) and returns the rest. */
+export function takeAll(argv: string[], name: string): { values: string[]; rest: string[] } {
+  const values: string[] = [];
+  const rest: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] !== `--${name}`) {
+      rest.push(argv[i]!);
+      continue;
+    }
+    const value = argv[++i];
+    if (value === undefined || value.startsWith("--")) throw new Error(`--${name} needs a value`);
+    values.push(value);
+  }
+  return { values, rest };
+}
+
 /** Splits `--name value` and `--switch`; a name outside `valued` or `switches` is refused. */
 export function split(
   argv: string[],

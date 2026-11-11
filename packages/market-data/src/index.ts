@@ -16,3 +16,4 @@ export * from "./feed/series.ts";
 export * from "./feed/simulated-feed.ts";
 export * from "./feed/types.ts";
 export * from "./feed/nav-attestation.ts";
+export * from "./feed/reserve-attestation.ts";
