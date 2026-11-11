@@ -322,7 +322,7 @@ export const ListRedemptionsQuerySchema = z
 
 /** The camelCase twin of the contract's `ReserveAttestation` argument (ADR 0020 section 3). */
 export const ReserveAttestationInputSchema = z
-  .object({
+  .strictObject({
     version: z.literal(1),
     /** Must be the contract account the attestation was signed for. */
     contract: AccountId,
@@ -338,7 +338,7 @@ export const ReserveAttestationInputSchema = z
   .meta({ id: "ReserveAttestationInput" });
 
 export const SubmitReserveAttestationRequestSchema = z
-  .object({
+  .strictObject({
     attestation: ReserveAttestationInputSchema,
     /** Base64 ed25519 signature over the Borsh message of ADR 0020 section 3. */
     signature: z.string().min(1).max(200),

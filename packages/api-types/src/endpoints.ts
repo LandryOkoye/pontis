@@ -497,7 +497,7 @@ export const ENDPOINTS = {
     query: CustodyListQuerySchema,
     errors: { ...VALIDATION, ...COMMON },
     description:
-      "Read from the chain, never cached. Oldest first. Every custodian in the demo is a simulator holding a test key: `synthetic` is true and `verificationStatus` is never above what the registrar recorded, which the contract keeps below `independently_verified`. Nothing here is custodied, audited or regulated.",
+      "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. Oldest first. Every custodian in the demo is a simulator holding a test key: `synthetic` is true and `verificationStatus` is never above what the registrar recorded, which the contract keeps below `independently_verified`. Nothing here is custodied, audited or regulated.",
   },
   getCustodian: {
     method: "get",
@@ -531,7 +531,7 @@ export const ENDPOINTS = {
     params: IdParam,
     errors: { 404: ["NOT_FOUND"], ...COMMON },
     description:
-      "Computed by the contract on every read from the custodians' signed attestations and the supply it tracks; never a stored verdict, never cached. `ratioBps` is attested over circulating in basis points (null while nothing circulates); render `ratioPercent`. `state` is `unmonitored` when the asset has no reserve policy. `simulated` and `sources` say whose figures these are: in the demo, a fictional custodian's. Never present them as backed, custodied or audited.",
+      "Computed by the contract on every read from the custodians' signed attestations and the supply it tracks; never a stored verdict; like other public reads the response may be shared-cached for a few seconds. `ratioBps` is attested over circulating in basis points (null while nothing circulates); render `ratioPercent`. `state` is `unmonitored` when the asset has no reserve policy. `simulated` and `sources` say whose figures these are: in the demo, a fictional custodian's. Never present them as backed, custodied or audited.",
   },
   getAssetReserveHistory: {
     method: "get",
