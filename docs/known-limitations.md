@@ -8,6 +8,7 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **One pair, one direction of review.** TGOLD-A and TGOLD-B, one relationship, one fixed ratio, one flat fee (10 bps). No market pricing, no slippage, no other chains.
 - **Controlled vault.** Liquidity is whatever the owner funds. A busy direction drains one side and quotes are refused with `INSUFFICIENT_INVENTORY`; refilling is manual ([runbook](runbooks/vault-low.md)).
 - **No user accounts.** The wallet signature is the authority. Transaction history is public by account ID.
+- **Bridge work is a local foundation only.** The Phase 6 EVM token and shared transfer lifecycle are synthetic test components. There is no deployed EVM route, NEAR bridge state machine, relayer, proof verifier, supply monitor, or tested bridge refund yet. The EVM token is not connected to `pontis-core`.
 - **Web app.** The frontend is a separate branch and pull request. This repository's demo and end-to-end run drive the API.
 
 ## Operations

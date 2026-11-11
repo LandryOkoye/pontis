@@ -39,6 +39,16 @@ jobs:
             || cargo install cargo-near --locked
       - run: scripts/integration-tests.sh
 
+  evm-contracts:
+    name: EVM contracts (Foundry)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      - name: Run local EVM contract tests
+        run: forge test --root contracts-evm
+
   node:
     name: Node (lint, typecheck, test)
     runs-on: ubuntu-latest
