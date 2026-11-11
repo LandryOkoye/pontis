@@ -331,6 +331,17 @@ export class CoreClient implements RegistrySource {
     return z.boolean().parse(raw);
   }
 
+  /**
+   * The roles an account holds on the contract, snake_case, with `owner` when it is the owner
+   * (ADR 0019). Names are returned as the contract spells them; the caller decides which it knows.
+   */
+  async getAccountRoles(accountId: string): Promise<string[]> {
+    const raw = await this.rpc.view(this.accountId, "get_account_roles", {
+      account_id: accountId,
+    });
+    return z.array(z.string()).parse(raw);
+  }
+
   async getFeeBps(): Promise<number> {
     return z
       .number()

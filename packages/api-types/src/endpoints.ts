@@ -21,6 +21,15 @@ import {
   SubmitReserveAttestationRequestSchema,
   SubmitReserveAttestationResponseSchema,
 } from "./custody-types.ts";
+import {
+  AuthChallengeRequestSchema,
+  AuthChallengeResponseSchema,
+  AuthLogoutResponseSchema,
+  AuthMeResponseSchema,
+  AuthSessionHeaderSchema,
+  AuthVerifyRequestSchema,
+  AuthVerifyResponseSchema,
+} from "./auth-types.ts";
 import { RouteGuardsQuerySchema, RouteGuardsResponseSchema } from "./guard-types.ts";
 import {
   AssetSchema,
@@ -110,6 +119,7 @@ interface Endpoint {
     | "Conversions"
     | "Transactions"
     | "Metrics"
+    | "Auth"
     | "Admin";
   readonly status: number;
   readonly response: z.ZodType;
@@ -129,6 +139,7 @@ interface Endpoint {
 }
 
 const VALIDATION = { 400: ["VALIDATION_ERROR"] } as const;
+const FORBIDDEN = { 403: ["FORBIDDEN"] } as const;
 const COMMON = { 429: ["RATE_LIMITED"], 500: ["INTERNAL"] } as const;
 
 /** Keyed by operation ID. */
@@ -720,9 +731,9 @@ export const ENDPOINTS = {
     status: 200,
     response: ReconciliationReportSchema,
     headers: AdminAuthHeaderSchema,
-    errors: { 401: ["UNAUTHORIZED"], ...COMMON },
+    errors: { 401: ["UNAUTHORIZED"], ...FORBIDDEN, ...COMMON },
     description:
-      "Admin only. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.",
+      "Operators only: a session whose account holds the owner, registrar, compat_approver or pauser role (re-read from the chain on every call), or the break-glass admin key. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.",
   },
   getProtocolMetrics: {
     method: "get",
@@ -743,9 +754,9 @@ export const ENDPOINTS = {
     status: 200,
     response: AdminMetricsSchema,
     headers: AdminAuthHeaderSchema,
-    errors: { 401: ["UNAUTHORIZED"], ...COMMON },
+    errors: { 401: ["UNAUTHORIZED"], ...FORBIDDEN, ...COMMON },
     description:
-      "Admin only, audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.",
+      "Operators only (any of owner, registrar, compat_approver, pauser; roles cached for 60 seconds), or the break-glass admin key; audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.",
   },
   getPrometheusMetrics: {
     method: "get",
@@ -756,9 +767,56 @@ export const ENDPOINTS = {
     response: PrometheusTextSchema,
     contentType: "text/plain; version=0.0.4",
     headers: AdminAuthHeaderSchema,
+    errors: { 401: ["UNAUTHORIZED"], ...FORBIDDEN, ...COMMON },
+    description:
+      "Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same credentials (for a scraper use the break-glass admin bearer key; a session expires; Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.",
+  },
+  authChallenge: {
+    method: "post",
+    path: "/v1/auth/challenge",
+    summary: "Start a wallet sign-in",
+    tag: "Auth",
+    status: 200,
+    response: AuthChallengeResponseSchema,
+    body: AuthChallengeRequestSchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Returns a single-use nonce (5 minutes), the `recipient` and the exact `message` for the wallet's NEP-413 `signMessage`. Rate limited per client address. Not available in fixtures mode.",
+  },
+  authVerify: {
+    method: "post",
+    path: "/v1/auth/verify",
+    summary: "Finish a wallet sign-in and open a session",
+    tag: "Auth",
+    status: 200,
+    response: AuthVerifyResponseSchema,
+    body: AuthVerifyRequestSchema,
+    errors: { ...VALIDATION, 401: ["UNAUTHORIZED"], ...COMMON },
+    description:
+      "Checks the NEP-413 signature, that the key is an access key of the account (over RPC), consumes the nonce and returns a session token: 15 minutes, renewed by use up to 8 hours. An account that holds no role may sign in; it holds no admin rights. The signed message authorises a session only, never a chain transaction.",
+  },
+  authLogout: {
+    method: "post",
+    path: "/v1/auth/logout",
+    summary: "End the session",
+    tag: "Auth",
+    status: 200,
+    response: AuthLogoutResponseSchema,
+    headers: AuthSessionHeaderSchema,
+    errors: { 401: ["UNAUTHORIZED"], ...COMMON },
+    description: "Revokes the session at once.",
+  },
+  authMe: {
+    method: "get",
+    path: "/v1/auth/me",
+    summary: "The signed-in account and its roles",
+    tag: "Auth",
+    status: 200,
+    response: AuthMeResponseSchema,
+    headers: AuthSessionHeaderSchema,
     errors: { 401: ["UNAUTHORIZED"], ...COMMON },
     description:
-      "Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same admin bearer key (Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.",
+      "Roles are read from the contract and cached for 60 seconds. Using the session renews it.",
   },
 } as const satisfies Record<string, Endpoint>;
 
@@ -766,7 +824,8 @@ export type OperationId = keyof typeof ENDPOINTS;
 
 const ERROR_DESCRIPTIONS: Record<number, string> = {
   400: "Invalid request",
-  401: "Missing or wrong admin key",
+  401: "Missing, expired or wrong credential",
+  403: "Signed in, but the account holds no role this endpoint accepts",
   404: "Not found",
   409: "Conflict",
   410: "Gone",

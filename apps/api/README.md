@@ -42,7 +42,8 @@ Settings are in `.env.example`; reasons are in [ADR 0013](../../docs/decisions/0
 | `RATE_LIMIT_READ` / `RATE_LIMIT_WRITE` / `RATE_LIMIT_ADMIN` | `120` / `30` / `10`     | Requests per client per window, by class                             |
 | `RATE_LIMIT_WINDOW_MS`                                      | `60000`                 | Window length                                                        |
 | `TRUST_PROXY`                                               | `false`                 | Read the client address from `X-Forwarded-For` (behind a proxy only) |
-| `ADMIN_API_KEY`                                             | unset                   | Bearer key for `/v1/admin/*`; at least 16 characters                 |
+| `ADMIN_API_KEY`                                             | unset                   | Break-glass bearer key for `/v1/admin/*`; at least 16 characters     |
+| `AUTH_RECIPIENT`                                            | `pontis-api.<network>`  | The NEP-413 `recipient` a wallet is told a sign-in is for            |
 
 An excess request gets `429` with `Retry-After`. Logs hold method and path only; every admin call is written to `audit_log`.
 
@@ -91,9 +92,11 @@ The body:
 | `INDEXER_STALE_AFTER_MS` | `30000` | Heartbeat age after which the indexer is `stale` (at least 1000). Keep it well above the indexer's poll and retry pauses (default poll 2 s, retries back off up to 60 s, so a long outage goes stale) |
 | `INDEXER_MAX_LAG_BLOCKS` | `50`    | Blocks behind the chain after which a live indexer is `lagging`                                                                                                                                       |
 
-### Admin
+### Sign-in and admin
 
-`GET /v1/admin/reconciliation` returns the reconciler's last run (findings, each vault's inventory against the tokens the core holds) and the quotes waiting in `REQUIRES_RECONCILIATION`. It needs `Authorization: Bearer $ADMIN_API_KEY` (at least 16 characters); with no key set it refuses everyone.
+Operators sign in with a wallet (NEP-413): `POST /v1/auth/challenge`, the wallet's `signMessage`, `POST /v1/auth/verify` for a session token (15 minutes, renewed by use up to 8 hours), then `Authorization: Bearer <token>`; `GET /v1/auth/me` and `POST /v1/auth/logout`. Roles come from the contract's `get_account_roles` and are checked against `src/auth/policy.ts`. Fixtures mode answers 404 for all four. Runbook: [operator sign-in](../../docs/runbooks/auth.md).
+
+`GET /v1/admin/reconciliation` returns the reconciler's last run (findings, each vault's inventory against the tokens the core holds) and the quotes waiting in `REQUIRES_RECONCILIATION`. It needs a session whose account holds the owner, registrar, compat_approver or pauser role, or the break-glass `Authorization: Bearer $ADMIN_API_KEY` (at least 16 characters, audited as `legacy-admin-key`); with no key set and no session it refuses everyone.
 
 ```bash
 curl -s -H "Authorization: Bearer $ADMIN_API_KEY" $API/v1/admin/reconciliation

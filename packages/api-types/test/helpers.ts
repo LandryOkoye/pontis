@@ -31,4 +31,5 @@ export const ERROR_CODES_FOR_TEST = [
   "UNAUTHORIZED",
   "RATE_LIMITED",
   "INTERNAL",
+  "FORBIDDEN",
 ] as const;

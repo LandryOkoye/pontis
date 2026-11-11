@@ -48,6 +48,12 @@ const app = buildApp({
   },
   conversionChain: { isRegistered: async () => true },
   txVerifier: { getTransaction: async () => undefined },
+  // Sign-in is not measured here.
+  auth: {
+    chain: { getAccessKey: async () => null, getAccountRoles: async () => [] },
+    recipient: "load",
+    networkId: "testnet",
+  },
 });
 
 const [first] = (

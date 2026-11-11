@@ -1,20 +1,26 @@
-// Admin endpoints take `Authorization: Bearer <ADMIN_API_KEY>`. With no key configured they are
-// closed to everyone. B14 adds rate limiting and an audit trail on top of this check.
+// The legacy break-glass credential (ADR 0019): `Authorization: Bearer <ADMIN_API_KEY>`. With no
+// key configured it admits no one. Wallet sessions are checked in `../auth/authorize.ts`.
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { AppError } from "../errors.ts";
 
 const digest = (value: string) => createHash("sha256").update(value).digest();
 
+/** The token of an `Authorization: Bearer <token>` header, or undefined. */
+export function bearerToken(authorization: string | undefined): string | undefined {
+  return authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
+}
+
+/** True if `presented` is the configured key. Comparing digests keeps it constant-time. */
+export function isLegacyKey(configuredKey: string | undefined, presented: string): boolean {
+  return configuredKey !== undefined && timingSafeEqual(digest(configuredKey), digest(presented));
+}
+
 export function requireAdmin(
   configuredKey: string | undefined,
   authorization: string | undefined,
 ): void {
-  const presented = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
-  // Comparing digests keeps the check constant-time whatever the lengths are.
-  const ok =
-    configuredKey !== undefined &&
-    presented !== undefined &&
-    timingSafeEqual(digest(configuredKey), digest(presented));
-  if (!ok) throw new AppError("UNAUTHORIZED", 401, "A valid admin key is required");
+  const presented = bearerToken(authorization);
+  if (presented === undefined || !isLegacyKey(configuredKey, presented))
+    throw new AppError("UNAUTHORIZED", 401, "A valid admin key is required");
 }

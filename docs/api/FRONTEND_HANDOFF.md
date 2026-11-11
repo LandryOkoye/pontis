@@ -3,7 +3,7 @@
 What the API serves for each screen, how to read it, and what is not there yet. Kept in step with `packages/api-types` (schemas, `openapi.yaml`, fixtures). If a screen needs something that is not listed here, ask for it; do not infer it.
 
 - **Contract:** `packages/api-types` (`ENDPOINTS`, Zod schemas, `openapi.yaml`). Example payloads for every endpoint: `import * as fx from "@pontis/api-types/fixtures"`.
-- **No chain needed:** run the API with `API_MODE=fixtures` ([API README](../../apps/api/README.md), `apps/api/.env.example`). It serves the same fixtures, validates requests like the real server, marks every response `x-pontis-mode: fixtures`, and answers 404 for what needs a live chain (`compareRoutes`, `createConversion`, `markConversionSubmitted`, `submitReserveAttestation`, admin, Prometheus `/metrics`); `getRouteGuards` is served from a fixture.
+- **No chain needed:** run the API with `API_MODE=fixtures` ([API README](../../apps/api/README.md), `apps/api/.env.example`). It serves the same fixtures, validates requests like the real server, marks every response `x-pontis-mode: fixtures`, and answers 404 for what needs a live chain (`compareRoutes`, `createConversion`, `markConversionSubmitted`, `submitReserveAttestation`, the four auth endpoints, admin, Prometheus `/metrics`); `getRouteGuards` is served from a fixture.
 - **Base URL:** `http://localhost:3000`; all paths are under `/v1`.
 
 ## Conventions
@@ -121,19 +121,59 @@ Phase 4. **Everything here is simulated and none of it is backed, custodied, aud
 - Windows are rolling from `asOf` (not calendar days); `all` has no lower bound. Poll no faster than the cache lifetime.
 - Fixtures mode serves the public endpoint; the two admin-keyed ones answer 404 there.
 
+## Auth
+
+Only operators sign in (users are authorised by their wallet signature on each transfer). Sign-in is NEP-413 `signMessage`: it proves the wallet holds an access key of the account, signs no transaction and moves nothing. The four endpoints answer 404 in fixtures mode.
+
+1. `POST /v1/auth/challenge` with `{accountId}` returns `{accountId, nonce, recipient, message, expiresAt}`. `nonce` is base64 of 32 bytes, single use, valid 5 minutes (until `expiresAt`).
+2. Call the wallet's `signMessage` with exactly these parameters (wallet selector: `wallet.signMessage(...)`):
+
+   ```ts
+   const { signature, publicKey, accountId } = await wallet.signMessage({
+     message: challenge.message, // byte for byte, do not trim or re-wrap
+     recipient: challenge.recipient, // e.g. "pontis-api.testnet"
+     nonce: Buffer.from(challenge.nonce, "base64"), // the 32 bytes, not the base64 text
+     // callbackUrl: omit. Browser wallets (MyNearWallet) default it to the page URL and sign over it.
+   });
+   ```
+
+   The wallet signs `sha256(u32le(2^31+413) ++ borsh({message, nonce, recipient, callbackUrl?}))` with ed25519 (NEP-413; the same bytes are pinned by `test-vectors/nep413.json`). Show the user the recipient and message: that is the phishing defence.
+
+3. `POST /v1/auth/verify` with `{accountId, publicKey, signature, nonce, callbackUrl?}`: `publicKey` is the wallet's `ed25519:<base58>`, `signature` its **base64** signature (convert if the wallet returns bytes), `nonce` the challenge's base64 unchanged. **If the wallet signed over a callback URL** (a browser wallet that redirects back does), send the same string as `callbackUrl`; without it the signature fails. The answer is `{token, tokenType: "Bearer", accountId, roles, keyType, expiresAt, maxExpiresAt}`.
+4. Send the session on every admin call: `Authorization: Bearer <token>` (also CORS-allowed). Keep the token in memory or `sessionStorage`; it is shown once.
+5. `GET /v1/auth/me` returns `{accountId, roles, expiresAt}`; use it to decide what the operator screens show. `POST /v1/auth/logout` ends the session at once.
+
+Behaviour to design for:
+
+- **Lifetime**: 15 minutes from the last authenticated request (each request renews it), and never past `maxExpiresAt` (8 hours from sign-in). A `401` on an admin call means sign in again.
+- **Roles** are the contract's `get_account_roles` at sign-in, refreshed after 60 seconds, so a change reaches the UI within about a minute. Names: `owner`, `registrar`, `compat_approver`, `pauser`, `attester`, `reserve_attester`, `bridge_attester`. `roles: []` is valid: the account signed in and holds no admin rights. Hide admin screens, and expect `403 FORBIDDEN` if called anyway.
+- **Admin endpoints** (`/v1/admin/reconciliation`, `/v1/admin/metrics`) accept any of `owner`, `registrar`, `compat_approver`, `pauser`. `attester` roles do not open them.
+- **`keyType`** is `full_access` or `function_call` (accepted, recorded). Prefer a full-access key: that is what NEP-413 asks for.
+- **Errors**: `401 UNAUTHORIZED` (unknown, used or expired challenge; wrong signature; key not on the account; expired session), `403 FORBIDDEN`, `429` (sign-in is limited per address; the admin allowance). Refusals carry a plain message to show.
+- Sign-in responses are `no-store`. The `ADMIN_API_KEY` break-glass key is not a session; the frontend never uses it.
+
 ## Not available yet
 
 These are in the brief and not in the API. They arrive with the phase named, and this document changes with them.
 
-| Feature                                                                             | Phase |
-| ----------------------------------------------------------------------------------- | ----- |
-| Issuer onboarding, attestations, account sign-in, issuer portal                     | 3     |
-| Holders, issuer queue, redemption prepare and reclaim, mint requests (need sign-in) | 4     |
-| Pools, LPs, market-priced quotes, depth, trade and portfolio endpoints, SSE streams | 5     |
-| Bridge routes and transfers, `chains` supply across real chains                     | 6     |
-| Private RFQ                                                                         | 8     |
+| Feature                                                                               | Phase |
+| ------------------------------------------------------------------------------------- | ----- |
+| Issuer onboarding, attestations, account sign-in, issuer portal                       | 3     |
+| Holders, issuer queue, redemption prepare and reclaim, mint requests (need sign-in)   | 4     |
+| Pools, LPs, market-priced quotes, depth, trade and portfolio endpoints, SSE streams   | 5     |
+| Bridge routes and transfers, `chains` supply across real chains                       | 6     |
+| Private RFQ                                                                           | 8     |
+| Feature                                                                               | Phase |
+| ------------------------------------------------------------------------------------- | ----- |
+| Issuer onboarding, attestations, issuer portal (cut: issuers are mock data, ADR 0019) | —     |
+| Reserves, custody, redemption, holders                                                | 4     |
+| Pools, LPs, market-priced quotes, depth, trade and portfolio endpoints, SSE streams   | 5     |
+| Bridge routes and transfers, `chains` supply across real chains                       | 6     |
+| Private RFQ                                                                           | 8     |
 
 ## Changes to existing endpoints
+
+- **`GET /v1/admin/reconciliation`, `GET /v1/admin/metrics`, `GET /metrics`** (additive): accept a wallet session (see Auth) as well as the break-glass admin key; a session whose account holds no operator role gets `403` with the new error code `FORBIDDEN`. The `401` message now says a session or admin key is required.
 
 - **`GET /v1/assets`** (additive, but the response shape grew): `items[]` gained `category`, `tags`, `chains`, `convertible`, `bridgeable`, `market`, `sparkline`; the body gained `nextCursor` and `total`; it accepts the query parameters above. The default order is still by `id`. Existing readers of `items[].id`, `symbol`, `name`, `issuer`, ... are unaffected.
 

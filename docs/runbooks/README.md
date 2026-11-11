@@ -1,6 +1,6 @@
 # Runbooks
 
-For the person operating a Pontis deployment on testnet. Each runbook gives the symptom, how to confirm it, what to do, and how to know it worked. Commands assume the deployer key is configured ([local setup](../local-setup.md)) and `API` and `ADMIN_API_KEY` are set.
+For the person operating a Pontis deployment on testnet. Each runbook gives the symptom, how to confirm it, what to do, and how to know it worked. Commands assume the deployer key is configured ([local setup](../local-setup.md)) and `API` is set, with a session token or the break-glass `ADMIN_API_KEY` ([operator sign-in](auth.md)).
 
 | Situation                                                       | Runbook                                      |
 | --------------------------------------------------------------- | -------------------------------------------- |
@@ -12,13 +12,14 @@ For the person operating a Pontis deployment on testnet. Each runbook gives the 
 | Quotes say `PRICE_*` or the circuit breaker tripped             | [Price guards](price-guards.md)              |
 | A corporate action, freeze, delisting or NAV window is involved | [Corporate actions](corporate-actions.md)    |
 | Quotes say `RESERVE_*`, or the reserve relay fails              | [Reserve relay](reserve-relay.md)            |
+| Signing in to the admin endpoints, or rotating the admin key    | [Operator sign-in](auth.md)                  |
 
 First look, always:
 
 ```bash
 pnpm --filter @pontis/scripts ops status                                  # chain: paused, fee, signer, inventory, route
 curl -s $API/v1/health | jq                                               # database, rpc, chain height, indexer state and lag
-curl -s -H "Authorization: Bearer $ADMIN_API_KEY" $API/v1/admin/reconciliation | jq   # findings and flagged quotes
+curl -s -H "Authorization: Bearer $TOKEN" $API/v1/admin/reconciliation | jq   # findings and flagged quotes (TOKEN: a session, or ADMIN_API_KEY)
 ```
 
 Roles on chain: `owner` funds and unpauses, `pauser` pauses and suspends, `compat_approver` re-approves ([ADR 0003](../decisions/0003-admin-roles-and-pause.md)). On the MVP deployment the deployer holds all of them.

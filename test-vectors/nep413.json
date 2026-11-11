@@ -1,0 +1,56 @@
+{
+  "description": "NEP-413 signMessage vectors (ADR 0019). preimage = u32 LE 2147484061 ++ borsh(Payload{message: string, nonce: [u8;32], recipient: string, callback_url: Option<string>}); digest = sha256(preimage); signature = ed25519 over the 32-byte digest. Computed in Python (hashlib, cryptography) with hand-rolled Borsh, independently of the TypeScript code. The first case is the example of the NEP-413 text. Checked by packages/quote-engine.",
+  "tag": 2147484061,
+  "seed_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+  "public_key": "ed25519:9C6hybhQ6Aycep9jaUnP6uL9ZYvDjUp1aSkFWPUFJtpj",
+  "cases": [
+    {
+      "name": "nep-example",
+      "message": "hi",
+      "nonce_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "nonce_base64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "recipient": "myapp.com",
+      "callback_url": "myapp.com/callback",
+      "preimage_hex": "9d010080020000006869000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f090000006d796170702e636f6d01120000006d796170702e636f6d2f63616c6c6261636b",
+      "sha256_hex": "c9ce5de288f7de6d83e2303e56c7615949da83867ea33c0747ed45c47ef50148",
+      "signature_hex": "828f70af6d09c8837799abeb2d81b55e23765a3b868b87b835a98d014e1156a4392fb66c03b50f219b307fd5521b5400d7ec685a530201a929eefe2d4412730b",
+      "signature_base64": "go9wr20JyIN3mavrLYG1XiN2WjuGi4e4NamNAU4RVqQ5L7ZsA7UPIZswf9VSG1QA1+xoWlMCAakp7v4tRBJzCw=="
+    },
+    {
+      "name": "no-callback",
+      "message": "hi",
+      "nonce_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "nonce_base64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "recipient": "myapp.com",
+      "callback_url": null,
+      "preimage_hex": "9d010080020000006869000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f090000006d796170702e636f6d00",
+      "sha256_hex": "0e80e1606a46e66fcb450f6ceb55803921e465fddee8216463cf7b2680c09f37",
+      "signature_hex": "d39c2e3108e20631f90ad1b0374b3e6f958daef05ed9a9050d3bf22a5ae410a16f3fbf60004e01bde188af0ae3fcd56cd3f1b59dd1cdabfbbe18f3d6c4948d0f",
+      "signature_base64": "05wuMQjiBjH5CtGwN0s+b5WNrvBe2akFDTvyKlrkEKFvP79gAE4BveGIrwrj/NVs0/G1ndHNq/u+GPPWxJSNDw=="
+    },
+    {
+      "name": "pontis-sign-in",
+      "message": "Sign in to the Pontis API as alice.testnet. Testnet, synthetic assets only. This authorises a session, never a transaction.",
+      "nonce_hex": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+      "nonce_base64": "paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU=",
+      "recipient": "pontis-api.testnet",
+      "callback_url": null,
+      "preimage_hex": "9d0100807b0000005369676e20696e20746f2074686520506f6e7469732041504920617320616c6963652e746573746e65742e20546573746e65742c2073796e74686574696320617373657473206f6e6c792e205468697320617574686f726973657320612073657373696f6e2c206e657665722061207472616e73616374696f6e2ea5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a512000000706f6e7469732d6170692e746573746e657400",
+      "sha256_hex": "64d679fe1d54f345b19134e32db67e842f047661d29a984668f6e3d494b5dd0c",
+      "signature_hex": "f939552880a2bc94515fd32d53655cd25230670f48d8063f65246588f61ab257cd121a475f83d34af43d74635342e412134011d3ed6388b0c7832c61b387ad09",
+      "signature_base64": "+TlVKICivJRRX9MtU2Vc0lIwZw9I2AY/ZSRliPYaslfNEhpHX4PTSvQ9dGNTQuQSE0AR0+1jiLDHgyxhs4etCQ=="
+    },
+    {
+      "name": "non-ascii",
+      "message": "Anmeldung über Pontis — é",
+      "nonce_hex": "fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0",
+      "nonce_base64": "//79/Pv6+fj39vX08/Lx8O/u7ezr6uno5+bl5OPi4eA=",
+      "recipient": "api.pontis.example",
+      "callback_url": "https://app.pontis.example/auth",
+      "preimage_hex": "9d0100801d000000416e6d656c64756e6720c3bc62657220506f6e74697320e2809420c3a9fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0120000006170692e706f6e7469732e6578616d706c65011f00000068747470733a2f2f6170702e706f6e7469732e6578616d706c652f61757468",
+      "sha256_hex": "e052b9e65cc9fd51448228cca6177780e377fcd6428efe36eadb110e93802e38",
+      "signature_hex": "41ba2e55f621199a354cd792f6a1845b7f23f848708c9060623b7fbb4a8aba468864a3059c10abfed354750ec216ace7546d71c8abdc8d2853f903dffcd69a0c",
+      "signature_base64": "QbouVfYhGZo1TNeS9qGEW38j+EhwjJBgYjt/u0qKukaIZKMFnBCr/tNUdQ7CFqznVG1xyKvcjShT+QPf/NaaDA=="
+    }
+  ]
+}

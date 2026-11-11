@@ -33,6 +33,13 @@ describe("classify", () => {
     expect(classify({ method: "OPTIONS", url: "/v1/quotes" })).toBe("read");
     expect(classify({ method: "POST", url: "/v1/quotes" })).toBe("write");
   });
+
+  it("puts sign-in attempts in the admin class, and the session endpoints with ordinary calls", () => {
+    expect(classify({ method: "POST", url: "/v1/auth/challenge" })).toBe("admin");
+    expect(classify({ method: "POST", url: "/v1/auth/verify?x=1" })).toBe("admin");
+    expect(classify({ method: "POST", url: "/v1/auth/logout" })).toBe("write");
+    expect(classify({ method: "GET", url: "/v1/auth/me" })).toBe("read");
+  });
 });
 
 describe("rate limiting", () => {
@@ -62,5 +69,23 @@ describe("rate limiting", () => {
       });
     for (let i = 0; i < 3; i++) expect((await guess(`wrong-guess-${i}`)).statusCode).toBe(401);
     expect((await guess("0123456789abcdef-admin-key")).statusCode).toBe(429);
+  });
+
+  it("limits challenge and verify together per client, apart from the admin counter", async () => {
+    const challenge = () =>
+      call("POST", "/v1/auth/challenge", "10.0.0.5", { accountId: "alice.testnet" });
+    expect((await challenge()).statusCode).toBe(200);
+    expect((await challenge()).statusCode).toBe(200);
+    expect((await call("POST", "/v1/auth/verify", "10.0.0.5", {})).statusCode).toBe(400);
+    const limited = await challenge();
+    expect(limited.statusCode).toBe(429);
+    expect(ApiErrorSchema.parse(limited.json()).code).toBe("RATE_LIMITED");
+    expect((await call("POST", "/v1/auth/verify", "10.0.0.5", {})).statusCode).toBe(429);
+    // Another client, and the same client's admin calls, are unaffected.
+    expect(
+      (await call("POST", "/v1/auth/challenge", "10.0.0.6", { accountId: "a.testnet" })).statusCode,
+    ).toBe(200);
+    const admin = await call("GET", "/v1/admin/reconciliation", "10.0.0.5");
+    expect(admin.statusCode).toBe(401);
   });
 });

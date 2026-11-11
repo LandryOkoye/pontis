@@ -25,8 +25,13 @@ const EnvSchema = z.object({
     (v) => (v === "" ? undefined : v),
     z.string().startsWith("ed25519:").optional(),
   ),
-  /** Bearer key for `/v1/admin/*`; unset closes the admin endpoints. At least 16 characters. */
+  /** Break-glass bearer key for `/v1/admin/*` (audited as `legacy-admin-key`); unset turns it off. At least 16 characters. */
   ADMIN_API_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(16).optional()),
+  /** The NEP-413 `recipient` wallets are told a sign-in is for; default `pontis-api.<network>`. */
+  AUTH_RECIPIENT: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().min(3).max(128).optional(),
+  ),
   /** Comma-separated browser origins allowed by CORS, for example `https://app.example.com`. */
   CORS_ORIGIN: z
     .string()

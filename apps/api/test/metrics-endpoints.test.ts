@@ -2,7 +2,7 @@ import { auditLog } from "@pontis/db";
 import { createTestDb, type TestDb } from "@pontis/db/testing";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { adminActor } from "../src/admin/audit.ts";
+import { LEGACY_ACTOR } from "../src/admin/audit.ts";
 import { buildApp } from "../src/app.ts";
 import { testAppDeps } from "./helpers.ts";
 import { NOW, seedRegistry } from "./metrics-helpers.ts";
@@ -67,7 +67,7 @@ describe.each([
   it("answers the right key, audits it under the key's fingerprint and never caches", async () => {
     const res = await get(path, `Bearer ${KEY}`);
     expect(res.statusCode).toBe(200);
-    expect(await audits()).toContainEqual([adminActor(KEY), action, path]);
+    expect(await audits()).toContainEqual([LEGACY_ACTOR, action, path]);
     expect(res.headers.etag).toBeUndefined();
     expect(res.headers["cache-control"]).toBe("no-store");
   });

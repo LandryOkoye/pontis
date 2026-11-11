@@ -187,3 +187,19 @@ describe("TokenClient", () => {
     expect(await token.storageBalanceOf("alice.testnet")).toBeNull();
   });
 });
+
+describe("CoreClient.getAccountRoles", () => {
+  it("asks get_account_roles with the account and returns the snake_case names as sent", async () => {
+    const { rpc, calls } = fakeRpc(() => ["owner", "pauser"]);
+    expect(await new CoreClient(rpc, "core.testnet").getAccountRoles("alice.testnet")).toEqual([
+      "owner",
+      "pauser",
+    ]);
+    expect(calls[0]).toMatchObject({ method: "get_account_roles" });
+  });
+
+  it("rejects a response that is not a list of strings", async () => {
+    const bad = new CoreClient(fakeRpc(() => ({ roles: [] })).rpc, "core.testnet");
+    await expect(bad.getAccountRoles("alice.testnet")).rejects.toThrow();
+  });
+});
