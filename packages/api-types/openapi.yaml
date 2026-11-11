@@ -277,10 +277,19 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/AssetSummary"
+            $ref: "#/components/schemas/AssetDirectoryItem"
+        nextCursor:
+          type:
+            - string
+            - "null"
+        total:
+          type: integer
+          minimum: 0
       required:
         - items
-    AssetSummary:
+        - nextCursor
+        - total
+    AssetDirectoryItem:
       type: object
       properties:
         id:
@@ -311,6 +320,24 @@ components:
           type: boolean
         verificationStatus:
           $ref: "#/components/schemas/VerificationStatus"
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        chains:
+          type: array
+          items:
+            type: string
+        convertible:
+          type: boolean
+        bridgeable:
+          type: boolean
+        market:
+          $ref: "#/components/schemas/MarketSnapshot"
+        sparkline:
+          $ref: "#/components/schemas/Sparkline"
       required:
         - id
         - symbol
@@ -325,6 +352,13 @@ components:
         - issuer
         - synthetic
         - verificationStatus
+        - category
+        - tags
+        - chains
+        - convertible
+        - bridgeable
+        - market
+        - sparkline
     Network:
       type: string
       enum:
@@ -345,6 +379,122 @@ components:
       example:
         num: "1000"
         den: "1"
+    MarketSnapshot:
+      type:
+        - object
+        - "null"
+      properties:
+        price:
+          $ref: "#/components/schemas/PriceString"
+        currency:
+          type: string
+        priceAsOf:
+          $ref: "#/components/schemas/Timestamp"
+        change24hBps:
+          type:
+            - integer
+            - "null"
+        change7dBps:
+          type:
+            - integer
+            - "null"
+        change30dBps:
+          type:
+            - integer
+            - "null"
+        supply:
+          $ref: "#/components/schemas/AmountString"
+        marketCap:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        volume24h:
+          $ref: "#/components/schemas/PriceString"
+        tvl:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        rank:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+      required:
+        - price
+        - currency
+        - priceAsOf
+        - change24hBps
+        - change7dBps
+        - change30dBps
+        - supply
+        - marketCap
+        - volume24h
+        - tvl
+        - rank
+        - sources
+        - simulated
+    PriceString:
+      type: string
+      pattern: ^(0|[1-9][0-9]*)(\.[0-9]{1,8})?$
+      description: "Decimal with up to 8 fractional digits: a price or a value in the quote currency. Never a float."
+      example: "2681.42585338"
+    AmountString:
+      type:
+        - string
+        - "null"
+      pattern: ^(0|[1-9][0-9]*)$
+      description: Non-negative integer in smallest token units, as a decimal string (max u128).
+      example: "1000000"
+    DataSource:
+      type: string
+      enum:
+        - pontis_trades
+        - simulated_feed
+      description: "`pontis_trades` is real testnet activity. `simulated_feed` is the labelled demo market."
+    Sparkline:
+      type:
+        - object
+        - "null"
+      properties:
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceString"
+        simulated:
+          type: boolean
+      required:
+        - interval
+        - points
+        - simulated
+    CandleInterval:
+      type: string
+      enum:
+        - 1m
+        - 5m
+        - 15m
+        - 1h
+        - 4h
+        - 1d
+    DataFilter:
+      type: string
+      enum:
+        - real
+        - simulated
+        - all
+      default: all
+      description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
     Asset:
       type: object
       properties:
@@ -490,11 +640,6 @@ components:
         - lastReviewedAt
         - synthetic
         - verificationStatus
-    AmountString:
-      type: string
-      pattern: ^(0|[1-9][0-9]*)$
-      description: Non-negative integer in smallest token units, as a decimal string (max u128).
-      example: "1000000"
     CompatibilityList:
       type: object
       properties:
@@ -1194,10 +1339,112 @@ paths:
   /v1/assets:
     get:
       operationId: listAssets
-      summary: List asset representations
-      description: Each representation embeds its canonical claim name and issuer summary. Canonical claim and representation are separate records; use `GET /v1/assets/{id}` for the claim detail.
+      summary: "Asset directory: search, filter, sort, paginate"
+      description: One row per representation with its canonical claim name, issuer summary, filter facts, latest market figures and a 7 day sparkline. `market` is null when the asset has no price. Every market figure carries `simulated` and `sources`; `data` selects real rows, simulated rows, or real where they exist (`all`). Sorting by a figure that is null for some assets puts those last. Cursors are opaque and valid only for the same query.
       tags:
-        - Registry
+        - Market
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          required: false
+          name: q
+          in: query
+        - schema:
+            type: string
+            maxLength: 100
+          required: false
+          name: category
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: issuerId
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: chain
+          in: query
+        - schema:
+            type: string
+            enum:
+              - unverified
+              - issuer_attested
+              - third_party_attested
+              - independently_verified
+          required: false
+          name: verification
+          in: query
+        - schema:
+            $ref: "#/components/schemas/RecordStatus"
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: convertible
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: bridgeable
+          in: query
+        - schema:
+            type: string
+            enum:
+              - id
+              - name
+              - price
+              - marketCap
+              - tvl
+              - volume24h
+              - change24h
+              - change7d
+              - change30d
+            default: id
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: asc
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
       responses:
         "200":
           description: Success
@@ -1205,6 +1452,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "429":
           description: "Rate limited. Codes: RATE_LIMITED."
           content:

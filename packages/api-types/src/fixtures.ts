@@ -17,6 +17,7 @@ import type {
   Issuer,
   IssuerSummary,
 } from "./registry-types.ts";
+import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
 import type { Quote, Transaction } from "./trading-types.ts";
 
 const T0 = "2026-11-07T18:00:00.000Z";
@@ -269,4 +270,62 @@ export const transactionSettled: Transaction = {
   createdAt: T0,
   submittedAt: "2026-11-07T18:00:20.000Z",
   settledAt: "2026-11-07T18:00:30.000Z",
+};
+
+// ---- market data (ADR 0015): every figure is simulated and says so ----
+
+const marketA: MarketSnapshot = {
+  price: "2681.42585338",
+  currency: "USD",
+  priceAsOf: "2026-11-11T12:00:00.000Z",
+  change24hBps: 31,
+  change7dBps: 396,
+  change30dBps: -5,
+  supply: "12400000000",
+  marketCap: "33250000.5",
+  volume24h: "1250000.25",
+  tvl: "4100000",
+  rank: 1,
+  sources: ["simulated_feed"],
+  simulated: true,
+};
+
+const marketB: MarketSnapshot = {
+  ...marketA,
+  price: "268.01474754",
+  supply: "1240000000000",
+  marketCap: "3324000.1",
+  volume24h: "104000",
+  tvl: "410000",
+  rank: 2,
+};
+
+const sparkline = (points: string[]) => ({ interval: "4h" as const, points, simulated: true });
+
+const directoryFacts = {
+  category: "Synthetic commodity claim (test only)",
+  tags: ["synthetic", "gold", "commodity"],
+  chains: ["near-testnet"],
+  convertible: true,
+  bridgeable: false,
+};
+
+export const directoryItemA: AssetDirectoryItem = {
+  ...tgoldASummary,
+  ...directoryFacts,
+  market: marketA,
+  sparkline: sparkline(["2660.1", "2671.9", "2668.4", "2681.42585338"]),
+};
+
+export const directoryItemB: AssetDirectoryItem = {
+  ...tgoldBSummary,
+  ...directoryFacts,
+  market: marketB,
+  sparkline: sparkline(["266.0", "267.2", "266.8", "268.01474754"]),
+};
+
+export const assetDirectory = {
+  items: [directoryItemA, directoryItemB],
+  nextCursor: null,
+  total: 2,
 };

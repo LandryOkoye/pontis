@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ApiErrorSchema,
+  AssetListSchema,
   AssetSchema,
   AssetSummarySchema,
   CompareRoutesRequestSchema,
@@ -12,6 +13,8 @@ import {
   HealthSchema,
   IssuerSchema,
   ListTransactionsQuerySchema,
+  ListAssetsQuerySchema,
+  PriceString,
   QuoteSchema,
   ReconciliationFindingSchema,
   ReconciliationReportSchema,
@@ -32,6 +35,7 @@ describe("fixtures round-trip through the schemas", () => {
     ["quote", QuoteSchema, fx.quote],
     ["settled transaction", TransactionSchema, fx.transactionSettled],
     ["health", HealthSchema, fx.health],
+    ["asset directory", AssetListSchema, fx.assetDirectory],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));
@@ -246,5 +250,37 @@ describe("transaction hashes", () => {
       expect(TransactionSchema.safeParse({ ...unverified, txHashStatus: status }).success).toBe(
         true,
       );
+  });
+});
+
+describe("market strings and queries", () => {
+  it("accepts decimal prices with up to eight places", () => {
+    for (const price of ["0", "1", "2681.42585338", "0.00000001", "100.5"]) {
+      expect(PriceString.safeParse(price).success, price).toBe(true);
+    }
+  });
+
+  it.each(["", "-1", "01", "1.", ".5", "1e3", "1.123456789", " 1", "NaN"])(
+    "rejects price %j",
+    (price) => {
+      expect(PriceString.safeParse(price).success).toBe(false);
+    },
+  );
+
+  it("rejects a JSON number for a price", () => {
+    expect(PriceString.safeParse(2681.4).success).toBe(false);
+  });
+
+  it("defaults the directory query and bounds the page size", () => {
+    expect(ListAssetsQuerySchema.parse({})).toMatchObject({
+      sort: "id",
+      order: "asc",
+      limit: 25,
+      data: "all",
+    });
+    expect(ListAssetsQuerySchema.parse({ limit: "100" }).limit).toBe(100);
+    expect(ListAssetsQuerySchema.safeParse({ limit: "101" }).success).toBe(false);
+    expect(ListAssetsQuerySchema.safeParse({ sort: "rank" }).success).toBe(false);
+    expect(ListAssetsQuerySchema.safeParse({ data: "fake" }).success).toBe(false);
   });
 });

@@ -7,7 +7,6 @@ import { ApiErrorSchema } from "./common.ts";
 import { AdminAuthHeaderSchema, ReconciliationReportSchema } from "./admin-types.ts";
 import {
   AssetSchema,
-  AssetSummarySchema,
   CompatibilitySchema,
   HealthSchema,
   IssuerSchema,
@@ -26,13 +25,11 @@ import {
   SubmittedRequestSchema,
   TransactionSchema,
 } from "./trading-types.ts";
+import { AssetListSchema, ListAssetsQuerySchema } from "./market-types.ts";
 
 export const IssuerListSchema = z
   .object({ items: z.array(IssuerSummarySchema) })
   .meta({ id: "IssuerList" });
-export const AssetListSchema = z
-  .object({ items: z.array(AssetSummarySchema) })
-  .meta({ id: "AssetList" });
 export const CompatibilityListSchema = z
   .object({ items: z.array(CompatibilitySchema) })
   .meta({ id: "CompatibilityList" });
@@ -50,7 +47,14 @@ interface Endpoint {
   readonly path: string;
   readonly summary: string;
   readonly tag:
-    "Health" | "Registry" | "Routes" | "Quotes" | "Conversions" | "Transactions" | "Admin";
+    | "Health"
+    | "Registry"
+    | "Market"
+    | "Routes"
+    | "Quotes"
+    | "Conversions"
+    | "Transactions"
+    | "Admin";
   readonly status: number;
   readonly response: z.ZodType;
   /** Error codes this endpoint can return, with their HTTP status. */
@@ -133,13 +137,14 @@ export const ENDPOINTS = {
   listAssets: {
     method: "get",
     path: "/v1/assets",
-    summary: "List asset representations",
-    tag: "Registry",
+    summary: "Asset directory: search, filter, sort, paginate",
+    tag: "Market",
     status: 200,
     response: AssetListSchema,
-    errors: { ...COMMON },
+    query: ListAssetsQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
     description:
-      "Each representation embeds its canonical claim name and issuer summary. Canonical claim and representation are separate records; use `GET /v1/assets/{id}` for the claim detail.",
+      "One row per representation with its canonical claim name, issuer summary, filter facts, latest market figures and a 7 day sparkline. `market` is null when the asset has no price. Every market figure carries `simulated` and `sources`; `data` selects real rows, simulated rows, or real where they exist (`all`). Sorting by a figure that is null for some assets puts those last. Cursors are opaque and valid only for the same query.",
   },
   getAsset: {
     method: "get",
