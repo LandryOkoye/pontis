@@ -30,6 +30,21 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
   const policies = new Map<string, Json>();
   const ledger = new Map<string, bigint>();
   const attestations = new Map<string, Json>();
+  const terms = new Map<string, Json>();
+  const tokens = new Map(
+    Object.entries(supplies).map(([account, supply]) => [
+      account,
+      {
+        rep: account.split(".")[0]!,
+        supply,
+        minter: null as string | null,
+        balances: new Map<string, bigint>([[DEPLOYER, supply]]),
+        registered: new Set<string>(),
+      },
+    ]),
+  );
+  type Token = NonNullable<ReturnType<typeof tokens.get>>;
+  const tokenOfRep = (rep: string) => [...tokens.values()].find((t) => t.rep === rep)!;
   const has = (role: string, account: string) => roles.get(role)?.has(account) ?? false;
 
   /** The reserve status as the contract computes it on read (reserve_status.rs). */
@@ -62,7 +77,12 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
     get_reserve_status: (a) => status(a.representation_id as string),
     get_reserve_attestation: (a) =>
       attestations.get(`${a.representation_id}|${a.custodian_id}`) ?? null,
-    ft_total_supply: (_a, contract) => (supplies[contract] ?? 0n).toString(),
+    ft_total_supply: (_a, contract) => tokens.get(contract)!.supply.toString(),
+    ft_balance_of: (a, c) => (tokens.get(c)!.balances.get(a.account_id as string) ?? 0n).toString(),
+    get_minter: (_a, contract) => tokens.get(contract)!.minter,
+    storage_balance_of: (a, c) =>
+      tokens.get(c)!.registered.has(a.account_id as string) ? { total: "1" } : null,
+    get_redemption_terms: (a) => terms.get(a.representation_id as string) ?? null,
   };
 
   function applyCore(method: string, args: Json, signer: string): unknown {
@@ -121,8 +141,28 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
         attestations.set(key, a);
         return;
       }
+      case "set_redemption_terms": {
+        const rep = args.representation_id as string;
+        const version = ((terms.get(rep)?.version as number | undefined) ?? 0) + 1;
+        const terms_hash = `${rep}${version}`.padEnd(64, "0").replace(/[^0-9a-f]/g, "a");
+        terms.set(rep, { terms: args.terms, version, terms_hash: terms_hash.slice(0, 64) });
+        return;
+      }
       default:
         return fail(`unexpected core call ${method}`);
+    }
+  }
+
+  function applyToken(t: Token, method: string, args: Json, signer: string): unknown {
+    switch (method) {
+      case "set_minter":
+        t.minter = (args.minter as string | null) ?? null;
+        return;
+      case "storage_deposit":
+        t.registered.add(args.account_id as string);
+        return;
+      default:
+        return fail(`unexpected token call ${method}`);
     }
   }
 
@@ -138,12 +178,16 @@ export function fakeCustodyChain(supplies: Record<string, bigint> = {}) {
         (views[method] ?? fail(`unexpected view ${method}`))(args, contract),
       call: async (contract: string, method: string, args: Json = {}) => {
         calls.push({ contract, method, args, signer });
+        const token = tokens.get(contract);
+        if (token) return applyToken(token, method, args, signer);
         return contract === CORE ? applyCore(method, args, signer) : fail(`unknown ${contract}`);
       },
     }) as unknown as Chain;
 
   return {
     chain: chainFor(DEPLOYER),
+    tokenOf: tokenOfRep,
+    terms,
     calls,
     clock,
     status,
