@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   ApiErrorSchema,
   AssetListSchema,
+  CategoryListSchema,
+  ChainListSchema,
+  MarketMoversSchema,
+  MarketOverviewSchema,
   AssetSchema,
   AssetSummarySchema,
   CompareRoutesRequestSchema,
@@ -44,6 +48,10 @@ describe("fixtures round-trip through the schemas", () => {
     ["NAV chart", NavChartSchema, fx.navChart],
     ["supply chart", SupplyChartSchema, fx.supplyChart],
     ["volume chart", VolumeChartSchema, fx.volumeChart],
+    ["market overview", MarketOverviewSchema, fx.marketOverview],
+    ["market movers", MarketMoversSchema, fx.marketMovers],
+    ["category breakdown", CategoryListSchema, fx.categoryList],
+    ["chain breakdown", ChainListSchema, fx.chainList],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));

@@ -33,6 +33,14 @@ import {
   SupplyChartSchema,
   VolumeChartSchema,
 } from "./chart-types.ts";
+import {
+  CategoryListSchema,
+  ChainListSchema,
+  MarketMoversSchema,
+  MarketOverviewSchema,
+  MoversQuerySchema,
+  OverviewQuerySchema,
+} from "./overview-types.ts";
 
 export const IssuerListSchema = z
   .object({ items: z.array(IssuerSummarySchema) })
@@ -203,6 +211,52 @@ export const ENDPOINTS = {
     params: IdParam,
     query: ChartQuerySchema,
     errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+  },
+  getMarketOverview: {
+    method: "get",
+    path: "/v1/market/overview",
+    summary: "Global market stats",
+    tag: "Market",
+    status: 200,
+    response: MarketOverviewSchema,
+    query: OverviewQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Counts and totals over every asset. Totals include only assets that have the figure (an asset with no known supply has no market cap and is left out of `totalMarketCap`, not counted as zero). `change24hBps` is the market-cap-weighted mean of the assets' 24h changes. `simulated` is true when any included figure is simulated.",
+  },
+  getMarketMovers: {
+    method: "get",
+    path: "/v1/market/movers",
+    summary: "Gainers, losers, top volume, top TVL, newly listed",
+    tag: "Market",
+    status: 200,
+    response: MarketMoversSchema,
+    query: MoversQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Each list has at most `limit` entries and only includes assets with the relevant figure. Gainers have a positive 24h change and losers a negative one.",
+  },
+  getMarketCategories: {
+    method: "get",
+    path: "/v1/market/categories",
+    summary: "Breakdown by category",
+    tag: "Market",
+    status: 200,
+    response: CategoryListSchema,
+    query: OverviewQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+  },
+  getMarketChains: {
+    method: "get",
+    path: "/v1/market/chains",
+    summary: "Breakdown by chain",
+    tag: "Market",
+    status: 200,
+    response: ChainListSchema,
+    query: OverviewQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Supply per chain valued at each asset's price. Only the NEAR testnet has real supply today; other chains appear when assets have profile entries or supply snapshots there.",
   },
   getAsset: {
     method: "get",

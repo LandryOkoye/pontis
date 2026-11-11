@@ -19,6 +19,13 @@ import type {
 } from "./registry-types.ts";
 import type { NavChart, PriceChart, SupplyChart, VolumeChart } from "./chart-types.ts";
 import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
+import type {
+  CategoryList,
+  ChainList,
+  MarketMovers,
+  MarketOverview,
+  Mover,
+} from "./overview-types.ts";
 import type { Quote, Transaction } from "./trading-types.ts";
 
 const T0 = "2026-11-07T18:00:00.000Z";
@@ -411,4 +418,79 @@ export const volumeChart: VolumeChart = {
     trades: p.trades,
     filled: false,
   })),
+};
+
+const mover = (id: string, symbol: string, market: MarketSnapshot): Mover => ({
+  id,
+  symbol,
+  name: `SYNTHETIC TEST Gold ${symbol.slice(-1)}`,
+  price: market.price,
+  change24hBps: market.change24hBps,
+  marketCap: market.marketCap,
+  volume24h: market.volume24h,
+  tvl: market.tvl,
+  simulated: market.simulated,
+});
+
+const moverA = mover("tgold-a", "TGOLD-A", marketA);
+const moverB = mover("tgold-b", "TGOLD-B", marketB);
+
+export const marketOverview: MarketOverview = {
+  data: "all",
+  asOf: "2026-11-11T12:00:00.000Z",
+  assetCount: 2,
+  pricedAssetCount: 2,
+  issuerCount: 2,
+  chainCount: 1,
+  convertibleAssetCount: 2,
+  totalMarketCap: "36574000.6",
+  totalTvl: "4510000",
+  volume24h: "1354000.25",
+  change24hBps: 31,
+  simulated: true,
+  sources: ["simulated_feed"],
+};
+
+export const marketMovers: MarketMovers = {
+  data: "all",
+  gainers: [moverB, moverA],
+  losers: [],
+  topByVolume: [moverA, moverB],
+  topByTvl: [moverA, moverB],
+  newlyListed: [
+    { id: "tgold-b", symbol: "TGOLD-B", name: moverB.name, registeredAt: T0, market: moverB },
+    { id: "tgold-a", symbol: "TGOLD-A", name: moverA.name, registeredAt: T0, market: moverA },
+  ],
+};
+
+export const categoryList: CategoryList = {
+  data: "all",
+  items: [
+    {
+      category: "Synthetic commodity claim (test only)",
+      assetCount: 2,
+      marketCap: "36574000.6",
+      volume24h: "1354000.25",
+      tvl: "4510000",
+      simulated: true,
+      sources: ["simulated_feed"],
+    },
+  ],
+};
+
+export const chainList: ChainList = {
+  data: "all",
+  items: [
+    {
+      chain: "near-testnet",
+      assetCount: 2,
+      value: "36574000.6",
+      supplies: [
+        { id: "tgold-a", supply: "12400000000" },
+        { id: "tgold-b", supply: "1240000000000" },
+      ],
+      simulated: true,
+      sources: ["simulated_feed"],
+    },
+  ],
 };
