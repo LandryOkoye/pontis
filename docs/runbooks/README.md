@@ -11,6 +11,7 @@ For the person operating a Pontis deployment on testnet. Each runbook gives the 
 | Something is wrong and conversions must stop                    | [Pause procedure](pause.md)                  |
 | Quotes say `PRICE_*` or the circuit breaker tripped             | [Price guards](price-guards.md)              |
 | A corporate action, freeze, delisting or NAV window is involved | [Corporate actions](corporate-actions.md)    |
+| Quotes say `RESERVE_*`, or the reserve relay fails              | [Reserve relay](reserve-relay.md)            |
 
 First look, always:
 
