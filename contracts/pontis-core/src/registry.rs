@@ -181,31 +181,30 @@ impl Contract {
             by: by.clone(),
             timestamp_ms: now,
         };
-        self.representations.insert(
-            id,
-            Representation {
-                id: r.id,
-                canonical_asset_id: r.canonical_asset_id,
-                issuer_id: r.issuer_id,
-                account_id: r.account_id,
-                name: r.name,
-                symbol: r.symbol,
-                decimals: r.decimals,
-                unit_multiplier,
-                admin_capabilities: r.admin_capabilities,
-                custody_description: r.custody_description,
-                redemption_mechanism: r.redemption_mechanism,
-                transfer_policy_summary: r.transfer_policy_summary,
-                bridge_status: r.bridge_status,
-                synthetic: r.synthetic,
-                verification_status: r.verification_status,
-                status: Status::Restricted,
-                evidence: vec![],
-                registered_by: by,
-                registered_at_ms: now,
-                last_reviewed_ms: None,
-            },
-        );
+        let rep = Representation {
+            id: r.id,
+            canonical_asset_id: r.canonical_asset_id,
+            issuer_id: r.issuer_id,
+            account_id: r.account_id,
+            name: r.name,
+            symbol: r.symbol,
+            decimals: r.decimals,
+            unit_multiplier,
+            admin_capabilities: r.admin_capabilities,
+            custody_description: r.custody_description,
+            redemption_mechanism: r.redemption_mechanism,
+            transfer_policy_summary: r.transfer_policy_summary,
+            bridge_status: r.bridge_status,
+            synthetic: r.synthetic,
+            verification_status: r.verification_status,
+            status: Status::Restricted,
+            evidence: vec![],
+            registered_by: by,
+            registered_at_ms: now,
+            last_reviewed_ms: None,
+        };
+        self.index_representation(&rep);
+        self.representations.insert(id, rep);
         event.emit();
     }
 
