@@ -137,7 +137,7 @@ export const NavStrikeSchema = z
     /** The strike window is `[asOf, cutoff)`: a fund converts only inside it. */
     cutoff: Timestamp,
     submittedAt: Timestamp,
-    /** The label the publisher signed, such as `simulated_nav`; shown as stored. */
+    /** The label the publisher signed, such as `simulated_feed`; shown as stored. */
     source: z.string(),
     /** True for every strike the demo publishes. Show it. */
     simulated: z.boolean(),

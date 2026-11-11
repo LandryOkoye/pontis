@@ -18,6 +18,8 @@ const byId = <T extends { id: string }>(items: readonly T[], id: string, what: s
 
 type Params = Record<string, string>;
 
+const fixtureAsset = (p: Params) => byId([fx.tgoldA, fx.tgoldB], p.id as string, "Asset");
+
 /** What this file needs of an endpoint definition (the literal types differ per endpoint). */
 interface EndpointShape {
   method: "get" | "post";
@@ -63,6 +65,12 @@ const HANDLERS: Partial<Record<OperationId, Handler>> = {
     fromId: p.fromId as string,
     toId: p.toId as string,
   }),
+  getAssetLifecycle: (p) => ({ ...fx.assetLifecycle, assetId: fixtureAsset(p).id }),
+  getAssetCorporateActions: (p) => ({ ...fx.corporateActionList, assetId: fixtureAsset(p).id }),
+  getAssetNav: (p) =>
+    p.id === fx.assetNav.assetId
+      ? fx.assetNav
+      : { assetId: fixtureAsset(p).id, kind: "fungible", strike: null },
   createQuote: () => fx.quote,
   getQuote: () => fx.quote,
   getTransaction: () => fx.transactionSettled,

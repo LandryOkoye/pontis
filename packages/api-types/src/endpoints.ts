@@ -364,7 +364,7 @@ export const ENDPOINTS = {
     params: IdParam,
     errors: { 404: ["NOT_FOUND"], ...COMMON },
     description:
-      "Read from the chain, never cached. An asset with no lifecycle record is a `fungible` asset in stage `active`. Anything but `active`, or a conversion flag, closes the asset's routes (`NOT_CONVERTIBLE`, `LIFECYCLE_BLOCKED`). Stage changes are entered by the registrar; delisting needs a second account.",
+      "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. An asset with no lifecycle record is a `fungible` asset in stage `active`. Anything but `active`, or a conversion flag, closes the asset's routes (`NOT_CONVERTIBLE`, `LIFECYCLE_BLOCKED`). Stage changes are entered by the registrar; delisting needs a second account.",
   },
   getAssetCorporateActions: {
     method: "get",
@@ -376,7 +376,7 @@ export const ENDPOINTS = {
     params: IdParam,
     errors: { 404: ["NOT_FOUND"], ...COMMON },
     description:
-      "Read from the chain, never cached. Actions belong to the canonical claim and apply to every wrapper of it: `wrappers` says which have applied. Routes of the claim are closed during an approved action's freeze window (`CORPORATE_ACTION_FREEZE`) and until every live wrapper has applied a multiplier change (`CORPORATE_ACTION_PENDING`). The facts are entered by the registrar; evidence keeps its own provenance label and nothing here is verified.",
+      "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. Actions belong to the canonical claim and apply to every wrapper of it: `wrappers` says which have applied. Routes of the claim are closed during an approved action's freeze window (`CORPORATE_ACTION_FREEZE`) and until every live wrapper has applied a multiplier change (`CORPORATE_ACTION_PENDING`). The facts are entered by the registrar; evidence keeps its own provenance label and nothing here is verified.",
   },
   getAssetNav: {
     method: "get",
@@ -388,7 +388,7 @@ export const ENDPOINTS = {
     params: IdParam,
     errors: { 404: ["NOT_FOUND"], ...COMMON },
     description:
-      "Read from the chain, never cached. `strike` is null for an asset that is not a NAV fund and for a fund with no strike yet. A fund converts only while `windowState` is `open`. The demo publishes simulated strikes only: `simulated` and `source` are shown as stored.",
+      "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. `strike` is null for an asset that is not a NAV fund and for a fund with no strike yet. A fund converts only while `windowState` is `open`. The demo publishes simulated strikes only: `simulated` and `source` are shown as stored.",
   },
   compareAssets: {
     method: "get",

@@ -21,6 +21,7 @@ import type { NavChart, PriceChart, SupplyChart, VolumeChart } from "./chart-typ
 import type { AssetDirectoryItem, MarketSnapshot } from "./market-types.ts";
 import type { CompareResponse, SearchResult } from "./discovery-types.ts";
 import type { AssetIssuerView, AssetMetadata } from "./detail-types.ts";
+import type { AssetLifecycle, AssetNav, CorporateActionList } from "./action-types.ts";
 import type { RouteGuardsResponse } from "./guard-types.ts";
 import type { IssuerLeaderboard, Status } from "./status-types.ts";
 import type {
@@ -692,4 +693,95 @@ export const routeGuards: RouteGuardsResponse = {
       simulated: true,
     },
   ],
+};
+
+/** A representation that never left the defaults: `fungible`, stage `active`, no history. */
+export const assetLifecycle: AssetLifecycle = {
+  assetId: "tgold-a",
+  kind: "fungible",
+  stage: "active",
+  noConversion: false,
+  bridgeOnly: false,
+  history: [],
+  delistRequest: null,
+};
+
+/** A 2:1 split of the claim, approved, with TGOLD-A applied and TGOLD-B still to apply. */
+export const corporateActionList: CorporateActionList = {
+  assetId: "tgold-a",
+  canonicalAssetId: "syn-gold-oz",
+  items: [
+    {
+      id: "syn-gold-oz-1",
+      canonicalAssetId: "syn-gold-oz",
+      kind: "split",
+      status: "approved",
+      announcedAt: "2026-11-05T09:00:00.000Z",
+      exDate: "2026-11-07T18:00:00.000Z",
+      effectiveAt: "2026-11-07T18:00:00.000Z",
+      freezeFrom: "2026-11-07T17:00:00.000Z",
+      freezeUntil: "2026-11-07T19:00:00.000Z",
+      freezeActive: true,
+      multiplierChange: { num: "2", den: "1" },
+      evidence: [
+        {
+          uri: "docs/asset-dossiers/TGOLD-split-notice.md",
+          sha256: SHA,
+          provenance: "issuer_provided",
+          description: "Issuer notice of the 2:1 split (synthetic example)",
+          addedBy: OWNER,
+          addedAt: "2026-11-05T09:30:00.000Z",
+        },
+      ],
+      proposedBy: OWNER,
+      approvedBy: "approver.testnet",
+      wrappers: [
+        { representationId: "tgold-a", live: true, applied: true },
+        { representationId: "tgold-b", live: true, applied: false },
+      ],
+      history: [
+        { status: "proposed", by: OWNER, at: "2026-11-05T09:00:00.000Z", note: "" },
+        {
+          status: "approved",
+          by: "approver.testnet",
+          at: "2026-11-05T10:00:00.000Z",
+          note: "Notice checked against the dossier",
+        },
+      ],
+    },
+  ],
+  multiplierEpochs: [
+    {
+      representationId: "tgold-a",
+      epochs: [
+        { effectiveAt: null, multiplier: { num: "1", den: "1000000" }, actionId: null },
+        {
+          effectiveAt: "2026-11-07T18:00:00.000Z",
+          multiplier: { num: "1", den: "500000" },
+          actionId: "syn-gold-oz-1",
+        },
+      ],
+    },
+    {
+      representationId: "tgold-b",
+      epochs: [{ effectiveAt: null, multiplier: { num: "1", den: "1000000000" }, actionId: null }],
+    },
+  ],
+};
+
+/** A NAV fund's latest strike, open for conversion; the simulator is the publisher and says so. */
+export const assetNav: AssetNav = {
+  assetId: "tnav-a",
+  kind: "nav_fund",
+  strike: {
+    navPerUnit: "10.25",
+    currency: "USD",
+    asOf: "2026-11-07T00:00:00.000Z",
+    cutoff: "2026-11-08T00:00:00.000Z",
+    submittedAt: "2026-11-07T00:00:05.000Z",
+    source: "simulated_feed",
+    simulated: true,
+    publisherKey: "ed25519:FgcwodK7aTtn3DgvqwPuSseKgTPcMpGmK6zdf7Ri9KXm",
+    windowState: "open",
+  },
 };
