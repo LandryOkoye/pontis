@@ -1,6 +1,6 @@
 # ADR 0014: Scope expansion beyond the MVP
 
-- **Status:** Accepted
+- **Status:** Accepted; Workstream C narrowed by [0019](0019-phase-3-scope-and-demo-issuers.md)
 - **Date:** 2026-11-11
 - **Brief items:** the backend expansion brief (`PONTIS_MVP_TO_DEMOABLE-BACKEND.md`, kept locally and not committed), §0, §2 and §14
 - **Related:** supersedes parts of [0010](0010-deferred-scope.md); amends the scope lines of `BuildPlan.md` (top and §11); will supersede parts of [0003](0003-admin-roles-and-pause.md) and [0006](0006-quote-signing-model.md) when their workstreams land
