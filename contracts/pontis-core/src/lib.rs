@@ -296,6 +296,8 @@ mod roles_sep_tests;
 #[cfg(test)]
 mod route_tests;
 #[cfg(test)]
+mod signers_tests;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod vault_tests;
