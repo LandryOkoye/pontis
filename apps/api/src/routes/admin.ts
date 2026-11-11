@@ -1,41 +1,15 @@
-// Admin-only endpoints (B13). Every handler checks the admin key first, and every call, allowed
-// or refused, leaves an audit row.
+// Admin-only endpoints (B13). Every handler passes the admin gate first (`auth/authorize.ts`: a
+// wallet session with a role the policy table allows, or the break-glass key), and every call,
+// allowed or refused, leaves an audit row.
 
 import { ENDPOINTS } from "@pontis/api-types";
-import type { Db } from "@pontis/db";
 import type { FastifyInstance } from "fastify";
-import { adminActor, auditAdmin, type AdminAuditEntry } from "../admin/audit.ts";
-import { requireAdmin } from "../admin/auth.ts";
 import { getReconciliationReport } from "../admin/reconciliation.ts";
+import { authorizeAdmin, type AuthContext } from "../auth/authorize.ts";
 
-export function registerAdminRoutes(
-  app: FastifyInstance,
-  db: Db,
-  adminApiKey: string | undefined,
-): void {
+export function registerAdminRoutes(app: FastifyInstance, ctx: AuthContext): void {
   app.get(ENDPOINTS.getReconciliation.path, async (req) => {
-    await authorizeAdmin(db, adminApiKey, req, "admin.reconciliation.read");
-    return ENDPOINTS.getReconciliation.response.parse(await getReconciliationReport(db));
+    await authorizeAdmin(ctx, req, "getReconciliation");
+    return ENDPOINTS.getReconciliation.response.parse(await getReconciliationReport(ctx.db));
   });
-}
-
-/**
- * Checks the admin key and audits the call, refused or allowed. Throws `UNAUTHORIZED` for a
- * missing or wrong key. Shared by every admin-keyed route, so they audit the same way.
- */
-export async function authorizeAdmin(
-  db: Db,
-  adminApiKey: string | undefined,
-  req: { url: string; headers: { authorization?: string | undefined } },
-  action: Exclude<AdminAuditEntry["action"], "admin.auth_failed">,
-): Promise<void> {
-  const subject = req.url.split("?")[0] ?? "";
-  try {
-    requireAdmin(adminApiKey, req.headers.authorization);
-  } catch (error) {
-    await auditAdmin(db, { actor: "anonymous", action: "admin.auth_failed", subject });
-    throw error;
-  }
-  // Authorized, so the key exists.
-  await auditAdmin(db, { actor: adminActor(adminApiKey ?? ""), action, subject });
 }

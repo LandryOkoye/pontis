@@ -15,6 +15,7 @@
 //! `cooldown_ms` per account. The caller must already be registered (`storage_deposit`).
 
 mod events;
+mod minter;
 
 use events::TokenEvent;
 use near_contract_standards::fungible_token::events::{FtBurn, FtMint};
@@ -68,6 +69,8 @@ pub struct Contract {
     faucet: FaucetConfig,
     /// Last faucet mint time in ms, per account. Testnet only: entries are never pruned.
     faucet_last_mint_ms: LookupMap<AccountId, u64>,
+    /// The only account that can create supply while set (ADR 0020 section 6).
+    minter: Option<AccountId>,
 }
 
 #[near]
@@ -122,6 +125,7 @@ impl Contract {
                 cooldown_ms: faucet_cooldown_ms.unwrap_or(DEFAULT_FAUCET_COOLDOWN_MS),
             },
             faucet_last_mint_ms: LookupMap::new(StorageKey::FaucetLastMint),
+            minter: None,
         }
     }
 
@@ -132,6 +136,7 @@ impl Contract {
     pub fn mint(&mut self, account_id: AccountId, amount: U128) {
         self.assert_owner();
         self.assert_not_paused();
+        self.assert_not_gated();
         require!(amount.0 > 0, "amount must be positive");
         self.mint_to(&account_id, amount, Some("owner mint"));
     }
@@ -198,6 +203,7 @@ impl Contract {
     /// Mints `amount` to the caller. Testnet-only demo faucet; see module docs.
     pub fn faucet_mint(&mut self, amount: U128) {
         self.assert_not_paused();
+        self.assert_not_gated();
         require!(self.faucet.enabled, "faucet is disabled");
         require!(amount.0 > 0, "amount must be positive");
         require!(
@@ -385,5 +391,7 @@ impl FungibleTokenMetadataProvider for Contract {
     }
 }
 
+#[cfg(test)]
+mod minter_tests;
 #[cfg(test)]
 mod tests;

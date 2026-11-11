@@ -148,6 +148,8 @@ export const ERROR_CODES = [
   "UNAUTHORIZED",
   "RATE_LIMITED",
   "INTERNAL",
+  /** Signed in, but the account holds no role the endpoint accepts (ADR 0019). Appended. */
+  "FORBIDDEN",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 

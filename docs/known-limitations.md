@@ -12,7 +12,7 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 
 ## Operations
 
-- **One admin key** for the API's admin endpoint; audit rows name a key fingerprint, not a person. One operator holds every contract role; separation of proposer and approver is not enforced on chain.
+- **Operators sign in with a wallet; the shared admin key remains as break-glass.** Admin endpoints take a session (NEP-413 sign-in, roles read from the contract) or, while `ADMIN_API_KEY` is set, that key, audited as `legacy-admin-key`; it is removed in phase 7. See [the auth runbook](runbooks/auth.md). One operator holds every contract role; separation of proposer and approver is not enforced on chain.
 - **One API instance.** Rate-limit counters live in the process.
 - **Free public RPC endpoints rate limit.** The indexer reads about two calls per block; with the reconciler and the API on the same free endpoint it gets `429`, backs off, and settlements arrive late (they are not lost). A demo wants a keyed endpoint or a node of its own.
 - **The indexer trusts its RPC node.** To read a receipt's logs it asks the node for a light-client proof and reads the outcome inside it. It does not verify that proof cryptographically (no block-header signature check, no Merkle path check), so receiving a proof from the RPC is not the same as verifying one: a dishonest or faulty node could feed it false events. It follows final blocks about four blocks behind, reads only the core's shard, and stalls visibly (health shows lag, and `stale` once its heartbeat stops) rather than skipping a block it cannot read. Past a node's retention, history needs an archival node ([indexer notes](../apps/indexer/README.md)).
@@ -25,6 +25,11 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **Health cannot tell a stopped indexer from a crashed one.** Both show as `stale` once the heartbeat is older than `INDEXER_STALE_AFTER_MS`; the indexer writes no stop marker. The heartbeat age uses the API's clock against the database's.
 - **Postgres is a local container.** No backup or restore drill. Registry state rebuilds from the chain; quotes, conversions and the audit log do not.
 - **Quote-signer key** is one ed25519 key in an environment variable. Rotating it invalidates outstanding quotes at once.
+
+- **Roles lag by up to 60 seconds.** A session caches the account's contract roles for a minute; only the reconciliation read re-checks the chain on every call. A key removed from an account keeps its existing session (at most 8 hours; log out revokes at once).
+- **Sign-in proves a key, not a person.** A full-access key is what NEP-413 asks for; a function-call key is accepted as proof the account issued it and is recorded as such. Anyone can request a challenge for any account; it can only be answered with that account's key.
+- **Sessions are bearer tokens** with no binding to a device, and the `/metrics` scraper must use the break-glass key because a session idles out. Sessions and challenges live in Postgres; there is no session list or "log out everywhere".
+- **No issuer onboarding.** Issuers and assets are mock data ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)); there is no application, proof of account control or third-party attestation.
 
 ## Registry: what is recorded, not verified
 
@@ -47,6 +52,36 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **The reference price is a signed attestation, not a market.** Nothing but the simulator publishes prices, with a key anyone can recompute. The guard shows the mechanism works; it says nothing about any real price.
 - **Limits are tumbling windows.** Up to twice the window limit can pass across a boundary. A payout failure does not give the allowance back.
 - **The breaker counts evaluations.** Every price submission evaluates the pair, so a deviation counts once per submission that leaves it in place, including one for the other leg.
+
+## Roles and signer keys (contract, phase 3)
+
+- **The owner decides which keys count.** The owner registers every attester signer key; the contract checks the role, the scope and the curve, not who really holds the key. Until a multisig owner exists (phase 7) that is one account's judgement.
+- **Separation is per account.** A registrar cannot hold an attester role and the owner holds none, but one operator can run two accounts. The rule shows the mechanism, not an organisation.
+- **Issuer onboarding is not built** ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)). No issuer is `third_party_attested`, and attester roles sign reserves, custody and bridge attestations only, never issuer claims.
+
+## Custody, reserves and the gated mint (contract, phase 4)
+
+The contract side of [ADR 0020](decisions/0020-custody-reserves-and-redemption.md) sections 2 to 6. Nothing is custodied, backed, audited or regulated; every figure is `simulated`.
+
+- **A reserve attestation is a signed figure, not a bank balance.** The simulator custodian signs whatever the demo script says, with a published dev key. The contract proves who signed and when, never that the reserves exist.
+- **Supply is trusted through a ledger and a read.** The core counts what its gate minted and what redemption burned, and `refresh_supply` reads the token. A token the owner can still mint from shows up only after a read, and the owner can clear the minter.
+- **The status is computed on read.** Staleness changes with time, so `reserve_status_changed` is emitted only when someone calls `evaluate_reserve` (the monitor does, each minute); the route gate never depends on that call.
+- **Headroom ignores tolerance.** `tolerance_bps` widens the invariant, not the amount that may be minted. Under `warn` and `restrict_conversions` a stale attestation still caps mint at its last figure; only `pause_mint` refuses.
+- **A suspended custodian lowers reserves at once** but emits no status event until the next evaluation.
+- **The back office is a claim.** `controlled_accounts` of the issuer decides who may mint; proof of control was cut ([ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md)).
+- **The history ring holds the last 500 attestations per representation** on chain; the indexer keeps the rest.
+
+## Redemption (contract, phase 4)
+
+The contract side of [ADR 0020](decisions/0020-custody-reserves-and-redemption.md) section 7. A redemption pays nothing: it moves the user's tokens into escrow and burns or returns them.
+
+- **No value moves.** `fee_units` and `net_units` are figures the simulated issuer is meant to honour off chain; nothing models a fiat payout, a custody release or a legal claim.
+- **Fulfilment is the issuer's word.** The back office posts an evidence hash; the contract checks its shape, not what it points to. A fulfilment burns the escrow whether or not any payout happened.
+- **Reliability is a counter, not a score.** The contract counts requests, accepts, fulfilments, rejections, misses and latency; the API derives a score and labels it `simulated`.
+- **Settlement days are whole days.** At least one day to fulfil after accepting, so the fulfil deadline is only reached in unit tests; the accept deadline can be seconds.
+- **A redeeming holder is not checked for eligibility.** Redemption is an exit, so there is no allowlist check.
+- **The escrow needs a working token.** A burn or return that fails leaves the tokens in the core and the request in its earlier state until a retry succeeds.
+- **The core's token balance now includes escrow.** The vault check compares `get_inventory` with `ft_balance_of(core)`; with redemptions the balance also covers `get_escrow_ledger(...).held`, so a reconciler must add it to the expected balance or it reports a surplus.
 
 ## Corporate actions, lifecycle and NAV strikes (contract, phase 2)
 

@@ -105,6 +105,8 @@ export const auditLog = pgTable("audit_log", {
   action: text().notNull(),
   subject: text().notNull(),
   detail: jsonb().$type<unknown>().notNull(),
+  /** The access key behind a wallet sign-in (ADR 0019); null for the legacy admin key and refusals. */
+  actorKey: text(),
   at: at("at").notNull().defaultNow(),
 });
 
