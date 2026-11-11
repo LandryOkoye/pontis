@@ -42,4 +42,15 @@ describe("public caching", () => {
       (await app.inject({ method: "GET", url: "/v1/admin/reconciliation" })).headers.etag,
     ).toBeUndefined();
   });
+
+  it("gives protocol metrics a 30 s lifetime and leaves /metrics and admin metrics uncached", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/metrics/protocol" });
+    expect([res.statusCode, res.headers["cache-control"]]).toEqual([200, "public, max-age=30"]);
+    expect(res.headers.etag).toMatch(/^W\/"/);
+    for (const url of ["/metrics", "/v1/admin/metrics"]) {
+      const refused = await app.inject({ method: "GET", url });
+      expect([url, refused.statusCode, refused.headers.etag]).toEqual([url, 401, undefined]);
+      expect(refused.headers["cache-control"]).toBe("no-store");
+    }
+  });
 });

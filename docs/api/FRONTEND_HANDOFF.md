@@ -3,7 +3,7 @@
 What the API serves for each screen, how to read it, and what is not there yet. Kept in step with `packages/api-types` (schemas, `openapi.yaml`, fixtures). If a screen needs something that is not listed here, ask for it; do not infer it.
 
 - **Contract:** `packages/api-types` (`ENDPOINTS`, Zod schemas, `openapi.yaml`). Example payloads for every endpoint: `import * as fx from "@pontis/api-types/fixtures"`.
-- **No chain needed:** run the API with `API_MODE=fixtures` ([API README](../../apps/api/README.md), `apps/api/.env.example`). It serves the same fixtures, validates requests like the real server, marks every response `x-pontis-mode: fixtures`, and answers 404 for what needs a live chain (`compareRoutes`, `createConversion`, `markConversionSubmitted`, admin).
+- **No chain needed:** run the API with `API_MODE=fixtures` ([API README](../../apps/api/README.md), `apps/api/.env.example`). It serves the same fixtures, validates requests like the real server, marks every response `x-pontis-mode: fixtures`, and answers 404 for what needs a live chain (`compareRoutes`, `createConversion`, `markConversionSubmitted`, admin, Prometheus `/metrics`).
 - **Base URL:** `http://localhost:3000`; all paths are under `/v1`.
 
 ## Conventions
@@ -16,7 +16,7 @@ What the API serves for each screen, how to read it, and what is not there yet. 
 | Times          | ISO-8601 UTC strings.                                                                                                                                   |
 | Fields         | camelCase.                                                                                                                                              |
 | Paging         | `limit` and an opaque `cursor`; the response has `nextCursor` (null on the last page). A cursor only works with the query it came from (400 otherwise). |
-| Caching        | Public market reads send `ETag` and `Cache-Control: public, max-age=5`. Send `If-None-Match` for a `304`.                                               |
+| Caching        | Public market reads send `ETag` and `Cache-Control: public, max-age=5`. Send `If-None-Match` for a `304`. Protocol metrics use `max-age=30`.            |
 | Errors         | `{code, message, details?}` with a stable `code` (`VALIDATION_ERROR`, `NOT_FOUND`, `RATE_LIMITED`, ...). Branch on `code`, show `message`.              |
 | Wallet actions | The API never holds a user key. Write endpoints return the exact unsigned actions for the wallet to sign (see conversions in the OpenAPI document).     |
 
@@ -71,19 +71,31 @@ Almost all market data today is **simulated** by `apps/simulator`. The contract 
 - **Volume is units moved**, valued at the bucket's close. A parity conversion has no market price of its own, so this is not a market-volume measure. Real conversions only appear in a candle when a real price exists for the bucket, which is not the case yet.
 - NAV and supply: the last value before the end of each bucket. An asset without a NAV has empty NAV `points`.
 
+## Protocol metrics
+
+`GET /v1/metrics/protocol` (public, `Cache-Control: public, max-age=30`, ETag) lists metrics with `key`, `unit`, `scope`, `available`, and either `values` per window (`24h`, `7d`, `all`) or one `value`. The keys are the snake_case names of the success-metrics spec.
+
+- **Null is "no data"**: a rate with no denominator, a latency with no settled conversion, `indexer_lag_blocks` when the RPC is down. Do not render it as 0.
+- Counts are integers; rates (`unit: ratio`) are decimal strings from 0 to 1 and `assets_third_party_attested_pct` (`unit: percent`) from 0 to 100, both at 6 places; latencies are decimal strings of seconds at 3 places. Never convert through floats for anything but display.
+- `available: false` metrics (USD values, pools, bridge, reserves, parity, breaker) carry `availableFrom` (the phase). Show them as "coming", not as 0.
+- `simulated` is true when the metric reads synthetic rows, which is every row of the testnet deployment. Show the badge. Metrics are computed from the database; they do not change what is real or simulated elsewhere.
+- Public aggregates only: per-representation amounts and quote IDs are in the admin view (`GET /v1/admin/metrics`) and Prometheus (`GET /metrics`), both behind the admin key; the frontend does not call them.
+- The public response lists only the keys the spec tags for the public endpoint; the admin-only keys (for example `requires_reconciliation_open`, `submit_to_settle_latency_seconds_p95`, `indexer_heartbeat_age_seconds`) are not in it.
+- Windows are rolling from `asOf` (not calendar days); `all` has no lower bound. Poll no faster than the cache lifetime.
+- Fixtures mode serves the public endpoint; the two admin-keyed ones answer 404 there.
+
 ## Not available yet
 
 These are in the brief and not in the API. They arrive with the phase named, and this document changes with them.
 
-| Feature                                                                                            | Phase         |
-| -------------------------------------------------------------------------------------------------- | ------------- |
-| Corporate actions, lifecycle, route guards (`/routes/{from}/{to}/guards`), price-deviation breaker | 2             |
-| Issuer onboarding, attestations, account sign-in, issuer portal                                    | 3             |
-| Reserves, custody, redemption, holders                                                             | 4             |
-| Pools, LPs, market-priced quotes, depth, trade and portfolio endpoints, SSE streams                | 5             |
-| Bridge routes and transfers, `chains` supply across real chains                                    | 6             |
-| Private RFQ                                                                                        | 8             |
-| `GET /metrics/protocol`, `GET /admin/metrics`, Prometheus `/metrics`                               | phase 1, next |
+| Feature                                                                                            | Phase |
+| -------------------------------------------------------------------------------------------------- | ----- |
+| Corporate actions, lifecycle, route guards (`/routes/{from}/{to}/guards`), price-deviation breaker | 2     |
+| Issuer onboarding, attestations, account sign-in, issuer portal                                    | 3     |
+| Reserves, custody, redemption, holders                                                             | 4     |
+| Pools, LPs, market-priced quotes, depth, trade and portfolio endpoints, SSE streams                | 5     |
+| Bridge routes and transfers, `chains` supply across real chains                                    | 6     |
+| Private RFQ                                                                                        | 8     |
 
 ## Changes to existing endpoints
 
