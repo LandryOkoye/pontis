@@ -49,6 +49,18 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 - **The breaker counts evaluations.** Every price submission evaluates the pair, so a deviation counts once per submission that leaves it in place, including one for the other leg.
 - **Corporate actions, lifecycle and NAV windows are not part of this change** ([ADR 0017](decisions/0017-corporate-actions-and-multiplier-epochs.md), [0018](decisions/0018-asset-lifecycle-and-nav-strikes.md)).
 
+## Demo catalogue: trust states are narrative
+
+The demo seed (`seed-catalogue`) registers four simulated issuers in four states. Read them as labels a registrar set, not as results of any process ([dossiers](asset-dossiers/README.md)).
+
+- **`issuer_attested` means the issuer supplied a dossier.** `halcyon-securities` and `orchard-trust` carry it; the contract only checks that some evidence exists. Nothing is `third_party_attested` (no third party verified anything) or `independently_verified` (the contract refuses it). There is no attestation mechanism until a later phase ([ADR 0014](decisions/0014-scope-expansion-beyond-mvp.md), workstream C).
+- **`orchard-trust`'s lapsed attestation is a story.** The registry has no attestation expiry. What is on chain is a registrar moving the issuer to `deprecated` (terminal) while its `verification_status` stays `issuer_attested`, because records cannot be edited. Its approved pair with `tustb-h` stays approved, but no conversion can run, because the contract treats a representation as executable only while its issuer is `active`.
+- **`meridian-assets` is pending only in the sense that nobody activated it.** Its tokens `tacme-m` and `tnova-m` are registered but cannot be activated while the issuer is `restricted`, so the `tacme-h` / `tacme-m` relationship is proposed and cannot be approved. There is no review queue.
+- **`vantage-credit` is rejected before issuing anything.** A representation of a rejected issuer could never be activated, so it has none; `tcredit-1` sits under `halcyon-securities` instead.
+- **The dossiers' dates and events are fiction.** The `syn-nova` split (announced, "effective 2026-12-15"), the `syn-credit` maturity (2028-03-31) and redemption terms, and the `syn-villa` appraisal are text. Nothing on chain implements corporate actions, maturity or redemption, and the unit multiplier of a representation is immutable, so a split could not be applied today.
+- **`syn-villa` has a supply of one only because nobody minted more.** The faucet is disabled and the owner minted one token, but the owner can mint again; the registry cannot detect a second record of the same fictional villa.
+- **Profiles are off-chain and simulated.** `asset_profiles` rows (`convertible`, `bridgeable`, a planned EVM entry) are hints written by `seed-profiles` with `simulated: true`; the contract is the authority on what can convert, and no bridge exists.
+
 ## Contract behaviour worth knowing
 
 - A quote lives 60 seconds. A transaction that lands after expiry is refused and refunded.

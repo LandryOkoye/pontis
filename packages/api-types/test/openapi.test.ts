@@ -17,7 +17,7 @@ describe("openapi.yaml", () => {
     await expect(SwaggerParser.validate(specPath)).resolves.toBeTruthy();
   });
 
-  it("documents exactly the BuildPlan §8 endpoints plus the admin reconciliation endpoint", () => {
+  it("documents exactly the BuildPlan §8 endpoints plus the admin reconciliation and metrics endpoints", () => {
     const doc = buildOpenApiDocument();
     const actual = Object.entries(doc.paths ?? {})
       .flatMap(([path, item]) =>
@@ -60,13 +60,21 @@ describe("openapi.yaml", () => {
         "GET /v1/transactions/{id}",
         "GET /v1/transactions",
         "GET /v1/admin/reconciliation",
+        "GET /v1/metrics/protocol",
+        "GET /v1/admin/metrics",
+        "GET /metrics",
       ].sort(),
     );
   });
 
   it("requires a header only where one is defined: Idempotency-Key on conversions, a bearer key on admin", () => {
     const withHeader = Object.values(ENDPOINTS).filter((e) => "headers" in e);
-    expect(withHeader.map((e) => e.path)).toEqual(["/v1/conversions", "/v1/admin/reconciliation"]);
+    expect(withHeader.map((e) => e.path)).toEqual([
+      "/v1/conversions",
+      "/v1/admin/reconciliation",
+      "/v1/admin/metrics",
+      "/metrics",
+    ]);
   });
 
   it("gives every endpoint a structured error response for failures, except declared failureResponses", () => {

@@ -13,6 +13,10 @@ import {
   IssuerLeaderboardSchema,
   SearchResultSchema,
   StatusSchema,
+  AdminMetricsSchema,
+  MetricBreakdownSchema,
+  MetricSchema,
+  ProtocolMetricsSchema,
   ChainListSchema,
   MarketMoversSchema,
   MarketOverviewSchema,
@@ -73,6 +77,9 @@ describe("fixtures round-trip through the schemas", () => {
     ["issuer leaderboard", IssuerLeaderboardSchema, fx.issuerLeaderboard],
     ["status", StatusSchema, fx.status],
     ["route guards", RouteGuardsResponseSchema, fx.routeGuards],
+
+    ["protocol metrics", ProtocolMetricsSchema, fx.protocolMetrics],
+    ["admin metrics", AdminMetricsSchema, fx.adminMetrics],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));
@@ -327,5 +334,46 @@ describe("market strings and queries", () => {
     for (const ids of ["a", "a,b,c,d,e,f,g", "a,,b", "A,b", "a b"]) {
       expect(CompareQuerySchema.safeParse({ ids }).success, ids).toBe(false);
     }
+  });
+});
+
+describe("metrics", () => {
+  const rate = {
+    key: "refund_rate",
+    unit: "ratio",
+    scope: "window",
+    available: true,
+    simulated: false,
+    values: { "24h": null, "7d": "0.010000", all: "0.025000" },
+  };
+
+  it("accepts null for an empty window and rejects floats and malformed decimals", () => {
+    expect(MetricSchema.safeParse(rate).success).toBe(true);
+    for (const bad of [0.5, "1", ".5", "0.5e1", -1, "-0.5"]) {
+      expect(
+        MetricSchema.safeParse({ ...rate, values: { ...rate.values, all: bad } }).success,
+        String(bad),
+      ).toBe(false);
+    }
+  });
+
+  it("ties availability to the fields: unavailable needs availableFrom and no value", () => {
+    const off = { key: "tvl_usd", unit: "usd", scope: "now", available: false };
+    expect(MetricSchema.safeParse(off).success).toBe(false);
+    expect(MetricSchema.safeParse({ ...off, availableFrom: "phase 1" }).success).toBe(true);
+    expect(MetricSchema.safeParse({ ...off, availableFrom: "phase 1", value: 0 }).success).toBe(
+      false,
+    );
+    expect(MetricSchema.safeParse({ ...rate, simulated: undefined }).success).toBe(false);
+    expect(MetricSchema.safeParse({ ...rate, values: undefined }).success).toBe(false);
+    expect(MetricSchema.safeParse({ ...rate, availableFrom: "phase 1" }).success).toBe(false);
+  });
+
+  it("keeps per-representation amounts as integer strings", () => {
+    const b = fx.adminMetrics.breakdowns[0];
+    expect(MetricBreakdownSchema.safeParse(b).success).toBe(true);
+    expect(MetricBreakdownSchema.safeParse({ ...b, value: { "tgold-a": "1.5" } }).success).toBe(
+      false,
+    );
   });
 });

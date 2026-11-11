@@ -23,6 +23,7 @@ import type { CompareResponse, SearchResult } from "./discovery-types.ts";
 import type { AssetIssuerView, AssetMetadata } from "./detail-types.ts";
 import type { RouteGuardsResponse } from "./guard-types.ts";
 import type { IssuerLeaderboard, Status } from "./status-types.ts";
+import type { AdminMetrics, Metric, ProtocolMetrics } from "./metrics-types.ts";
 import type {
   CategoryList,
   ChainList,
@@ -692,4 +693,73 @@ export const routeGuards: RouteGuardsResponse = {
       simulated: true,
     },
   ],
+};
+
+const metricsAsOf = "2026-11-11T12:00:00.000Z";
+const publicMetrics: Metric[] = [
+  {
+    key: "conversion_success_rate",
+    unit: "ratio",
+    scope: "window",
+    available: true,
+    simulated: true,
+    values: { "24h": "0.950000", "7d": "0.975000", all: null },
+  },
+  {
+    key: "quote_to_settle_latency_seconds_p95",
+    unit: "seconds",
+    scope: "window",
+    available: true,
+    simulated: true,
+    values: { "24h": "41.250", "7d": "52.000", all: "52.000" },
+  },
+  {
+    key: "indexer_lag_blocks",
+    unit: "blocks",
+    scope: "now",
+    available: true,
+    simulated: false,
+    value: 2,
+  },
+  {
+    key: "representations_active",
+    unit: "count",
+    scope: "now",
+    available: true,
+    simulated: true,
+    value: 2,
+  },
+  { key: "volume_usd", unit: "usd", scope: "window", available: false, availableFrom: "phase 1" },
+];
+
+export const protocolMetrics: ProtocolMetrics = {
+  asOf: metricsAsOf,
+  windows: ["24h", "7d", "all"],
+  metrics: publicMetrics,
+};
+
+export const adminMetrics: AdminMetrics = {
+  asOf: metricsAsOf,
+  windows: ["24h", "7d", "all"],
+  metrics: [
+    ...publicMetrics,
+    {
+      key: "requires_reconciliation_open",
+      unit: "count",
+      scope: "now",
+      available: true,
+      simulated: true,
+      value: 1,
+    },
+  ],
+  breakdowns: [
+    {
+      key: "vault_inventory_base_units",
+      unit: "base_units",
+      scope: "now",
+      simulated: true,
+      value: { "tgold-a": "1000000", "tgold-b": "500000000" },
+    },
+  ],
+  requiresReconciliationQuoteIds: ["c6a9f0a4-2b8e-4a53-8f06-2b9a0a6f3e11"],
 };

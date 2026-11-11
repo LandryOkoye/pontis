@@ -63,6 +63,8 @@ const HANDLERS: Partial<Record<OperationId, Handler>> = {
     fromId: p.fromId as string,
     toId: p.toId as string,
   }),
+
+  getProtocolMetrics: () => fx.protocolMetrics,
   createQuote: () => fx.quote,
   getQuote: () => fx.quote,
   getTransaction: () => fx.transactionSettled,
@@ -75,6 +77,8 @@ export const UNAVAILABLE_IN_FIXTURES: readonly OperationId[] = [
   "createConversion",
   "markConversionSubmitted",
   "getReconciliation",
+  "getAdminMetrics",
+  "getPrometheusMetrics",
 ];
 
 export function buildFixturesApp(security: SecurityOptions = { corsOrigins: [] }): FastifyInstance {
