@@ -260,6 +260,10 @@ mod lifecycle_tests;
 #[cfg(test)]
 mod math_tests;
 #[cfg(test)]
+mod nav_submit_tests;
+#[cfg(test)]
+mod nav_tests;
+#[cfg(test)]
 mod policy_tests;
 #[cfg(test)]
 mod price_submit_tests;
