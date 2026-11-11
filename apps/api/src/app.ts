@@ -4,6 +4,7 @@ import type { Db } from "@pontis/db";
 import type { TxVerifier } from "@pontis/near-client";
 import { errorHandler, notFoundHandler } from "./errors.ts";
 import { loggerOptions } from "./logging.ts";
+import { registerPublicCaching } from "./routes/caching.ts";
 import { registerCatalogRoutes } from "./routes/catalog.ts";
 import type { ConversionChain } from "./conversions/chain.ts";
 import type { QuoteDeps } from "./quotes/service.ts";
@@ -25,6 +26,8 @@ export interface AppDeps {
   conversionChain: ConversionChain;
   /** Checks reported transaction hashes against the chain before they are shown as verified. */
   txVerifier: TxVerifier;
+  /** Clock for market reads (chart ranges, sparklines); tests pin it. */
+  now?: () => Date;
   /** Bearer key for the admin endpoints; without one they refuse everyone. */
   adminApiKey?: string;
   /** CORS origins and rate limits; see `registerSecurity`. */
@@ -46,6 +49,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // Queued after the security plugins, so their hooks cover every route below.
   app.register(async (scope) => {
     registerHealthRoute(scope, deps.db, deps.chainHeight, deps.health);
+    registerPublicCaching(scope);
     registerCatalogRoutes(scope, deps.db);
     registerQuoteRoutes(scope, { db: deps.db, ...deps.quotes });
     registerConversionRoutes(scope, {
