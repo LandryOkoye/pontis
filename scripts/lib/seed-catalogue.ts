@@ -13,6 +13,7 @@
 
 import { admin, type Chain } from "./chain.ts";
 import { buildCatalogue } from "./catalogue-plan.ts";
+import { seedTokens } from "./seed-catalogue-tokens.ts";
 import { grantRoles, type RegistryRecord } from "./seed-registry.ts";
 
 export interface CatalogueSeedOptions {
@@ -123,6 +124,9 @@ export async function seedCatalogue(
       console.log(`approved ${name} as ${rel.classification}`);
     }
   }
+
+  const accounts = [...new Set([deployerId, ...(options.allowlist ?? [])])];
+  await seedTokens(chain, data.representations, accounts);
 
   for (const { record, finalStatus } of data.issuers) {
     const current = await core<RegistryRecord>("get_issuer", { id: record.id });
