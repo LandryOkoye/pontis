@@ -6,12 +6,15 @@ This crate holds the **registry** (B5) and **compatibility, policy and route gat
 
 ## Roles ([ADR 0003](../../docs/decisions/0003-admin-roles-and-pause.md))
 
-| Role              | Methods                                                                                                                                                                  |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `owner`           | `grant_role`, `revoke_role`, `transfer_ownership` and `accept_ownership` (two-step), `unpause`, `unpause_asset`                                                          |
-| `registrar`       | `register_issuer`, `register_canonical_asset`, `register_representation`, `add_evidence`, `set_issuer_status`, `set_canonical_asset_status`, `set_representation_status` |
-| `pauser`          | `pause` (global), `pause_asset`. Can never unpause                                                                                                                       |
-| `compat_approver` | held now, used from B6                                                                                                                                                   |
+| Role                                              | Methods                                                                                                                                                                                                                                     |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owner`                                           | `grant_role`, `revoke_role`, `transfer_ownership` and `accept_ownership` (two-step), `unpause`, `unpause_asset`                                                                                                                             |
+| `registrar`                                       | `register_issuer`, `register_canonical_asset`, `register_representation`, `add_evidence`, `set_issuer_status`, `set_canonical_asset_status`, `set_representation_status`                                                                    |
+| `pauser`                                          | `pause` (global), `pause_asset`. Can never unpause                                                                                                                                                                                          |
+| `compat_approver`                                 | held now, used from B6                                                                                                                                                                                                                      |
+| `attester`, `reserve_attester`, `bridge_attester` | Sign attestations with a key the owner registered: `add_signer_key`, `remove_signer_key` (owner), `get_signer_keys`; `get_account_roles` lists an account's roles ([ADR 0019](../../docs/decisions/0019-phase-3-scope-and-demo-issuers.md)) |
+
+A `registrar` never holds an attester role, the owner holds none, and revoking an attester role removes that account's signer keys.
 
 The owner holds no other role implicitly; grant roles explicitly. Every state-changing method requires exactly 1 yoctoNEAR and emits an event. While the contract is globally paused, registrar methods fail; owner role management, `unpause` and pausing still work.
 

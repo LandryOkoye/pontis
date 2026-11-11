@@ -23,6 +23,7 @@ Decisions that settle the open items in brief §23–24. Any change to a decisio
 | [0017](0017-corporate-actions-and-multiplier-epochs.md) | Corporate actions and multiplier epochs                                     | expansion brief §4.3        |
 | [0018](0018-asset-lifecycle-and-nav-strikes.md)         | Asset lifecycle and NAV strikes                                             | expansion brief §4.3        |
 | [0019](0019-phase-3-scope-and-demo-issuers.md)          | Phase 3 scope: wallet sign-in and a role registry; demo issuers stay mocked | expansion brief §5, §14     |
+| [0020](0020-custody-reserves-and-redemption.md)         | Custody registry, proof of reserve, gated mint and redemption               | expansion brief §6, §14     |
 
 ## Format
 
