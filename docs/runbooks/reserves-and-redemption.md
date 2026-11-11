@@ -138,7 +138,7 @@ pnpm --filter @pontis/scripts backoffice --accept-after-ms 10000 --fulfil-after-
 - A `requested` redemption older than `--accept-after-ms` is accepted (`accept_redemption`); an `accepted` one older than `--fulfil-after-ms` **since its acceptance** is fulfilled (`fulfil_redemption(id, evidence_hash)`), where `evidence_hash` is the sha256 of a synthetic receipt text (`SIMULATED fulfilment receipt: ...`). It does not try after a deadline has passed: the contract would refuse.
 - A failed call is logged and retried on the next round; the loop survives errors.
 
-**Account and key.** The contract accepts these calls only from an account in the `controlled_accounts` of the representation's issuer (an unproven registrar claim, a labelled mock, not authentication of an issuer; [ADR 0019](../decisions/0019-phase-3-scope-and-demo-issuers.md)). That list is set when the issuer is registered and the registry has no method to change it afterwards, so the operator has two options:
+**Account and key.** The contract accepts these calls only from an account in the `controlled_accounts` of the representation's issuer (an unproven registrar claim, a labelled mock, not authentication of an issuer; [ADR 0019](../decisions/0019-phase-3-scope-and-demo-issuers.md)). That list is set when the issuer is registered and the registry has no method to change it afterwards, so the operator has these options:
 
 1. Register the demo issuer with the back-office account in `controlled_accounts` (a fresh deployment or a sandbox).
 2. On the demo seed, which lists each issuer's token accounts, sign as one of those accounts (`BACKOFFICE_ACCOUNT_ID=tgold-a.<deployer>`) and add the dev `issuer-backoffice` key to it. **Anyone can recompute that key**, so while it is on the account anyone can sign as that token account: testnet synthetic tokens only, remove it when done.
@@ -147,6 +147,8 @@ pnpm --filter @pontis/scripts backoffice --accept-after-ms 10000 --fulfil-after-
    near account add-key tgold-a.<deployer> grant-full-access use-manually-provided-public-key \
      ed25519:6qm5vvyuMtoYmHtn4ccTcK4ncgrkDStpmofDFFKC1Veu network-config testnet
    ```
+
+On a sandbox or a fresh deployment there is a third way that needs no key added: `deploy-testnet` creates each token account with the deployer's public key as a full-access key, so `BACKOFFICE_ACCOUNT_ID=<token account>` with `BACKOFFICE_PRIVATE_KEY=<the deployer key>` signs as that issuer account. The end-to-end `custody` scenario ([`tests/e2e`](../../tests/e2e/README.md)) does exactly this, and also drives every step of this runbook (set-up, attestation, mint, drift, redemption, expiry, reclaim) through the real contract, indexer and API on a sandbox. Its terms use `accept_within_ms: 25000` so the accept deadline passes inside a run; the fulfil deadline is `settlement_days` (at least a day) after acceptance and is not reachable in a sandbox run.
 
 The key is `BACKOFFICE_PRIVATE_KEY` if set, else the account's NEAR credentials file, else the public dev key. The back-office prints a `skipped` line for every representation whose issuer does not list the account.
 
