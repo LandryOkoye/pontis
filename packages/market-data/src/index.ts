@@ -3,3 +3,4 @@ export * from "./intervals.ts";
 export * from "./stats.ts";
 export * from "./candle-builder.ts";
 export * from "./trades.ts";
+export * from "./search.ts";
