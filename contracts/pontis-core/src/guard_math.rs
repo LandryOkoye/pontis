@@ -62,3 +62,23 @@ pub fn skew_bps(skew_max_bps: u16, reference: u128, inventory_after: u128) -> u1
         None => skew_max_bps,
     }
 }
+
+/// The fee in basis points for converting `amount_in` at `ratio`: the protocol fee, the extra fee
+/// of a tolerated stale price, and the skew for the vault's depletion after paying out what the
+/// base fee would give (ADR 0016 section 3). A fee that cannot be computed charges the base.
+pub fn fee_with_skew(
+    base_fee_bps: u16,
+    extra_fee_bps: u16,
+    skew_max_bps: u16,
+    reference: u128,
+    inventory: u128,
+    amount_in: u128,
+    ratio: Ratio,
+) -> u16 {
+    let base = base_fee_bps + extra_fee_bps;
+    if skew_max_bps == 0 {
+        return base;
+    }
+    let net = crate::math::compute_amounts(amount_in, ratio, base).map_or(0, |a| a.net);
+    base + skew_bps(skew_max_bps, reference, inventory.saturating_sub(net))
+}

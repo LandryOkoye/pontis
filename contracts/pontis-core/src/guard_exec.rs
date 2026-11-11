@@ -4,7 +4,7 @@
 
 use crate::compatibility::pair_key;
 use crate::guard::{LimitRefusal, PriceOutcome, RouteGuard, StalePolicy, WindowState};
-use crate::guard_math::{deviation_terms, exceeds, skew_bps};
+use crate::guard_math::{deviation_terms, exceeds, fee_with_skew};
 use crate::price::PriceRecord;
 use crate::route::RouteRefusal;
 use crate::types::Ratio;
@@ -121,19 +121,18 @@ impl Contract {
         terms: &crate::route::RouteTerms,
         amount_in: u128,
     ) -> u16 {
-        let base = self.fee_bps + terms.extra_fee_bps;
-        let Some(guard) = self.guards.get(&pair_key(from_id, to_id)) else {
-            return base;
-        };
-        if guard.skew_max_bps == 0 {
-            return base;
-        }
-        let net = crate::math::compute_amounts(amount_in, terms.ratio, base).map_or(0, |a| a.net);
-        let after = self.get_inventory(to_id.to_string()).0.saturating_sub(net);
-        base + skew_bps(
-            guard.skew_max_bps,
+        let skew_max = self
+            .guards
+            .get(&pair_key(from_id, to_id))
+            .map_or(0, |g| g.skew_max_bps);
+        fee_with_skew(
+            self.fee_bps,
+            terms.extra_fee_bps,
+            skew_max,
             self.inventory_reference_of(to_id),
-            after,
+            self.get_inventory(to_id.to_string()).0,
+            amount_in,
+            terms.ratio,
         )
     }
 

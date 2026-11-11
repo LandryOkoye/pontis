@@ -1,0 +1,58 @@
+{
+  "description": "Guard arithmetic for ADR 0016, computed with unbounded Python integers and the documented 256-bit refusal rules. pontis-core (Rust) and @pontis/quote-engine (TypeScript) must both reproduce every expected value.",
+  "constants": {"max_price": "18446744073709551615", "max_decimal_gap": 18},
+  "deviation": [
+    {"input":{"ratio":{"num":"1000","den":"1"},"price_from":"10000000000","price_to":"1000000000","decimals_from":6,"decimals_to":8,"max_bps":100},"expected":{"available":true,"exceeds":false,"deviation_bps":"0"}},
+    {"input":{"ratio":{"num":"1000","den":"1"},"price_from":"10000000000","price_to":"1050000000","decimals_from":6,"decimals_to":8,"max_bps":100},"expected":{"available":true,"exceeds":true,"deviation_bps":"476"}},
+    {"input":{"ratio":{"num":"1000","den":"1"},"price_from":"10000000000","price_to":"1050000000","decimals_from":6,"decimals_to":8,"max_bps":476},"expected":{"available":true,"exceeds":true,"deviation_bps":"476"}},
+    {"input":{"ratio":{"num":"1000","den":"1"},"price_from":"10000000000","price_to":"1050000000","decimals_from":6,"decimals_to":8,"max_bps":477},"expected":{"available":true,"exceeds":false,"deviation_bps":"476"}},
+    {"input":{"ratio":{"num":"1000","den":"1"},"price_from":"10000000000","price_to":"950000000","decimals_from":6,"decimals_to":8,"max_bps":500},"expected":{"available":true,"exceeds":true,"deviation_bps":"526"}},
+    {"input":{"ratio":{"num":"1000","den":"1"},"price_from":"10000000000","price_to":"950000000","decimals_from":6,"decimals_to":8,"max_bps":526},"expected":{"available":true,"exceeds":true,"deviation_bps":"526"}},
+    {"input":{"ratio":{"num":"1","den":"1000"},"price_from":"1000000000","price_to":"10000000000","decimals_from":8,"decimals_to":6,"max_bps":50},"expected":{"available":true,"exceeds":false,"deviation_bps":"0"}},
+    {"input":{"ratio":{"num":"1","den":"1"},"price_from":"1","price_to":"1","decimals_from":0,"decimals_to":0,"max_bps":1},"expected":{"available":true,"exceeds":false,"deviation_bps":"0"}},
+    {"input":{"ratio":{"num":"3","den":"7"},"price_from":"12345678901","price_to":"987654321","decimals_from":6,"decimals_to":6,"max_bps":250},"expected":{"available":true,"exceeds":true,"deviation_bps":"281666"}},
+    {"input":{"ratio":{"num":"1","den":"1"},"price_from":"0","price_to":"5","decimals_from":6,"decimals_to":6,"max_bps":100},"expected":{"available":false}},
+    {"input":{"ratio":{"num":"1","den":"1"},"price_from":"18446744073709551616","price_to":"5","decimals_from":6,"decimals_to":6,"max_bps":100},"expected":{"available":false}},
+    {"input":{"ratio":{"num":"1","den":"1"},"price_from":"18446744073709551615","price_to":"18446744073709551615","decimals_from":0,"decimals_to":18,"max_bps":100},"expected":{"available":true,"exceeds":true,"deviation_bps":"9999999999999999990000"}},
+    {"input":{"ratio":{"num":"1","den":"1"},"price_from":"18446744073709551615","price_to":"18446744073709551615","decimals_from":0,"decimals_to":19,"max_bps":100},"expected":{"available":false}},
+    {"input":{"ratio":{"num":"170141183460469231731687303715884105728","den":"1"},"price_from":"18446744073709551615","price_to":"18446744073709551615","decimals_from":0,"decimals_to":18,"max_bps":100},"expected":{"available":true,"exceeds":true,"deviation_bps":"9999"}},
+    {"input":{"ratio":{"num":"340282366920938463463374607431768211455","den":"340282366920938463463374607431768211455"},"price_from":"18446744073709551615","price_to":"1","decimals_from":0,"decimals_to":0,"max_bps":10000},"expected":{"available":true,"exceeds":true,"deviation_bps":"184467440737095516140000"}},
+    {"input":{"ratio":{"num":"1000000000000000000000000000000","den":"1"},"price_from":"18446744073709551615","price_to":"18446744073709551615","decimals_from":0,"decimals_to":0,"max_bps":100},"expected":{"available":true,"exceeds":true,"deviation_bps":"9999"}}
+  ],
+  "skew": [
+    {"input":{"skew_max_bps":400,"reference":"1000","inventory_after":"1000"},"expected":0},
+    {"input":{"skew_max_bps":400,"reference":"1000","inventory_after":"5000"},"expected":0},
+    {"input":{"skew_max_bps":400,"reference":"1000","inventory_after":"0"},"expected":400},
+    {"input":{"skew_max_bps":400,"reference":"0","inventory_after":"0"},"expected":0},
+    {"input":{"skew_max_bps":0,"reference":"1000","inventory_after":"0"},"expected":0},
+    {"input":{"skew_max_bps":400,"reference":"1000","inventory_after":"500"},"expected":100},
+    {"input":{"skew_max_bps":400,"reference":"1000","inventory_after":"900"},"expected":4},
+    {"input":{"skew_max_bps":400,"reference":"1000000","inventory_after":"999000"},"expected":1},
+    {"input":{"skew_max_bps":400,"reference":"1329227995784915872903807060280344576","inventory_after":"664613997892457936451903530140172288"},"expected":100},
+    {"input":{"skew_max_bps":400,"reference":"340282366920938463463374607431768211455","inventory_after":"170141183460469231731687303715884105727"},"expected":400},
+    {"input":{"skew_max_bps":100,"reference":"1000000000000","inventory_after":"999001000000"},"expected":1},
+    {"input":{"skew_max_bps":100,"reference":"1000000000000","inventory_after":"900000000000"},"expected":1},
+    {"input":{"skew_max_bps":1,"reference":"10","inventory_after":"9"},"expected":1},
+    {"input":{"skew_max_bps":400,"reference":"3","inventory_after":"1"},"expected":178}
+  ],
+  "fee": [
+    {"input":{"protocol_fee_bps":10,"extra_fee_bps":0,"skew_max_bps":0,"reference":"1000000000000","inventory":"1000000000000","amount_in":"1000000","ratio":{"num":"1000","den":"1"}},"expected":10},
+    {"input":{"protocol_fee_bps":10,"extra_fee_bps":0,"skew_max_bps":100,"reference":"1000000000000","inventory":"1000000000000","amount_in":"1000000","ratio":{"num":"1000","den":"1"}},"expected":11},
+    {"input":{"protocol_fee_bps":10,"extra_fee_bps":0,"skew_max_bps":100,"reference":"1000000000000","inventory":"1000000000000","amount_in":"1000000000","ratio":{"num":"1000","den":"1"}},"expected":110},
+    {"input":{"protocol_fee_bps":10,"extra_fee_bps":25,"skew_max_bps":100,"reference":"1000000000000","inventory":"500000000000","amount_in":"1000000000","ratio":{"num":"1000","den":"1"}},"expected":135},
+    {"input":{"protocol_fee_bps":10,"extra_fee_bps":0,"skew_max_bps":400,"reference":"1000000000","inventory":"1000000000","amount_in":"100000","ratio":{"num":"1000","den":"1"}},"expected":14},
+    {"input":{"protocol_fee_bps":100,"extra_fee_bps":200,"skew_max_bps":400,"reference":"1000000000","inventory":"200000000","amount_in":"100000","ratio":{"num":"1000","den":"1"}},"expected":622},
+    {"input":{"protocol_fee_bps":10,"extra_fee_bps":0,"skew_max_bps":100,"reference":"0","inventory":"1000000000000","amount_in":"1000000","ratio":{"num":"1000","den":"1"}},"expected":10}
+  ],
+  "limits": [
+    {"input":{"min_amount_in":"10","max_amount_in":"1000","window_ms":60000,"max_window_amount_in":"2500","amount_in":"10","window_used":"0"},"expected":"ok"},
+    {"input":{"min_amount_in":"10","max_amount_in":"1000","window_ms":60000,"max_window_amount_in":"2500","amount_in":"9","window_used":"0"},"expected":"below_min"},
+    {"input":{"min_amount_in":"10","max_amount_in":"1000","window_ms":60000,"max_window_amount_in":"2500","amount_in":"1000","window_used":"0"},"expected":"ok"},
+    {"input":{"min_amount_in":"10","max_amount_in":"1000","window_ms":60000,"max_window_amount_in":"2500","amount_in":"1001","window_used":"0"},"expected":"above_max"},
+    {"input":{"min_amount_in":"10","max_amount_in":"1000","window_ms":60000,"max_window_amount_in":"2500","amount_in":"1000","window_used":"1500"},"expected":"ok"},
+    {"input":{"min_amount_in":"10","max_amount_in":"1000","window_ms":60000,"max_window_amount_in":"2500","amount_in":"1000","window_used":"1501"},"expected":"window_exceeded"},
+    {"input":{"min_amount_in":"10","max_amount_in":"1000","window_ms":60000,"max_window_amount_in":"2500","amount_in":"500","window_used":"2000"},"expected":"ok"},
+    {"input":{"min_amount_in":"10","max_amount_in":"1000","window_ms":60000,"max_window_amount_in":"2500","amount_in":"500","window_used":"2001"},"expected":"window_exceeded"},
+    {"input":{"min_amount_in":"0","max_amount_in":"0","window_ms":0,"max_window_amount_in":"0","amount_in":"340282366920938463463374607431768211455","window_used":"340282366920938463463374607431768211455"},"expected":"ok"}
+  ]
+}
