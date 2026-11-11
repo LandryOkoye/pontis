@@ -2549,6 +2549,10 @@ components:
         - VAULT_INSOLVENT
         - VAULT_UNTRACKED_BALANCE
         - CORPORATE_ACTION_OVERDUE
+        - RESERVE_BREACH
+        - RESERVE_STALE
+        - REDEMPTION_OVERDUE
+        - ESCROW_MISMATCH
     FindingSeverity:
       type: string
       enum:
