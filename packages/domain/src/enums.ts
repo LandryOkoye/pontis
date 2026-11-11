@@ -216,6 +216,14 @@ export const RECONCILIATION_KINDS = [
   "VAULT_UNTRACKED_BALANCE",
   /** An approved corporate action took effect over 10 minutes ago and a live wrapper has not applied it. */
   "CORPORATE_ACTION_OVERDUE",
+  /** The chain's reserve status is breached and the mirror has not recorded a breach (ADR 0020 section 5). */
+  "RESERVE_BREACH",
+  /** A monitored representation's attestations are older than its policy allows (ADR 0020 section 5). */
+  "RESERVE_STALE",
+  /** A redemption is still requested or accepted well past its deadline; anyone can expire it (ADR 0020 section 7). */
+  "REDEMPTION_OVERDUE",
+  /** Open redemption escrows, vault inventory and pending input do not add up to the core's token balance (ADR 0020 section 7). */
+  "ESCROW_MISMATCH",
 ] as const;
 export type ReconciliationKind = (typeof RECONCILIATION_KINDS)[number];
 

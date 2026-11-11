@@ -5,6 +5,7 @@ import { auditLog, conversions, quotes, settlementEvents, type DbTx } from "@pon
 import { and, eq, sql } from "drizzle-orm";
 import type { CoreExecution } from "./chain-source.ts";
 import { anchorsTxHash, parseEvents, type CoreEvent } from "./events.ts";
+import { applyMirrorEvent } from "./mirror/apply.ts";
 import { nonceOf, settlementFor } from "./settle.ts";
 
 export interface ApplyResult {
@@ -39,6 +40,9 @@ async function applyEvent(tx: DbTx, execution: CoreExecution, event: CoreEvent):
     .onConflictDoNothing()
     .returning({ id: settlementEvents.id });
   if (stored.length === 0) return false;
+
+  // Custody, reserve, mint, redemption and signer-key events also land in their mirror tables.
+  await applyMirrorEvent(tx, execution, event);
 
   // A new outcome receipt is something a reported hash can be checked against: verify it again soon.
   if (row?.conversion?.reportedTxHash && anchorsTxHash(event))

@@ -4,16 +4,32 @@
 // abstraction instead (phase 7).
 
 import { createHash } from "node:crypto";
-import { keyFromSeed, type QuoteKey } from "@pontis/quote-engine";
+import { base58Decode, base58Encode, keyFromSeed, type QuoteKey } from "@pontis/quote-engine";
 
-/** Roles that have a simulated key. Each later workstream adds its own. */
-export const DEV_KEY_ROLES = ["price-publisher"] as const;
+/**
+ * Roles that have a simulated key. Each later workstream adds its own. `reserve-attester` signs
+ * the simulated custodian's reserve attestations (ADR 0020); `issuer-backoffice` is the key of the
+ * simulated issuer back-office account.
+ */
+export const DEV_KEY_ROLES = ["price-publisher", "reserve-attester", "issuer-backoffice"] as const;
 export type DevKeyRole = (typeof DEV_KEY_ROLES)[number];
 
 const DOMAIN = "pontis-dev-key-v1";
 
+function seedOf(role: DevKeyRole): Buffer {
+  return createHash("sha256").update(`${DOMAIN}:${role}`).digest();
+}
+
 /** The same key for the same role on every machine. */
 export function devKey(role: DevKeyRole): QuoteKey {
-  const seed = createHash("sha256").update(`${DOMAIN}:${role}`).digest();
-  return keyFromSeed(seed);
+  return keyFromSeed(seedOf(role));
+}
+
+/**
+ * The role's key as a NEAR secret key (`ed25519:<base58 of seed then public key>`), for signing
+ * transactions as a testnet account that has the matching public key added. Public by construction.
+ */
+export function devSecretKey(role: DevKeyRole): string {
+  const publicBytes = base58Decode(devKey(role).publicKey.slice("ed25519:".length));
+  return `ed25519:${base58Encode(Buffer.concat([seedOf(role), publicBytes]))}`;
 }
