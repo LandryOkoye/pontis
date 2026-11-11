@@ -1,4 +1,5 @@
 export * from "./amount.ts";
+export * from "./custody.ts";
 export * from "./entities.ts";
 export * from "./enums.ts";
 export * from "./market.ts";
