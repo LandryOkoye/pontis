@@ -4,7 +4,15 @@
 import { createHash } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 
-const PUBLIC_PREFIXES = ["/v1/assets", "/v1/issuers", "/v1/market", "/v1/search", "/v1/compare"];
+const PUBLIC_PREFIXES = [
+  "/v1/assets",
+  "/v1/issuers",
+  "/v1/market",
+  "/v1/search",
+  "/v1/compare",
+  "/v1/custodians",
+  "/v1/redemptions",
+];
 const CACHE_CONTROL = "public, max-age=5, stale-while-revalidate=30";
 /** Protocol metrics are aggregates over rolling windows: 30 s stale is fine and spares the database. */
 const METRICS_PREFIX = "/v1/metrics";

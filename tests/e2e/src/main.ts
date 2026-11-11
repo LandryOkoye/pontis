@@ -1,6 +1,7 @@
 // End-to-end run: catalog, quote, convert, index, refuse, reconcile. Sandbox by default (needs the
 // built contracts, Docker Postgres and cargo); `E2E_MODE=testnet` runs against a real deployment.
 
+import { auth } from "./scenarios/auth.ts";
 import { catalog } from "./scenarios/catalog.ts";
 import { conversion } from "./scenarios/conversion.ts";
 import { reconciliation } from "./scenarios/reconciliation.ts";
@@ -22,6 +23,7 @@ try {
   await history(world, settled);
   await replay(world, settled);
   await refusals(world);
+  if (world.mode === "sandbox") await auth(world);
   if (world.mode === "sandbox") await suspension(world);
   // Started before the expiry wait so the two minutes overlap.
   const stuck = await stuckSubmission(world);

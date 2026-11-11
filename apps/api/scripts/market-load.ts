@@ -10,6 +10,7 @@ import { createDb } from "@pontis/db";
 import { keyFromSeed } from "@pontis/quote-engine";
 import { sql } from "drizzle-orm";
 import { buildApp } from "../src/app.ts";
+import type { CustodyRepository } from "../src/custody/chain.ts";
 
 const requests = Number(process.argv[2] ?? 200);
 const { db, pool } = createDb(
@@ -37,6 +38,8 @@ const app = buildApp({
     key: keyFromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1)),
     coreId: "core.testnet",
   },
+  // The load script reads only market endpoints and never reaches the custody views.
+  custodyChain: {} as CustodyRepository,
   actionsChain: {
     getCorporateActions: async () => [],
     getMultiplierEpochs: async () => [],
@@ -45,6 +48,12 @@ const app = buildApp({
   },
   conversionChain: { isRegistered: async () => true },
   txVerifier: { getTransaction: async () => undefined },
+  // Sign-in is not measured here.
+  auth: {
+    chain: { getAccessKey: async () => null, getAccountRoles: async () => [] },
+    recipient: "load",
+    networkId: "testnet",
+  },
 });
 
 const [first] = (

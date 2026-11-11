@@ -46,6 +46,16 @@ describe("openapi.yaml", () => {
         "GET /v1/assets/{id}/lifecycle",
         "GET /v1/assets/{id}/corporate-actions",
         "GET /v1/assets/{id}/nav",
+        "GET /v1/custodians",
+        "GET /v1/custodians/{id}",
+        "GET /v1/assets/{id}/custody",
+        "GET /v1/assets/{id}/reserves",
+        "GET /v1/assets/{id}/reserves/history",
+        "GET /v1/assets/{id}/redemption-terms",
+        "GET /v1/issuers/{id}/reliability",
+        "GET /v1/redemptions",
+        "GET /v1/redemptions/{id}",
+        "POST /v1/reserves/attestations",
         "GET /v1/compare",
         "GET /v1/search",
         "GET /v1/issuers/leaderboard",
@@ -66,6 +76,10 @@ describe("openapi.yaml", () => {
         "GET /v1/metrics/protocol",
         "GET /v1/admin/metrics",
         "GET /metrics",
+        "POST /v1/auth/challenge",
+        "POST /v1/auth/verify",
+        "POST /v1/auth/logout",
+        "GET /v1/auth/me",
       ].sort(),
     );
   });
@@ -77,6 +91,8 @@ describe("openapi.yaml", () => {
       "/v1/admin/reconciliation",
       "/v1/admin/metrics",
       "/metrics",
+      "/v1/auth/logout",
+      "/v1/auth/me",
     ]);
   });
 

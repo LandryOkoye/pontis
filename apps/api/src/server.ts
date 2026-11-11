@@ -2,12 +2,14 @@
 // `API_MODE=fixtures` skips all of that and serves the example data instead (fixtures-app.ts).
 
 import { CoreClient, RpcClient, RpcTxVerifier, TokenClient } from "@pontis/near-client";
+import { rpcAuthChain } from "./auth/types.ts";
 import { parseSecretKey } from "@pontis/quote-engine";
 import { buildApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
 import { verifyStartup } from "./startup.ts";
 import { createDb } from "@pontis/db";
 import { runMigrations } from "@pontis/db";
+import { NearReserveRelayer } from "./custody/near-relayer.ts";
 import { syncRegistry } from "./sync/registry-sync.ts";
 import { expireQuotes } from "./quotes/lifecycle.ts";
 import { startScheduler } from "./sync/scheduler.ts";
@@ -50,11 +52,27 @@ const app = buildApp({
   },
   quotes: { chain: core, key, coreId: config.PONTIS_CORE_ACCOUNT_ID },
   actionsChain: core,
+  custodyChain: core,
+  ...(config.PONTIS_RELAYER_ACCOUNT_ID && config.PONTIS_RELAYER_SECRET_KEY
+    ? {
+        reserveRelayer: new NearReserveRelayer({
+          rpcUrl: config.NEAR_RPC_URL,
+          coreId: config.PONTIS_CORE_ACCOUNT_ID,
+          accountId: config.PONTIS_RELAYER_ACCOUNT_ID,
+          secretKey: config.PONTIS_RELAYER_SECRET_KEY,
+        }),
+      }
+    : {}),
   conversionChain: {
     isRegistered: async (tokenId, account) =>
       (await new TokenClient(rpc, tokenId).storageBalanceOf(account)) !== null,
   },
   txVerifier: new RpcTxVerifier(rpc),
+  auth: {
+    chain: rpcAuthChain(rpc, core),
+    recipient: config.AUTH_RECIPIENT ?? `pontis-api.${config.NEAR_NETWORK_ID}`,
+    networkId: config.NEAR_NETWORK_ID,
+  },
   ...(config.ADMIN_API_KEY ? { adminApiKey: config.ADMIN_API_KEY } : {}),
   security: {
     corsOrigins: config.CORS_ORIGIN,

@@ -47,8 +47,15 @@
     {
       "idx": 6,
       "version": "7",
-      "when": 1794395612923,
-      "tag": "0006_custody_reserves_redemption",
+      "when": 1794395231051,
+      "tag": "0006_auth_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794409896274,
+      "tag": "0007_custody_reserves_redemption",
       "breakpoints": true
     }
   ]

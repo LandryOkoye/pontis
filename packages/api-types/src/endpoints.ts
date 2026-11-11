@@ -6,6 +6,30 @@ import type { ErrorCodeSchema } from "./common.ts";
 import { ApiErrorSchema } from "./common.ts";
 import { AssetLifecycleSchema, AssetNavSchema, CorporateActionListSchema } from "./action-types.ts";
 import { AdminAuthHeaderSchema, ReconciliationReportSchema } from "./admin-types.ts";
+import {
+  AssetCustodySchema,
+  AssetRedemptionTermsSchema,
+  AssetReservesSchema,
+  CustodianListSchema,
+  CustodianSchema,
+  CustodyListQuerySchema,
+  IssuerReliabilitySchema,
+  ListRedemptionsQuerySchema,
+  RedemptionListSchema,
+  RedemptionSchema,
+  ReserveHistorySchema,
+  SubmitReserveAttestationRequestSchema,
+  SubmitReserveAttestationResponseSchema,
+} from "./custody-types.ts";
+import {
+  AuthChallengeRequestSchema,
+  AuthChallengeResponseSchema,
+  AuthLogoutResponseSchema,
+  AuthMeResponseSchema,
+  AuthSessionHeaderSchema,
+  AuthVerifyRequestSchema,
+  AuthVerifyResponseSchema,
+} from "./auth-types.ts";
 import { RouteGuardsQuerySchema, RouteGuardsResponseSchema } from "./guard-types.ts";
 import {
   AssetSchema,
@@ -76,6 +100,7 @@ export const TransactionListSchema = z
 
 const IdParam = z.object({ id: z.string() });
 const UuidParam = z.object({ id: z.uuid() });
+const RedemptionIdParam = z.object({ id: z.string().regex(/^[0-9]{1,20}$/) });
 
 type Method = "get" | "post";
 
@@ -89,10 +114,12 @@ interface Endpoint {
     | "Market"
     | "Charts"
     | "Routes"
+    | "Custody"
     | "Quotes"
     | "Conversions"
     | "Transactions"
     | "Metrics"
+    | "Auth"
     | "Admin";
   readonly status: number;
   readonly response: z.ZodType;
@@ -112,6 +139,7 @@ interface Endpoint {
 }
 
 const VALIDATION = { 400: ["VALIDATION_ERROR"] } as const;
+const FORBIDDEN = { 403: ["FORBIDDEN"] } as const;
 const COMMON = { 429: ["RATE_LIMITED"], 500: ["INTERNAL"] } as const;
 
 /** Keyed by operation ID. */
@@ -470,6 +498,125 @@ export const ENDPOINTS = {
     description:
       "Read from the chain, never cached. Checks are independent, so a failure does not hide later ones. With `amount` the amount limits and the effective fee (skew included) are evaluated; a quote copies that fee. `prices` are the contract's stored reference prices with their `simulated` flag: the demo publishes simulated prices only.",
   },
+  listCustodians: {
+    method: "get",
+    path: "/v1/custodians",
+    summary: "Registered custodians",
+    tag: "Custody",
+    status: 200,
+    response: CustodianListSchema,
+    query: CustodyListQuerySchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. Oldest first. Every custodian in the demo is a simulator holding a test key: `synthetic` is true and `verificationStatus` is never above what the registrar recorded, which the contract keeps below `independently_verified`. Nothing here is custodied, audited or regulated.",
+  },
+  getCustodian: {
+    method: "get",
+    path: "/v1/custodians/{id}",
+    summary: "One custodian",
+    tag: "Custody",
+    status: 200,
+    response: CustodianSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+  },
+  getAssetCustody: {
+    method: "get",
+    path: "/v1/assets/{id}/custody",
+    summary: "How an asset's reserves are held and by whom",
+    tag: "Custody",
+    status: 200,
+    response: AssetCustodySchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Read from the chain. `linked` is false until the registrar links the asset to custodians. This is a record of who is said to hold the reserves, not a proof that anyone does.",
+  },
+  getAssetReserves: {
+    method: "get",
+    path: "/v1/assets/{id}/reserves",
+    summary: "Reserve status: attested reserves against supply",
+    tag: "Custody",
+    status: 200,
+    response: AssetReservesSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Computed by the contract on every read from the custodians' signed attestations and the supply it tracks; never a stored verdict; like other public reads the response may be shared-cached for a few seconds. `ratioBps` is attested over circulating in basis points (null while nothing circulates); render `ratioPercent`. `state` is `unmonitored` when the asset has no reserve policy. `simulated` and `sources` say whose figures these are: in the demo, a fictional custodian's. Never present them as backed, custodied or audited.",
+  },
+  getAssetReserveHistory: {
+    method: "get",
+    path: "/v1/assets/{id}/reserves/history",
+    summary: "Reserve attestations, newest first",
+    tag: "Custody",
+    status: 200,
+    response: ReserveHistorySchema,
+    params: IdParam,
+    query: CustodyListQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "The attestations the chain still holds (the last 500 per asset), each with the label its signer put on it.",
+  },
+  getAssetRedemptionTerms: {
+    method: "get",
+    path: "/v1/assets/{id}/redemption-terms",
+    summary: "Enforced redemption terms",
+    tag: "Custody",
+    status: 200,
+    response: AssetRedemptionTermsSchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "`terms` is null until the registrar sets them; then the asset cannot be redeemed. The terms hash is part of the redeem message: a request made under older terms is refused. Redemption pays no value: fee and net are figures a simulated issuer honours off-chain.",
+  },
+  getIssuerReliability: {
+    method: "get",
+    path: "/v1/issuers/{id}/reliability",
+    summary: "An issuer's redemption record",
+    tag: "Custody",
+    status: 200,
+    response: IssuerReliabilitySchema,
+    params: IdParam,
+    errors: { 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Counters from the contract and a score derived from them here. Every issuer in the demo is a simulator, so `simulated` is true.",
+  },
+  listRedemptions: {
+    method: "get",
+    path: "/v1/redemptions",
+    summary: "Redemption requests",
+    tag: "Custody",
+    status: 200,
+    response: RedemptionListSchema,
+    query: ListRedemptionsQuerySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "Needs `user` or `representationId`. Newest first, read from the chain. `status` filters within a page, so a page may hold fewer than `limit` items while `nextCursor` is set.",
+  },
+  getRedemption: {
+    method: "get",
+    path: "/v1/redemptions/{id}",
+    summary: "A redemption and its timeline",
+    tag: "Custody",
+    status: 200,
+    response: RedemptionSchema,
+    params: RedemptionIdParam,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+    description:
+      "The escrow is released by the issuer's fulfilment (burned) or by the user's reclaim after a rejection or expiry. `timeline` is rebuilt from the chain record; `txHash` stays null until the indexer's event mirror supplies it.",
+  },
+  submitReserveAttestation: {
+    method: "post",
+    path: "/v1/reserves/attestations",
+    summary: "Relay a signed reserve attestation",
+    tag: "Custody",
+    status: 201,
+    response: SubmitReserveAttestationResponseSchema,
+    body: SubmitReserveAttestationRequestSchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], 422: ["ATTESTATION_REJECTED"], ...COMMON },
+    description:
+      "Testnet and sandbox only. A relayer account pays for the transaction; the signature is the authority, so the relayer holds no custodian key and no user key. The contract checks the signature, the custodian's registered key, the link, the time and the sequence, and refuses with `ATTESTATION_REJECTED` otherwise. Unknown asset: `NOT_FOUND`; also `NOT_FOUND` where no relayer is configured.",
+  },
   createQuote: {
     method: "post",
     path: "/v1/quotes",
@@ -499,6 +646,8 @@ export const ENDPOINTS = {
         "NOT_CONVERTIBLE",
         "LIFECYCLE_BLOCKED",
         "NAV_WINDOW_CLOSED",
+        "RESERVE_RESTRICTED",
+        "RESERVE_STALE",
       ],
       ...COMMON,
     },
@@ -582,9 +731,9 @@ export const ENDPOINTS = {
     status: 200,
     response: ReconciliationReportSchema,
     headers: AdminAuthHeaderSchema,
-    errors: { 401: ["UNAUTHORIZED"], ...COMMON },
+    errors: { 401: ["UNAUTHORIZED"], ...FORBIDDEN, ...COMMON },
     description:
-      "Admin only. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.",
+      "Operators only: a session whose account holds the owner, registrar, compat_approver or pauser role (re-read from the chain on every call), or the break-glass admin key. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.",
   },
   getProtocolMetrics: {
     method: "get",
@@ -605,9 +754,9 @@ export const ENDPOINTS = {
     status: 200,
     response: AdminMetricsSchema,
     headers: AdminAuthHeaderSchema,
-    errors: { 401: ["UNAUTHORIZED"], ...COMMON },
+    errors: { 401: ["UNAUTHORIZED"], ...FORBIDDEN, ...COMMON },
     description:
-      "Admin only, audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.",
+      "Operators only (any of owner, registrar, compat_approver, pauser; roles cached for 60 seconds), or the break-glass admin key; audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.",
   },
   getPrometheusMetrics: {
     method: "get",
@@ -618,9 +767,56 @@ export const ENDPOINTS = {
     response: PrometheusTextSchema,
     contentType: "text/plain; version=0.0.4",
     headers: AdminAuthHeaderSchema,
+    errors: { 401: ["UNAUTHORIZED"], ...FORBIDDEN, ...COMMON },
+    description:
+      "Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same credentials (for a scraper use the break-glass admin bearer key; a session expires; Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.",
+  },
+  authChallenge: {
+    method: "post",
+    path: "/v1/auth/challenge",
+    summary: "Start a wallet sign-in",
+    tag: "Auth",
+    status: 200,
+    response: AuthChallengeResponseSchema,
+    body: AuthChallengeRequestSchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description:
+      "Returns a single-use nonce (5 minutes), the `recipient` and the exact `message` for the wallet's NEP-413 `signMessage`. Rate limited per client address. Not available in fixtures mode.",
+  },
+  authVerify: {
+    method: "post",
+    path: "/v1/auth/verify",
+    summary: "Finish a wallet sign-in and open a session",
+    tag: "Auth",
+    status: 200,
+    response: AuthVerifyResponseSchema,
+    body: AuthVerifyRequestSchema,
+    errors: { ...VALIDATION, 401: ["UNAUTHORIZED"], ...COMMON },
+    description:
+      "Checks the NEP-413 signature, that the key is an access key of the account (over RPC), consumes the nonce and returns a session token: 15 minutes, renewed by use up to 8 hours. An account that holds no role may sign in; it holds no admin rights. The signed message authorises a session only, never a chain transaction.",
+  },
+  authLogout: {
+    method: "post",
+    path: "/v1/auth/logout",
+    summary: "End the session",
+    tag: "Auth",
+    status: 200,
+    response: AuthLogoutResponseSchema,
+    headers: AuthSessionHeaderSchema,
+    errors: { 401: ["UNAUTHORIZED"], ...COMMON },
+    description: "Revokes the session at once.",
+  },
+  authMe: {
+    method: "get",
+    path: "/v1/auth/me",
+    summary: "The signed-in account and its roles",
+    tag: "Auth",
+    status: 200,
+    response: AuthMeResponseSchema,
+    headers: AuthSessionHeaderSchema,
     errors: { 401: ["UNAUTHORIZED"], ...COMMON },
     description:
-      "Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same admin bearer key (Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.",
+      "Roles are read from the contract and cached for 60 seconds. Using the session renews it.",
   },
 } as const satisfies Record<string, Endpoint>;
 
@@ -628,7 +824,8 @@ export type OperationId = keyof typeof ENDPOINTS;
 
 const ERROR_DESCRIPTIONS: Record<number, string> = {
   400: "Invalid request",
-  401: "Missing or wrong admin key",
+  401: "Missing, expired or wrong credential",
+  403: "Signed in, but the account holds no role this endpoint accepts",
   404: "Not found",
   409: "Conflict",
   410: "Gone",

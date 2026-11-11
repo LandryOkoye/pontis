@@ -1,5 +1,5 @@
 {
-  "id": "61eea34e-4521-4f54-bb22-eb81ada3cc6b",
+  "id": "684d8089-e88d-46b7-b0e2-1142dd639285",
   "prevId": "02367b07-ee52-4ac0-a085-be1dc0e3dbcc",
   "version": "7",
   "dialect": "postgresql",
@@ -1544,6 +1544,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "actor_key": {
+          "name": "actor_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "at": {
           "name": "at",
           "type": "timestamp with time zone",
@@ -2052,584 +2058,14 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.custodians": {
-      "name": "custodians",
+    "public.auth_challenges": {
+      "name": "auth_challenges",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
+        "nonce": {
+          "name": "nonce",
           "type": "text",
           "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "jurisdiction": {
-          "name": "jurisdiction",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "attester_key": {
-          "name": "attester_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "synthetic": {
-          "name": "synthetic",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "verification_status": {
-          "name": "verification_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "evidence": {
-          "name": "evidence",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "registered_by": {
-          "name": "registered_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "registered_at": {
-          "name": "registered_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "needs_refresh": {
-          "name": "needs_refresh",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "refreshed_at": {
-          "name": "refreshed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.custody_links": {
-      "name": "custody_links",
-      "schema": "",
-      "columns": {
-        "representation_id": {
-          "name": "representation_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "structure": {
-          "name": "structure",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "custodian_ids": {
-          "name": "custodian_ids",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "linked_by": {
-          "name": "linked_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "linked_at": {
-          "name": "linked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.reserve_attestations": {
-      "name": "reserve_attestations",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "receipt_id": {
-          "name": "receipt_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "log_index": {
-          "name": "log_index",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "block_height": {
-          "name": "block_height",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "representation_id": {
-          "name": "representation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "custodian_id": {
-          "name": "custodian_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reserved_units": {
-          "name": "reserved_units",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "as_of": {
-          "name": "as_of",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "report_hash": {
-          "name": "report_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "report_uri": {
-          "name": "report_uri",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "simulated": {
-          "name": "simulated",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "source": {
-          "name": "source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "attester_key": {
-          "name": "attester_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "seq": {
-          "name": "seq",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "submitted_at": {
-          "name": "submitted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "reserve_attestations_rep_seq_idx": {
-          "name": "reserve_attestations_rep_seq_idx",
-          "columns": [
-            {
-              "expression": "representation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "seq",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "reserve_attestations_rep_custodian_idx": {
-          "name": "reserve_attestations_rep_custodian_idx",
-          "columns": [
-            {
-              "expression": "representation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "custodian_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "as_of",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "reserve_attestations_receipt_log_key": {
-          "name": "reserve_attestations_receipt_log_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "receipt_id",
-            "log_index"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.reserve_monitor_report": {
-      "name": "reserve_monitor_report",
-      "schema": "",
-      "columns": {
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "report": {
-          "name": "report",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.reserve_policies": {
-      "name": "reserve_policies",
-      "schema": "",
-      "columns": {
-        "representation_id": {
-          "name": "representation_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "tolerance_bps": {
-          "name": "tolerance_bps",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "max_reserve_age_ms": {
-          "name": "max_reserve_age_ms",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "action": {
-          "name": "action",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "baseline_supply": {
-          "name": "baseline_supply",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "set_by": {
-          "name": "set_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "set_at": {
-          "name": "set_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.reserve_status": {
-      "name": "reserve_status",
-      "schema": "",
-      "columns": {
-        "representation_id": {
-          "name": "representation_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "action": {
-          "name": "action",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "attested_units": {
-          "name": "attested_units",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "circulating_units": {
-          "name": "circulating_units",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ratio_bps": {
-          "name": "ratio_bps",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "changed_at": {
-          "name": "changed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "chain_status": {
-          "name": "chain_status",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "chain_refreshed_at": {
-          "name": "chain_refreshed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "simulated": {
-          "name": "simulated",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "sources": {
-          "name": "sources",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.reserve_supply_reads": {
-      "name": "reserve_supply_reads",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "receipt_id": {
-          "name": "receipt_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "log_index": {
-          "name": "log_index",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "block_height": {
-          "name": "block_height",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "representation_id": {
-          "name": "representation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "supply": {
-          "name": "supply",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "read_at": {
-          "name": "read_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "simulated": {
-          "name": "simulated",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "source": {
-          "name": "source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'chain_view'"
-        }
-      },
-      "indexes": {
-        "reserve_supply_reads_rep_idx": {
-          "name": "reserve_supply_reads_rep_idx",
-          "columns": [
-            {
-              "expression": "representation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "read_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "reserve_supply_reads_receipt_log_key": {
-          "name": "reserve_supply_reads_receipt_log_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "receipt_id",
-            "log_index"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.signer_keys": {
-      "name": "signer_keys",
-      "schema": "",
-      "columns": {
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "public_key": {
-          "name": "public_key",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true
         },
         "account_id": {
@@ -2638,180 +2074,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "scopes": {
-          "name": "scopes",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "added_by": {
-          "name": "added_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "added_at": {
-          "name": "added_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "removed_by": {
-          "name": "removed_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "removed_at": {
-          "name": "removed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "signer_keys_role_public_key_pk": {
-          "name": "signer_keys_role_public_key_pk",
-          "columns": [
-            "role",
-            "public_key"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.issuer_reliability": {
-      "name": "issuer_reliability",
-      "schema": "",
-      "columns": {
-        "issuer_id": {
-          "name": "issuer_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "requested": {
-          "name": "requested",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "accepted": {
-          "name": "accepted",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "fulfilled": {
-          "name": "fulfilled",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "rejected": {
-          "name": "rejected",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "expired": {
-          "name": "expired",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "accept_misses": {
-          "name": "accept_misses",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "fulfil_misses": {
-          "name": "fulfil_misses",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "reclaimed": {
-          "name": "reclaimed",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "accept_latency_ms_total": {
-          "name": "accept_latency_ms_total",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'0'"
-        },
-        "settle_latency_ms_total": {
-          "name": "settle_latency_ms_total",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'0'"
-        },
-        "last_miss_at": {
-          "name": "last_miss_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "simulated": {
-          "name": "simulated",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "needs_refresh": {
-          "name": "needs_refresh",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "refreshed_at": {
-          "name": "refreshed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.mint_requests": {
-      "name": "mint_requests",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "bigint",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "representation_id": {
-          "name": "representation_id",
+        "message": {
+          "name": "message",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -2822,72 +2086,27 @@
           "primaryKey": false,
           "notNull": true
         },
-        "amount": {
-          "name": "amount",
-          "type": "numeric(39, 0)",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
-        "reference": {
-          "name": "reference",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "requested_by": {
-          "name": "requested_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "requested_at": {
-          "name": "requested_at",
+        "expires_at": {
+          "name": "expires_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
-        "resolved_at": {
-          "name": "resolved_at",
+        "consumed_at": {
+          "name": "consumed_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
-        },
-        "failure": {
-          "name": "failure",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
-      "indexes": {
-        "mint_requests_rep_idx": {
-          "name": "mint_requests_rep_idx",
-          "columns": [
-            {
-              "expression": "representation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -2895,297 +2114,43 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.redemption_events": {
-      "name": "redemption_events",
+    "public.auth_sessions": {
+      "name": "auth_sessions",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
           "primaryKey": true,
           "notNull": true
         },
-        "redemption_id": {
-          "name": "redemption_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
+        "account_id": {
+          "name": "account_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "at": {
-          "name": "at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "receipt_id": {
-          "name": "receipt_id",
+        "public_key": {
+          "name": "public_key",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "log_index": {
-          "name": "log_index",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "block_height": {
-          "name": "block_height",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tx_hash": {
-          "name": "tx_hash",
+        "key_type": {
+          "name": "key_type",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "data": {
-          "name": "data",
+        "roles": {
+          "name": "roles",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
-        }
-      },
-      "indexes": {
-        "redemption_events_redemption_idx": {
-          "name": "redemption_events_redemption_idx",
-          "columns": [
-            {
-              "expression": "redemption_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "redemption_events_receipt_log_key": {
-          "name": "redemption_events_receipt_log_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "receipt_id",
-            "log_index"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.redemption_terms": {
-      "name": "redemption_terms",
-      "schema": "",
-      "columns": {
-        "representation_id": {
-          "name": "representation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
         },
-        "version": {
-          "name": "version",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "terms_hash": {
-          "name": "terms_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "min_amount": {
-          "name": "min_amount",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "max_amount": {
-          "name": "max_amount",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fee_bps": {
-          "name": "fee_bps",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "window_anchor_ms": {
-          "name": "window_anchor_ms",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "window_length_ms": {
-          "name": "window_length_ms",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "window_period_ms": {
-          "name": "window_period_ms",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "accept_within_ms": {
-          "name": "accept_within_ms",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "settlement_days": {
-          "name": "settlement_days",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "set_by": {
-          "name": "set_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "set_at": {
-          "name": "set_at",
+        "roles_read_at": {
+          "name": "roles_read_at",
           "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "receipt_id": {
-          "name": "receipt_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "log_index": {
-          "name": "log_index",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "redemption_terms_representation_id_version_pk": {
-          "name": "redemption_terms_representation_id_version_pk",
-          "columns": [
-            "representation_id",
-            "version"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "redemption_terms_receipt_log_key": {
-          "name": "redemption_terms_receipt_log_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "receipt_id",
-            "log_index"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.redemptions": {
-      "name": "redemptions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "bigint",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_account_id": {
-          "name": "user_account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "representation_id": {
-          "name": "representation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "issuer_id": {
-          "name": "issuer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount": {
-          "name": "amount",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fee_bps": {
-          "name": "fee_bps",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fee_units": {
-          "name": "fee_units",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "net_units": {
-          "name": "net_units",
-          "type": "numeric(39, 0)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "terms_hash": {
-          "name": "terms_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "terms_version": {
-          "name": "terms_version",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "payout_instruction_hash": {
-          "name": "payout_instruction_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -3193,111 +2158,34 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
-        "accept_deadline_at": {
-          "name": "accept_deadline_at",
+        "expires_at": {
+          "name": "expires_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
-        "accepted_at": {
-          "name": "accepted_at",
+        "max_expires_at": {
+          "name": "max_expires_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "fulfil_deadline_at": {
-          "name": "fulfil_deadline_at",
+        "revoked_at": {
+          "name": "revoked_at",
           "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "resolved_at": {
-          "name": "resolved_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "fulfilment_evidence_hash": {
-          "name": "fulfilment_evidence_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reject_reason": {
-          "name": "reject_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "miss": {
-          "name": "miss",
-          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {
-        "redemptions_user_idx": {
-          "name": "redemptions_user_idx",
+        "auth_sessions_account_idx": {
+          "name": "auth_sessions_account_idx",
           "columns": [
             {
-              "expression": "user_account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "redemptions_rep_status_idx": {
-          "name": "redemptions_rep_status_idx",
-          "columns": [
-            {
-              "expression": "representation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "redemptions_status_deadlines_idx": {
-          "name": "redemptions_status_deadlines_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "accept_deadline_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "fulfil_deadline_at",
+              "expression": "account_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

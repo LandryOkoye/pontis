@@ -34,9 +34,9 @@ export function registerSecurity(app: FastifyInstance, options: SecurityOptions)
   app.addHook("onSend", async (req, reply) => {
     void reply.header("x-content-type-options", "nosniff");
     // Admin answers carry vault balances and findings: no shared cache may keep them. `/metrics`
-    // exports the same figures.
+    // exports the same figures, and the sign-in answers carry session tokens.
     const path = req.url.split("?")[0] ?? "";
-    if (req.url.startsWith("/v1/admin") || path === "/metrics")
+    if (req.url.startsWith("/v1/admin") || req.url.startsWith("/v1/auth") || path === "/metrics")
       void reply.header("cache-control", "no-store");
   });
 }

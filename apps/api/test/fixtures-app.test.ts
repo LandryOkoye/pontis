@@ -13,6 +13,9 @@ afterAll(async () => {
 
 const PATH_ID: Partial<Record<OperationId, string>> = {
   getIssuer: "synthetic-issuer-a",
+  getIssuerReliability: "synthetic-issuer-a",
+  getCustodian: "vault-co-sim",
+  getRedemption: "1",
   getQuote: "c6a9f0a4-2b8e-4a53-8f06-2b9a0a6f3e11",
   getTransaction: "c6a9f0a4-2b8e-4a53-8f06-2b9a0a6f3e11",
 };
@@ -20,6 +23,7 @@ const QUERY: Partial<Record<OperationId, string>> = {
   compareAssets: "?ids=tgold-a,tgold-b",
   search: "?q=gold",
   listTransactions: "?account=alice.testnet",
+  listRedemptions: "?user=alice.testnet",
 };
 
 /** A request that satisfies every endpoint's params and query. */
@@ -85,5 +89,35 @@ describe("fixtures mode", () => {
       const res = await app.inject({ method: "GET", url });
       expect([url, res.statusCode]).toEqual([url, 404]);
     }
+  });
+
+  it("serves labelled custody, reserve and redemption examples and no relay", async () => {
+    const get = (url: string) => app.inject({ method: "GET", url });
+    for (const url of [
+      "/v1/custodians",
+      "/v1/custodians/vault-co-sim",
+      "/v1/assets/tgold-a/custody",
+      "/v1/assets/tgold-a/reserves",
+      "/v1/assets/tgold-a/reserves/history",
+      "/v1/assets/tgold-a/redemption-terms",
+      "/v1/issuers/synthetic-issuer-a/reliability",
+      "/v1/redemptions?user=alice.testnet",
+      "/v1/redemptions/1",
+    ]) {
+      const res = await get(url);
+      expect([url, res.statusCode]).toEqual([url, 200]);
+      expect(res.json()).toMatchObject({ simulated: true });
+      expect(res.json().sources.length).toBeGreaterThan(0);
+    }
+    expect((await get("/v1/custodians/ghost")).statusCode).toBe(404);
+    expect((await get("/v1/assets/ghost/reserves")).statusCode).toBe(404);
+    expect((await get("/v1/redemptions/9")).statusCode).toBe(404);
+    expect((await get("/v1/redemptions?status=paid")).statusCode).toBe(400);
+    const relay = await app.inject({
+      method: "POST",
+      url: "/v1/reserves/attestations",
+      payload: {},
+    });
+    expect(relay.statusCode).toBe(404);
   });
 });

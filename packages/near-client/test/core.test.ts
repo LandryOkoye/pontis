@@ -111,6 +111,8 @@ describe("CoreClient quote-time views", () => {
     "not_convertible",
     "lifecycle_blocked",
     "nav_window_closed",
+    "reserve_restricted",
+    "reserve_stale",
   ])("accepts the %s refusal and the next freeze time", async (refusal) => {
     const view = { executable: false, refusal, terms: null, next_freeze_ms: 1_794_100_000_000 };
     const core = new CoreClient(fakeRpc(() => view).rpc, "core.testnet");
@@ -183,5 +185,21 @@ describe("TokenClient", () => {
     const token = new TokenClient(rpc, "tgold-a.testnet");
     expect(await token.ftBalanceOf("alice.testnet")).toBe("5");
     expect(await token.storageBalanceOf("alice.testnet")).toBeNull();
+  });
+});
+
+describe("CoreClient.getAccountRoles", () => {
+  it("asks get_account_roles with the account and returns the snake_case names as sent", async () => {
+    const { rpc, calls } = fakeRpc(() => ["owner", "pauser"]);
+    expect(await new CoreClient(rpc, "core.testnet").getAccountRoles("alice.testnet")).toEqual([
+      "owner",
+      "pauser",
+    ]);
+    expect(calls[0]).toMatchObject({ method: "get_account_roles" });
+  });
+
+  it("rejects a response that is not a list of strings", async () => {
+    const bad = new CoreClient(fakeRpc(() => ({ roles: [] })).rpc, "core.testnet");
+    await expect(bad.getAccountRoles("alice.testnet")).rejects.toThrow();
   });
 });
