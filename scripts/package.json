@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "guards": "tsx --env-file-if-exists=.env guards.ts"
+    "guards": "tsx --env-file-if-exists=.env guards.ts",
+    "actions": "tsx --env-file-if-exists=.env actions.ts"
   },
   "dependencies": {
     "@pontis/dev-keys": "workspace:*",
