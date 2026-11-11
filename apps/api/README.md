@@ -22,7 +22,7 @@ pnpm --filter @pontis/api start          # migrates, starts on :3000, syncs the 
 
 `GET /v1/assets/{id}/charts/{price,nav,supply,volume}` take `interval` (`1m` to `1d`), `from`, `to` (at most 5000 buckets) and return `{points, interval, from, to, source, simulated, filledPoints}`.
 
-**Real and simulated data are never mixed in one figure.** `data=real|simulated|all` picks the class (`all` prefers real and falls back to simulated), and every `market` block, sparkline, chart and point says `simulated` and its `sources`. Today almost everything is simulated by [`apps/simulator`](../simulator/README.md). The reads are public and carry an `ETag` and `Cache-Control: public, max-age=5`; send `If-None-Match` to get a `304`.
+**Real and simulated data are never mixed in one figure.** `data=real|simulated|all` picks the class (`all` prefers real and falls back to simulated), and every `market` block, sparkline, chart and point says `simulated` and its `sources`. Today almost everything is simulated by [`apps/simulator`](../simulator/README.md). Screens, endpoints and caveats for the frontend are in [`docs/api/FRONTEND_HANDOFF.md`](../../docs/api/FRONTEND_HANDOFF.md); `API_MODE=fixtures` serves the example data with no chain or database. The reads are public and carry an `ETag` and `Cache-Control: public, max-age=5`; send `If-None-Match` to get a `304`.
 
 ## Quotes
 
