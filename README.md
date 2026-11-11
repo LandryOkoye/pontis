@@ -8,6 +8,10 @@ A NEAR-based interoperability and settlement protocol for tokenized real-world a
 
 Tokenized real-world assets are split across issuers, chains and transfer restrictions. The same company can exist as several tokens from different issuers with different legal claims, and a holder of one cannot exchange it for another at a published parity; they sell and buy back. Pontis targets that gap: converting between issuers' representations of the same claim, only where a reviewed relationship says they are equivalent, and only for eligible holders. It is a research project on testnet with synthetic assets, and it has no users or liquidity. [`docs/market-context.md`](docs/market-context.md) gives the sourced market picture, the competitor landscape and where Pontis is weak.
 
+### How we measure success
+
+[`docs/success-metrics.md`](docs/success-metrics.md) defines each metric (conversion success and refund rates, quote-to-settle latency, route coverage, volume, trust and price integrity), its formula, its data source and demo and pilot targets. The endpoints that serve them (`GET /v1/metrics/protocol`, `GET /v1/admin/metrics`, `/metrics`) are not built yet; the document marks which metrics the MVP tables can already compute.
+
 ## MVP scope
 
 Two synthetic NEP-141 representations of one synthetic claim (`SYN-GOLD-OZ`) on NEAR Testnet:
@@ -35,6 +39,7 @@ Out of scope for the MVP: cross-chain bridges, market-priced exchange, dark pool
 | [`docs/known-limitations.md`](docs/known-limitations.md)         | What the MVP does not do                                                                  |
 | [`docs/definition-of-done.md`](docs/definition-of-done.md)       | Each Definition of Done item with its evidence                                            |
 | [`docs/decisions/`](docs/decisions/README.md)                    | ADRs 0001 to 0015                                                                         |
+| [`docs/success-metrics.md`](docs/success-metrics.md)             | Success metrics: definitions, formulas, sources, targets                                  |
 | [`docs/market-context.md`](docs/market-context.md)               | Why Pontis: the problem, the landscape, what would have to be true, where we are weak     |
 | [`docs/threat-model/mvp.md`](docs/threat-model/mvp.md)           | Threats, mitigations and accepted limitations                                             |
 
