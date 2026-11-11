@@ -397,6 +397,10 @@ mod redemption_expiry_tests;
 #[cfg(test)]
 mod redemption_fixture;
 #[cfg(test)]
+mod redemption_flow_tests;
+#[cfg(test)]
+mod redemption_tests;
+#[cfg(test)]
 mod redemption_vector_tests;
 #[cfg(test)]
 mod registry_tests;
