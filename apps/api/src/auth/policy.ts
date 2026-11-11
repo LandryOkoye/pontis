@@ -11,7 +11,11 @@ export interface AdminPolicy {
   /** The audit action an allowed call records. */
   action: Exclude<
     AdminAuditEntry["action"],
-    "admin.auth_failed" | "admin.forbidden" | `auth.${string}`
+    | "admin.auth_failed"
+    | "admin.forbidden"
+    | `auth.${string}`
+    | `session.${string}`
+    | `issuer.${string}`
   >;
 }
 
@@ -29,7 +33,7 @@ export const OPERATOR_ROLES = [
 
 export type AdminOperation = Extract<
   OperationId,
-  "getReconciliation" | "getAdminMetrics" | "getPrometheusMetrics"
+  "getReconciliation" | "getAdminMetrics" | "getPrometheusMetrics" | "getReserveMonitor"
 >;
 
 export const ADMIN_POLICY: Record<AdminOperation, AdminPolicy> = {
@@ -38,6 +42,12 @@ export const ADMIN_POLICY: Record<AdminOperation, AdminPolicy> = {
     roles: OPERATOR_ROLES,
     sensitive: true,
     action: "admin.reconciliation.read",
+  },
+  // Names the reserves that are breached or stale: the same operators, and as fresh as the findings.
+  getReserveMonitor: {
+    roles: OPERATOR_ROLES,
+    sensitive: true,
+    action: "admin.reserve_monitor.read",
   },
   getAdminMetrics: { roles: OPERATOR_ROLES, sensitive: false, action: "admin.metrics.read" },
   getPrometheusMetrics: {
