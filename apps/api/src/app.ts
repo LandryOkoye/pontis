@@ -52,7 +52,12 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     registerHealthRoute(scope, deps.db, deps.chainHeight, deps.health);
     registerPublicCaching(scope);
     registerCatalogRoutes(scope, deps.db);
-    registerMarketRoutes(scope, { db: deps.db, ...(deps.now ? { now: deps.now } : {}) });
+    registerMarketRoutes(scope, {
+      db: deps.db,
+      chainHeight: deps.chainHeight,
+      ...(deps.health ? { health: deps.health } : {}),
+      ...(deps.now ? { now: deps.now } : {}),
+    });
     registerQuoteRoutes(scope, { db: deps.db, ...deps.quotes });
     registerConversionRoutes(scope, {
       db: deps.db,

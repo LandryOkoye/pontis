@@ -4,12 +4,15 @@
 import { ENDPOINTS } from "@pontis/api-types";
 import type { Db } from "@pontis/db";
 import type { FastifyInstance } from "fastify";
+import { makeHealthCheck, type HealthOptions } from "./health.ts";
 import { notFound } from "../errors.ts";
 import { priceChart, representationExists, resolveRange, volumeChart } from "../market/charts.ts";
 import { listDirectory } from "../market/directory.ts";
 import { marketCategories, marketMovers, marketOverview } from "../market/overview.ts";
 import { compareAssets } from "../market/compare.ts";
+import { issuerLeaderboard } from "../market/leaderboard.ts";
 import { search } from "../market/search.ts";
+import { status } from "../market/status.ts";
 import { assetActivity } from "../market/activity.ts";
 import { marketChains } from "../market/chains.ts";
 import { assetChains, assetDocuments, assetIssuerView, assetMetadata } from "../market/detail.ts";
@@ -21,6 +24,9 @@ const route = (path: string) => path.replace(/\{(\w+)\}/g, ":$1");
 export interface MarketRouteDeps {
   db: Db;
   now?: () => Date;
+  /** Latest chain height, for the status feed's health block; may reject. */
+  chainHeight: () => Promise<number>;
+  health?: HealthOptions;
 }
 
 export function registerMarketRoutes(app: FastifyInstance, deps: MarketRouteDeps): void {
@@ -82,6 +88,16 @@ export function registerMarketRoutes(app: FastifyInstance, deps: MarketRouteDeps
   app.get(route(e.search.path), async (req) =>
     e.search.response.parse(await search(db, e.search.query.parse(req.query).q)),
   );
+  app.get(route(e.getIssuerLeaderboard.path), async (req) =>
+    e.getIssuerLeaderboard.response.parse(
+      await issuerLeaderboard(db, e.getIssuerLeaderboard.query.parse(req.query).data),
+    ),
+  );
+  const health = makeHealthCheck(db, deps.chainHeight, deps.health);
+  app.get(route(e.getStatus.path), async () =>
+    e.getStatus.response.parse(await status(db, await health(), now())),
+  );
+
   const charts = [
     [e.getAssetPriceChart, priceChart],
     [e.getAssetNavChart, navChart],
