@@ -8,8 +8,8 @@
 //         `demo`: at least one claim of every category with a conversion pair, a few trust states.
 //   full  everything: the phase 1 catalogue and every rich entry (ADR 0019 section 3).
 //
-// Phase 4 (custodians, reserves, redemption) attaches its data to this catalogue by id; see
-// PHASE_4_EXTENSION_POINT below.
+// Phase 4 (custodians, reserves, redemption) attaches its data to this catalogue by id, per tier, in
+// scripts/lib/catalogue-custody-tiers.ts; nothing here knows about it.
 
 import {
   CLAIMS,
@@ -116,12 +116,3 @@ export function tierFromArgs(argv: readonly string[], whenAbsent: CatalogueTier)
   }
   return found ?? whenAbsent;
 }
-
-/**
- * Phase 4 extension point. Custodians, reserve attestations and redemption terms are not part of
- * this catalogue (ADR 0019 non-goals). They will attach by id to the entries above, in their own
- * data files: a custodian per issuer id, a reserve report and a redemption window per
- * representation id. Nothing here reads them, and nothing here claims custody, reserves or
- * redeemability: every custody and redemption field stays "None".
- */
-export const PHASE_4_EXTENSION_POINT = "custodians, reserves and redemption attach by id" as const;

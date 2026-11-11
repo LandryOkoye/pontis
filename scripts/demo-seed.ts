@@ -2,13 +2,14 @@
 // catalogue tier), writes the off-chain asset profiles and a simulated market into Postgres, so the
 // API, directory and charts have something to show. Everything it writes is synthetic and labelled.
 //
-//   pnpm demo:seed [--catalogue=mvp|demo|full] --sandbox-info <file> [--days 90] [--no-market]
+//   pnpm demo:seed [--catalogue=mvp|demo|full] --sandbox-info <file> [--custody|--no-custody] [--days 90] [--no-market]
 //
 // `--sandbox-info` is the JSON the sandbox writes (see tests/e2e/src/sandbox.ts: PONTIS_SANDBOX_INFO
 // of `cargo test -p pontis-integration-tests --test serve_sandbox -- --ignored --nocapture`).
 // Without it the target is the network in the environment, and a public testnet needs `--testnet`
 // because the deploy spends testnet NEAR (`pnpm --filter @pontis/scripts catalogue-plan` prices it).
-// The market steps need DATABASE_URL. Every step reads current state first, so repeating it is safe.
+// `--custody` also seeds the fictional custody, reserves and redemptions (on by default for `demo` and `full` on a
+// sandbox, opt-in on a public testnet). The market steps need DATABASE_URL. Every step reads current state first, so repeating it is safe.
 
 import { KeyPair } from "near-api-js";
 import { createDb } from "@pontis/db";
@@ -18,6 +19,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { deploy } from "./deploy-testnet.ts";
 import { seedCatalogueOnChain } from "./seed-catalogue.ts";
+import { seedCustodyOnChain } from "./seed-custody.ts";
 import { seed } from "./seed-testnet.ts";
 import { connect } from "./lib/chain.ts";
 import { catalogueFor } from "./lib/catalogue-tiers.ts";
@@ -65,6 +67,7 @@ export async function demoSeed(options: DemoSeedOptions): Promise<void> {
   await deploy(chain, false, { catalogue: options.tier });
   const seeded = await seed(chain, extra ? { allowlist: extra } : {});
   await seedCatalogueOnChain(chain, { tier: options.tier, ...(extra ? { allowlist: extra } : {}) });
+  if (options.custody) await seedCustodyOnChain(chain, { tier: options.tier });
   if (seeded.generatedQuoteSignerSecretKey) {
     console.log(
       `\nGenerated quote-signer key (the only copy; keep it for the API):\nQUOTE_SIGNER_SECRET_KEY=${seeded.generatedQuoteSignerSecretKey}`,

@@ -1,6 +1,6 @@
 # Phase 3: a rich mock catalogue, three tiers and a one-command loader
 
-[ADR 0019](../decisions/0019-phase-3-scope-and-demo-issuers.md) section 3: the demo catalogue grows from 4 issuers and 8 tokens into a market that looks populated. Branch `feat/seed-rich-catalogue`, on main at phase 2 complete. No Rust, no web app, no auth work, no reserves or redemption data (phase 4 attaches those by id; see `PHASE_4_EXTENSION_POINT` in `scripts/lib/catalogue-tiers.ts`). **Everything is fiction:** every name, domain (reserved `.example`) and ticker is invented, every record is `synthetic` and at most `issuer_attested`, every price, NAV, supply and trade is `simulated`.
+[ADR 0019](../decisions/0019-phase-3-scope-and-demo-issuers.md) section 3: the demo catalogue grows from 4 issuers and 8 tokens into a market that looks populated. Branch `feat/seed-rich-catalogue`, on main at phase 2 complete. No Rust, no web app, no auth work, no reserves or redemption data (phase 4 attaches those by id; they attach in `scripts/lib/catalogue-custody-tiers.ts`, see [phase 4 seed](phase-4-seed.md)). **Everything is fiction:** every name, domain (reserved `.example`) and ticker is invented, every record is `synthetic` and at most `issuer_attested`, every price, NAV, supply and trade is `simulated`.
 
 ## What changed
 

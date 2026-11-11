@@ -13,6 +13,19 @@ export interface TokenPlan {
   faucet: boolean;
 }
 
+/** Registers the core on a token's storage so it can receive transfers (vault funding, redemptions). */
+export async function ensureCoreRegistered(chain: Chain, token: string): Promise<void> {
+  const { coreId } = chain.config;
+  if (await chain.view<unknown>(token, "storage_balance_of", { account_id: coreId })) return;
+  await chain.call(
+    token,
+    "storage_deposit",
+    { account_id: coreId, registration_only: true },
+    { deposit: 10n ** 22n },
+  );
+  console.log(`registered ${coreId} on ${token}`);
+}
+
 export async function seedTokens(
   chain: Chain,
   tokens: readonly TokenPlan[],
@@ -26,8 +39,11 @@ export async function seedTokens(
     const view = <T>(method: string, args: Record<string, unknown>) =>
       chain.view<T>(token, method, args);
 
+    // A token whose minter is the core is gated (the custody seed does that): the owner mint is
+    // closed, and a redemption burn lowers its supply on purpose, so it is not topped up again.
+    const gated = Boolean(await view<string | null>("get_minter", {}));
     const supply = BigInt((await view<string>("ft_total_supply", {})) ?? "0");
-    if (supply < startingSupply) {
+    if (supply < startingSupply && !gated) {
       await admin(chain, token, "mint", {
         account_id: deployerId,
         amount: (startingSupply - supply).toString(),
@@ -54,22 +70,14 @@ export async function seedTokens(
     });
 
     if (vaultInventory === 0n) continue;
-    if (!(await view<unknown>("storage_balance_of", { account_id: coreId }))) {
-      await chain.call(
-        token,
-        "storage_deposit",
-        { account_id: coreId, registration_only: true },
-        { deposit: 10n ** 22n },
-      );
-      console.log(`registered ${coreId} on ${token}`);
-    }
+    await ensureCoreRegistered(chain, token);
     const held = BigInt(
       (await core<string>("get_inventory", { representation_id: rep.id })) ?? "0",
     );
     if (held >= vaultInventory) continue;
     const top = vaultInventory - held;
     const owned = BigInt((await view<string>("ft_balance_of", { account_id: deployerId })) ?? "0");
-    if (owned < top) {
+    if (owned < top && !gated) {
       await admin(chain, token, "mint", {
         account_id: deployerId,
         amount: (top - owned).toString(),

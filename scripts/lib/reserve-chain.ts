@@ -46,7 +46,8 @@ export interface Discovery {
 /**
  * The (representation, custodian) pairs `attesterKey` may sign for: representations with a reserve
  * policy (monitored) and a custody link, for each linked custodian that is `active` and registered
- * with exactly this key. `onlyCustodian` narrows to one custodian id.
+ * with exactly this key. `onlyCustodian` narrows to one custodian id; a representation in `skip` is
+ * left alone (the seed's lapsed and never-attested stories).
  */
 export async function discoverTargets(
   view: View,
@@ -54,6 +55,7 @@ export async function discoverTargets(
   representations: readonly RepresentationRef[],
   attesterKey: string,
   onlyCustodian: string | null = null,
+  skip: readonly string[] = [],
 ): Promise<Discovery> {
   const targets: ReserveTarget[] = [];
   const skipped: string[] = [];
@@ -66,6 +68,10 @@ export async function discoverTargets(
     return custodians.get(id) ?? null;
   };
   for (const rep of representations) {
+    if (skip.includes(rep.id)) {
+      skipped.push(`${rep.id}: skipped by --skip`);
+      continue;
+    }
     const status = await view<ReserveStatusView>(coreId, "get_reserve_status", {
       representation_id: rep.id,
     });

@@ -55,4 +55,21 @@ The demo's redemption-gated note: the dossier says holders may not redeem on dem
 | -------------- | --------------------- | -------- | ---------------- | ---------------------------- | ------------- | ------------------------------------------------ |
 | `ttrd-b`       | `boreal-larch-credit` | 6        | 1 canonical unit | `1 / 10^6`                   | `active`      | [BOREAL-LARCH-CREDIT.md](BOREAL-LARCH-CREDIT.md) |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `ttrd-b`
+
+| Field                | Value                                                                                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Custodian (invented) | Northquay Securities Custody (SIMULATED), `northquay-custody-sim`, LU                                                                          |
+| Structure            | `segregated`                                                                                                                                   |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`                                                                                            |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d                                                                                           |
+| Simulated cover      | 10100 bps of supply, signed by the public dev key                                                                                              |
+| Seeded by            | `--catalogue=full`                                                                                                                             |
+| Redemption terms     | at least 1000 and no maximum whole tokens, fee 150 bps, open 3 d in every 180 d, issuer accepts within 7 d and settles within 10 d (simulated) |
+
 This claim has one representation, so no relationship exists for it.

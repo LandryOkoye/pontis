@@ -55,6 +55,35 @@ A forest credit from a Brazilian originator, also wrapped by an Emirati trader w
 | `tcbn-v`       | `verde-amazonas-ativos`    | 6        | 1 canonical unit | `1 / 10^6`                   | `active`      | [VERDE-AMAZONAS-ATIVOS.md](VERDE-AMAZONAS-ATIVOS.md)       |
 | `tcbn-d`       | `saffron-crescent-capital` | 3        | 1 canonical unit | `1 / 10^3`                   | `active`      | [SAFFRON-CRESCENT-CAPITAL.md](SAFFRON-CRESCENT-CAPITAL.md) |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `tcbn-v`
+
+| Field                | Value                                                                       |
+| -------------------- | --------------------------------------------------------------------------- |
+| Custodian (invented) | Mossgrove Carbon Registry Trustee (SIMULATED), `mossgrove-registry-sim`, BR |
+| Structure            | `segregated`                                                                |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`                         |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d                        |
+| Simulated cover      | 10100 bps of supply, signed by the public dev key                           |
+| Seeded by            | `--catalogue=demo\|full`                                                    |
+| Redemption terms     | none: not redeemable in this demo                                           |
+
+### `tcbn-d`
+
+| Field                | Value                                                                       |
+| -------------------- | --------------------------------------------------------------------------- |
+| Custodian (invented) | Mossgrove Carbon Registry Trustee (SIMULATED), `mossgrove-registry-sim`, BR |
+| Structure            | `omnibus`                                                                   |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`                         |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d                        |
+| Simulated cover      | 10000 bps of supply, signed by the public dev key                           |
+| Seeded by            | `--catalogue=full`                                                          |
+| Redemption terms     | none: not redeemable in this demo                                           |
+
 ## Relationships
 
 A shared `canonical_asset_id` is a candidate association only. Only an approved `DIRECT_EQUIVALENT` relationship enables parity conversion, and only while both issuers are `active`. Ratios are output smallest units of the second token per smallest unit of the first, derived from the unit multipliers (ADR 0001).

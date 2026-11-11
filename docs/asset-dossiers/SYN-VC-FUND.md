@@ -54,4 +54,17 @@ A fund sponsored by an issuer that was later moved back to restricted, so the to
 | -------------- | --------------------------- | -------- | ---------------- | ---------------------------- | ------------- | ------------------------------------------------------------ |
 | `tvcf-t`       | `kittiwake-cayman-partners` | 6        | 1 canonical unit | `1 / 10^6`                   | `active`      | [KITTIWAKE-CAYMAN-PARTNERS.md](KITTIWAKE-CAYMAN-PARTNERS.md) |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `tvcf-t`
+
+No custody is recorded for `tvcf-t`: the custody screens show their empty state, which is intended.
+
+| Field            | Value                             |
+| ---------------- | --------------------------------- |
+| Redemption terms | none: not redeemable in this demo |
+
 This claim has one representation, so no relationship exists for it.

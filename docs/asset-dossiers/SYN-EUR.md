@@ -55,6 +55,35 @@ A euro stable-value token wrapped by Singapore and Irish issuers; the tightest g
 | `teur-m`       | `merlion-harbour-trust` | 6        | 1 canonical unit | `1 / 10^6`                   | `active`      | [MERLION-HARBOUR-TRUST.md](MERLION-HARBOUR-TRUST.md) |
 | `teur-e`       | `emerald-tern-capital`  | 8        | 1 canonical unit | `1 / 10^8`                   | `active`      | [EMERALD-TERN-CAPITAL.md](EMERALD-TERN-CAPITAL.md)   |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `teur-m`
+
+| Field                | Value                                                                                                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Custodian (invented) | Ferncliff On-Chain Vault (SIMULATED), `ferncliff-vault-sim`, KY                                                                                                |
+| Structure            | `on_chain_vault`                                                                                                                                               |
+| Reserve story        | `stale`: attested once with a 5 minute max age and not refreshed: `ok` for minutes, then the route is restricted (`reserve_stale`). The story decays by design |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 5 min                                                                                                         |
+| Simulated cover      | 10000 bps of supply, signed by the public dev key                                                                                                              |
+| Seeded by            | `--catalogue=demo\|full`                                                                                                                                       |
+| Redemption terms     | none: not redeemable in this demo                                                                                                                              |
+
+### `teur-e`
+
+| Field                | Value                                                           |
+| -------------------- | --------------------------------------------------------------- |
+| Custodian (invented) | Ferncliff On-Chain Vault (SIMULATED), `ferncliff-vault-sim`, KY |
+| Structure            | `on_chain_vault`                                                |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`             |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d            |
+| Simulated cover      | 10100 bps of supply, signed by the public dev key               |
+| Seeded by            | `--catalogue=full`                                              |
+| Redemption terms     | none: not redeemable in this demo                               |
+
 ## Relationships
 
 A shared `canonical_asset_id` is a candidate association only. Only an approved `DIRECT_EQUIVALENT` relationship enables parity conversion, and only while both issuers are `active`. Ratios are output smallest units of the second token per smallest unit of the first, derived from the unit multipliers (ADR 0001).

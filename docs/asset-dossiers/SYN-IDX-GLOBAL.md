@@ -55,6 +55,27 @@ The demo's broad-market tracker, wrapped twice with different units per token.
 | `tidxg-c`      | `cobaltine-fund-services` | 6        | 1 canonical unit       | `1 / 10^6`                   | `active`      | [COBALTINE-FUND-SERVICES.md](COBALTINE-FUND-SERVICES.md) |
 | `tidxg-p`      | `pennywhistle-securities` | 6        | 1 / 100 canonical unit | `1 / 10^8`                   | `active`      | [PENNYWHISTLE-SECURITIES.md](PENNYWHISTLE-SECURITIES.md) |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `tidxg-c`
+
+No custody is recorded for `tidxg-c`: the custody screens show their empty state, which is intended.
+
+| Field            | Value                             |
+| ---------------- | --------------------------------- |
+| Redemption terms | none: not redeemable in this demo |
+
+### `tidxg-p`
+
+No custody is recorded for `tidxg-p`: the custody screens show their empty state, which is intended.
+
+| Field            | Value                             |
+| ---------------- | --------------------------------- |
+| Redemption terms | none: not redeemable in this demo |
+
 ## Relationships
 
 A shared `canonical_asset_id` is a candidate association only. Only an approved `DIRECT_EQUIVALENT` relationship enables parity conversion, and only while both issuers are `active`. Ratios are output smallest units of the second token per smallest unit of the first, derived from the unit multipliers (ADR 0001).

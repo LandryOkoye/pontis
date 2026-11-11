@@ -55,6 +55,36 @@ The flagship short-dated treasury fund of the demo, wrapped by two different iss
 | `ttb3m-m`      | `merlion-harbour-trust` | 6        | 1 canonical unit | `1 / 10^6`                   | `active`      | [MERLION-HARBOUR-TRUST.md](MERLION-HARBOUR-TRUST.md) |
 | `ttb3m-e`      | `emerald-tern-capital`  | 8        | 1 canonical unit | `1 / 10^8`                   | `active`      | [EMERALD-TERN-CAPITAL.md](EMERALD-TERN-CAPITAL.md)   |
 
+## Custody, reserves and redemption (simulated)
+
+> **FICTIONAL DEMO DATA. SIMULATED CUSTODY AND RESERVES.**
+> Every custodian is invented and every reserve figure is attested by a simulated custodian holding a public dev key (`pontis-reserve-v1`). Nothing is custodied, backed, audited, regulated or paid out, and nothing here is evidence of any of those. Seeded by `seed-custody` ([ADR 0020](../decisions/0020-custody-reserves-and-redemption.md)).
+
+### `ttb3m-m`
+
+| Field                | Value                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Custodian (invented) | Northquay Securities Custody (SIMULATED), `northquay-custody-sim`, LU                                                          |
+| Structure            | `segregated`                                                                                                                   |
+| Reserve story        | `thin`: attested a little below supply but inside the tolerance: `ok`, with no headroom                                        |
+| Reserve policy       | `restrict_conversions`, tolerance 100 bps, max age 1 d                                                                         |
+| Simulated cover      | 9950 bps of supply, signed by the public dev key                                                                               |
+| Seeded by            | `--catalogue=demo\|full`                                                                                                       |
+| Redemption terms     | at least 10 and no maximum whole tokens, fee 25 bps, always open, issuer accepts within 1 d and settles within 2 d (simulated) |
+| Simulated redemption | 25 whole tokens left `fulfilled` by the seed (the issuer is a test account; nothing is paid out)                               |
+
+### `ttb3m-e`
+
+| Field                | Value                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Custodian (invented) | Calderwick Fund Custody (SIMULATED), `calderwick-fund-custody-sim`, IE                                                         |
+| Structure            | `segregated`                                                                                                                   |
+| Reserve story        | `healthy`: attested above supply: the state is `ok`                                                                            |
+| Reserve policy       | `restrict_conversions`, tolerance 0 bps, max age 1 d                                                                           |
+| Simulated cover      | 10100 bps of supply, signed by the public dev key                                                                              |
+| Seeded by            | `--catalogue=full`                                                                                                             |
+| Redemption terms     | at least 10 and no maximum whole tokens, fee 25 bps, always open, issuer accepts within 1 d and settles within 2 d (simulated) |
+
 ## Relationships
 
 A shared `canonical_asset_id` is a candidate association only. Only an approved `DIRECT_EQUIVALENT` relationship enables parity conversion, and only while both issuers are `active`. Ratios are output smallest units of the second token per smallest unit of the first, derived from the unit multipliers (ADR 0001).

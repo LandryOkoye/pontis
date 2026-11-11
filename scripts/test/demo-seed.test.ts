@@ -7,6 +7,7 @@ describe("demo:seed arguments", () => {
       tier: "demo",
       sandboxInfo: undefined,
       testnet: false,
+      custody: false,
       days: 90,
       market: true,
     });
@@ -26,10 +27,24 @@ describe("demo:seed arguments", () => {
       tier: "full",
       sandboxInfo: "/tmp/s.json",
       testnet: false,
+      custody: true,
       days: 30,
       market: false,
     });
     expect(parseDemoSeedArgs(["--testnet"]).testnet).toBe(true);
+  });
+
+  it("seeds custody by default on a sandbox for demo and full, and only on request elsewhere", () => {
+    const sandbox = ["--sandbox-info", "/tmp/s.json"];
+    expect(parseDemoSeedArgs(sandbox).custody).toBe(true);
+    expect(parseDemoSeedArgs([...sandbox, "--no-custody"]).custody).toBe(false);
+    expect(parseDemoSeedArgs([...sandbox, "--catalogue=mvp"]).custody).toBe(false);
+    expect(parseDemoSeedArgs(["--testnet"]).custody).toBe(false);
+    expect(parseDemoSeedArgs(["--testnet", "--custody"]).custody).toBe(true);
+    expect(() => parseDemoSeedArgs(["--custody", "--no-custody"])).toThrow(/exclude/);
+    expect(() => parseDemoSeedArgs(["--custody", "--catalogue=mvp"])).toThrow(
+      /demo or --catalogue=full/,
+    );
   });
 
   it("refuses an unknown tier, option, positional or day count", () => {

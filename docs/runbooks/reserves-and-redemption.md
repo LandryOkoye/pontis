@@ -68,7 +68,7 @@ Example: token `tgold-a`, a simulated custodian `vault-co-sim`, and the reserve-
    pnpm --filter @pontis/scripts reserves publish                              # one round
    ```
 
-   Each attestation sets `reserved_units = floor(ft_total_supply * cover / 10000)` from the token's real supply, `as_of_ms = now`, `report_hash = sha256` of a synthetic report text, `report_uri = sim://reserves/<representation>/<yyyy-mm>`. The cover defaults to 10 000 bps (fully covered; `--cover-bps` changes the default). `--custodian <id>` narrows it to one custodian. A refusal or a failed read is logged and the next round tries again; `--loop` survives errors. The same layout is pinned by `test-vectors/reserve-attestation.json`.
+   Each attestation sets `reserved_units = floor(ft_total_supply * cover / 10000)` from the token's real supply, `as_of_ms = now`, `report_hash = sha256` of a synthetic report text, `report_uri = sim://reserves/<representation>/<yyyy-mm>`. The cover defaults to 10 000 bps (fully covered; `--cover-bps` changes the default). `--custodian <id>` narrows it to one custodian. `--skip <representation>` (repeatable) leaves a representation alone: the demo seed uses it to keep its lapsed-attestation and never-attested stories from being refreshed by a running publisher ([seed-demo runbook](seed-demo.md#custody-reserves-and-redemption)). A refusal or a failed read is logged and the next round tries again; `--loop` survives errors. The same layout is pinned by `test-vectors/reserve-attestation.json`.
 
 8. **Monitor.**
 
@@ -86,6 +86,16 @@ Example: token `tgold-a`, a simulated custodian `vault-co-sim`, and the reserve-
    near contract call-function as-transaction <core> evaluate_reserve json-args '{"representation_id":"tgold-a"}' \
      prepaid-gas '30 Tgas' attached-deposit '1 yoctoNEAR' sign-as <anyone> network-config testnet
    ```
+
+### Keeping a story from being refreshed
+
+A looping `publish` attests every monitored, linked representation, so it would also repair the stories the seed leaves deliberately unhealthy. `--skip` names the representations it must not touch; the others keep their attestations. Their cover, including the breached and thin ones, comes from the drift state described below, which the seed writes.
+
+```bash
+pnpm --filter @pontis/scripts reserves publish --loop --skip teur-m --skip tmmfeur-c
+```
+
+A skipped representation goes `stale` (or stays at `no_attestation`) exactly as the policy says: with `restrict_conversions` its routes are refused until a round that does not skip it publishes.
 
 ## Drift demo
 

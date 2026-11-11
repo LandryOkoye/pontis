@@ -50,6 +50,19 @@ The machinery is real contract logic; the parties and the numbers are fiction. E
 | Payout instruction                 | The client encrypts it and the API stores the ciphertext unread, hashing it for the `redeem:` message; no endpoint returns it and nothing decrypts it. A redemption pays nothing, so there is nothing to pay to                                                                        | A key custody scheme, an issuer who can decrypt it, payout rails and retention rules                                       |
 | Issuer login                       | An account listed in an issuer's `controlled_accounts` may read the queue and get unsigned accept, reject, fulfil and mint actions, checked against the chain on every call. Listing is a registrar's unproven claim                                                                   | Proven account control, an issuer portal with its own review and separation of duties                                      |
 
+## Demo custody data (seed-custody)
+
+Fiction written through the real contract methods; every row is `simulated`.
+
+| Area               | What the seed does                                                                                                                                                                                | What production would need                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Custodians         | Eight invented names (vaulted metals, fund and note custody, an on-chain vault, an SPV registry, carbon, stable-value) registered `synthetic: true`, `unverified`, no evidence                    | Real custodians, agreements, evidence an independent attester checked |
+| Reserve stories    | A policy and one simulated attestation per linked token: healthy, thin, breached, warn-only, `pause_mint`, a lapsing one and one never attested. The cover ratio is a number the data chose       | Independently attested reports of assets that exist                   |
+| Decay              | The lapsing story is a 5 minute max age with no refresh; the others need `reserves publish --loop` (skipping that one and the never-attested token) once a day has passed                         | Monitored publishers, alerting and a repair procedure                 |
+| Redemption terms   | Fictional minimums, maximums, fees, windows (including one gated note) and settlement days, set by the registrar and enforced by the contract                                                     | Legal redemption rights and a payout operation                        |
+| Seeded redemptions | Three requests left `requested`, `accepted` and `fulfilled`; the deployer is the holder and the issuer's token account (the deployer's key) accepts and fulfils; the burn is real, no value moves | Real holders, a real issuer back office, fiat or custody settlement   |
+| Gated tokens       | `pontis-core` is made the minter of two tokens so a redemption can burn and a mint can be gated; the owner mint and faucet close there                                                            | The same gate, with the minter set once by a governed owner           |
+
 ## Demo catalogue (seed-catalogue, seed-profiles)
 
 The catalogue adds fiction on top of the MVP seed. Each row is a label or a story, not behaviour.

@@ -188,6 +188,7 @@ describe("reserves arguments", () => {
       intervalMs: 30_000,
       coverBps: 10_000,
       custodianId: null,
+      skip: [],
     });
     expect(
       parseReservesArgs([
@@ -199,6 +200,10 @@ describe("reserves arguments", () => {
         "9500",
         "--custodian",
         "vault-co-sim",
+        "--skip",
+        "tgold-b",
+        "--skip",
+        "tgold-a",
       ]),
     ).toEqual({
       kind: "publish",
@@ -206,10 +211,17 @@ describe("reserves arguments", () => {
       intervalMs: 5000,
       coverBps: 9500,
       custodianId: "vault-co-sim",
+      skip: ["tgold-b", "tgold-a"],
     });
+    expect(() => parseReservesArgs(["publish", "--skip"])).toThrow(/needs a value/);
     expect(() => parseReservesArgs(["publish", "--interval-ms", "10"])).toThrow(/1000/);
     expect(() => parseReservesArgs(["publish", "--cover-bps", "100001"])).toThrow(/100000/);
     expect(() => parseReservesArgs(["publish", "extra"])).toThrow(/expected/);
+  });
+
+  it("lists --skip in the usage and refuses it with no value or a bad id", () => {
+    expect(() => parseReservesArgs(["bogus"])).toThrow(/--skip <representation>/);
+    expect(() => parseReservesArgs(["publish", "--skip", "Bad Id"])).toThrow(/representation/);
   });
 
   it("prints the usage for an unknown command", () => {
@@ -359,6 +371,14 @@ describe("discovery", () => {
       "tbond-a: no reserve policy (unmonitored)",
       "tfund-a: no custody link",
     ]);
+  });
+
+  it("leaves a representation named in skip alone, so its story is not refreshed", async () => {
+    const { targets, skipped } = await discoverTargets(view, "core.testnet", reps, KEY, null, [
+      "tgold-a",
+    ]);
+    expect(targets.map((t) => t.representationId)).toEqual(["tgold-b"]);
+    expect(skipped).toContain("tgold-a: skipped by --skip");
   });
 
   it("narrows to one custodian and skips a suspended one", async () => {
