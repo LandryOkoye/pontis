@@ -1,9 +1,9 @@
 // Fills in what events do not carry by reading the chain views: custodian details, issuer
-// reliability counters and a snapshot of the reserve status. Each row is marked when an event makes
+// reliability counters, a snapshot of the reserve status and the state of open mint requests. Each row is marked when an event makes
 // it stale (see apply.ts); a failed read leaves the mark, so the next pass tries again.
 
-import { custodians, issuerReliability, reserveStatus, type Db } from "@pontis/db";
-import { eq, isNull, lt, or } from "drizzle-orm";
+import { custodians, issuerReliability, mintRequests, reserveStatus, type Db } from "@pontis/db";
+import { eq, inArray, isNull, lt, or } from "drizzle-orm";
 import type { MirrorChain } from "../chain-views.ts";
 import type { Logger } from "../indexer.ts";
 
@@ -11,6 +11,8 @@ export interface RefreshResult {
   custodians: number;
   issuers: number;
   reserveStatuses: number;
+  /** Mint requests whose status moved on chain without (or ahead of) an event. */
+  mintRequests: number;
 }
 
 export interface RefreshOptions {
@@ -24,7 +26,7 @@ export interface RefreshOptions {
 export async function refreshMirrors(options: RefreshOptions): Promise<RefreshResult> {
   const { db, chain, log } = options;
   const now = (options.now ?? (() => new Date()))();
-  const result: RefreshResult = { custodians: 0, issuers: 0, reserveStatuses: 0 };
+  const result: RefreshResult = { custodians: 0, issuers: 0, reserveStatuses: 0, mintRequests: 0 };
 
   for (const { id } of await db
     .select({ id: custodians.id })
@@ -121,6 +123,33 @@ export async function refreshMirrors(options: RefreshOptions): Promise<RefreshRe
     } catch (error) {
       log.error("reserve status refresh failed; will retry", {
         representation: representationId,
+        error: String(error),
+      });
+    }
+  }
+
+  // `execute_mint` emits no event, so `minting` is visible only here, and a `mint_completed` or
+  // `mint_failed` the indexer has not read yet is closed from the chain's record. The chain is
+  // the authority; the events later apply the same terminal state.
+  for (const open of await db
+    .select({ id: mintRequests.id, status: mintRequests.status })
+    .from(mintRequests)
+    .where(inArray(mintRequests.status, ["requested", "minting"]))) {
+    try {
+      const onChain = await chain.mintRequest(open.id);
+      if (!onChain || onChain.status === open.status) continue;
+      await db
+        .update(mintRequests)
+        .set({
+          status: onChain.status,
+          resolvedAt: onChain.resolved_ms === null ? null : new Date(onChain.resolved_ms),
+          failure: onChain.failure,
+        })
+        .where(eq(mintRequests.id, open.id));
+      result.mintRequests++;
+    } catch (error) {
+      log.error("mint request refresh failed; will retry", {
+        mintRequest: open.id,
         error: String(error),
       });
     }
