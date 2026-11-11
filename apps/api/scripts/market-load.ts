@@ -24,6 +24,10 @@ const app = buildApp({
       isAllowed: async () => true,
       getInventory: async () => "0",
       getFeeBps: async () => 10,
+      getRouteGuards: async () => {
+        throw new Error("the load script never reaches the guards");
+      },
+      getPrice: async () => null,
     },
     key: keyFromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1)),
     coreId: "core.testnet",

@@ -10,6 +10,7 @@ import type { QuoteChain } from "../src/quotes/chain.ts";
 import { createQuote } from "../src/quotes/service.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
 import { createTestDb, type TestDb } from "@pontis/db/testing";
+import { unguarded } from "./helpers.ts";
 
 let t: TestDb;
 beforeAll(async () => {
@@ -25,12 +26,12 @@ const route: ChainRouteView = {
   refusal: null,
   terms: { ratio: { num: "1000", den: "1" }, compatibility_version: 2, policy_version: 1 },
 };
-const chain: QuoteChain = {
+const chain: QuoteChain = unguarded({
   getRoute: async () => route,
   isAllowed: async () => true,
   getInventory: async () => "1000000000000",
   getFeeBps: async () => 10,
-};
+});
 const claimsAtomicity = (text: string) => /(?<!\bnot (an? )?)\batomic(ally)?\b/i.test(text);
 const pair = { fromId: "tgold-a", toId: "tgold-b" };
 

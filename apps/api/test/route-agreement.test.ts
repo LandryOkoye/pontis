@@ -11,6 +11,7 @@ import { createQuote } from "../src/quotes/service.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
 import { createTestDb, type TestDb } from "@pontis/db/testing";
 import { AppError } from "../src/errors.ts";
+import { unguarded } from "./helpers.ts";
 
 let t: TestDb;
 beforeAll(async () => {
@@ -30,12 +31,12 @@ function chainWith(num: string, den: string, feeBps: number, inventory: bigint):
     refusal: null,
     terms: { ratio: { num, den }, compatibility_version: 2, policy_version: 1 },
   };
-  return {
+  return unguarded({
     getRoute: async () => route,
     isAllowed: async () => true,
     getInventory: async () => inventory.toString(),
     getFeeBps: async () => feeBps,
-  };
+  });
 }
 
 async function compareSays(chain: QuoteChain, amount: string): Promise<boolean> {
