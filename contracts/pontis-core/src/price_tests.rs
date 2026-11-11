@@ -6,7 +6,7 @@ use near_sdk::json_types::{Base64VecU8, U128};
 use near_sdk::{CurveType, PublicKey};
 
 /// The publisher key every price test uses: seed 101..=132.
-fn signing_key() -> SigningKey {
+pub(crate) fn signing_key() -> SigningKey {
     let seed: [u8; 32] = (101..=132u8).collect::<Vec<_>>().try_into().unwrap();
     SigningKey::from_bytes(&seed)
 }

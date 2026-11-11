@@ -51,8 +51,7 @@ impl Contract {
         };
         let now = now_ms();
         let price = |id: &str| {
-            self.prices
-                .get(id)
+            self.reference_price(id)
                 .filter(|p| now.saturating_sub(p.as_of_ms) <= guard.max_price_age_ms)
         };
         let (Some(a), Some(b)) = (
