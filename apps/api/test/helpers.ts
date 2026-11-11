@@ -50,6 +50,12 @@ export function testAppDeps(db: Db, over: Partial<AppDeps> = {}): AppDeps {
     db,
     chainHeight: async () => 1,
     quotes: { chain, key, coreId: "core.testnet" },
+    actionsChain: {
+      getCorporateActions: async () => [],
+      getMultiplierEpochs: async () => [],
+      getLifecycle: async () => null,
+      getNavStrike: async () => null,
+    },
     conversionChain: { isRegistered: async () => true },
     txVerifier: { getTransaction: async () => undefined },
     ...over,

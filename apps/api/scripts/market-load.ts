@@ -37,6 +37,12 @@ const app = buildApp({
     key: keyFromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1)),
     coreId: "core.testnet",
   },
+  actionsChain: {
+    getCorporateActions: async () => [],
+    getMultiplierEpochs: async () => [],
+    getLifecycle: async () => null,
+    getNavStrike: async () => null,
+  },
   conversionChain: { isRegistered: async () => true },
   txVerifier: { getTransaction: async () => undefined },
 });

@@ -8,7 +8,9 @@ import { registerPublicCaching } from "./routes/caching.ts";
 import { registerCatalogRoutes } from "./routes/catalog.ts";
 import { registerMarketRoutes } from "./routes/market.ts";
 import type { ConversionChain } from "./conversions/chain.ts";
+import type { ActionsChain } from "./actions/chain.ts";
 import type { QuoteDeps } from "./quotes/service.ts";
+import { registerActionRoutes } from "./routes/actions.ts";
 import { registerAdminRoutes } from "./routes/admin.ts";
 import { registerConversionRoutes } from "./routes/conversions.ts";
 import { registerHealthRoute, type HealthOptions } from "./routes/health.ts";
@@ -23,6 +25,8 @@ export interface AppDeps {
   health?: HealthOptions;
   /** Chain reads, signing key and core account for quoting. */
   quotes: Omit<QuoteDeps, "db">;
+  /** Corporate action, lifecycle and NAV strike reads for the asset endpoints. */
+  actionsChain: ActionsChain;
   /** Token registration reads for the wallet plan. */
   conversionChain: ConversionChain;
   /** Checks reported transaction hashes against the chain before they are shown as verified. */
@@ -59,6 +63,11 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       ...(deps.now ? { now: deps.now } : {}),
     });
     registerQuoteRoutes(scope, { db: deps.db, ...deps.quotes });
+    registerActionRoutes(scope, {
+      db: deps.db,
+      chain: deps.actionsChain,
+      ...(deps.now ? { now: deps.now } : {}),
+    });
     registerConversionRoutes(scope, {
       db: deps.db,
       chain: deps.conversionChain,

@@ -49,6 +49,7 @@ const app = buildApp({
     maxLagBlocks: config.INDEXER_MAX_LAG_BLOCKS,
   },
   quotes: { chain: core, key, coreId: config.PONTIS_CORE_ACCOUNT_ID },
+  actionsChain: core,
   conversionChain: {
     isRegistered: async (tokenId, account) =>
       (await new TokenClient(rpc, tokenId).storageBalanceOf(account)) !== null,
