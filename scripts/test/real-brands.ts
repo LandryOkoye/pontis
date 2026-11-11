@@ -27,6 +27,20 @@ export const REAL_BRAND_DENYLIST: readonly string[] = list(`
   spy, qqq, voo, gld, slv, tlt, bil, sgov, finma, bafin, cssf, adgm, difc
 `);
 
+/**
+ * Real custodians, vault operators and audit firms the custody data (ADR 0020, docs/progress/
+ * phase-4-seed.md) must never name or imitate. Generic words that are also ordinary English
+ * ("copper", "gemini") stay out of the list for the same reason as above.
+ */
+export const REAL_CUSTODIAN_DENYLIST: readonly string[] = list(`
+  bitgo, anchorage, fireblocks, bakkt, xapo, prime trust, bny, bny mellon, bank of new york,
+  northern trust, standard chartered, pictet, julius baer, ubs, brinks, loomis, malca amit,
+  iron mountain, perth mint, royal mint, bullionvault, lbma, comex, cme group, dtcc, computershare,
+  deloitte, pwc, pricewaterhousecoopers, kpmg, ernst young, grant thornton, bdo, mazars, rsm,
+  baker tilly, crowe, armanino, withum, marcum, moore stephens, cohen co, certik, hacken,
+  quantstamp, openzeppelin, trail of bits, chainsecurity, zellic, halborn
+`);
+
 /** Real token and fund tickers a catalogue symbol must not equal, with or without its dashes. */
 export const REAL_TICKER_DENYLIST: readonly string[] = list(`
   usdt, usdc, usde, usdy, usdp, dai, frax, paxg, xaut, buidl, benji, ousg, btc, eth, sol, near,
