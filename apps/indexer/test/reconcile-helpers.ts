@@ -5,13 +5,16 @@ import { conversions, settlementEvents } from "@pontis/db";
 import type { QuoteState } from "@pontis/domain";
 import { eq } from "drizzle-orm";
 import { Reconciler } from "../src/reconcile/reconciler.ts";
+import type { ActionChain } from "../src/reconcile/actions.ts";
+import type { ChainCorporateAction } from "@pontis/near-client";
 import type { VaultChain } from "../src/reconcile/vaults.ts";
 import { seedQuote } from "./seed.ts";
 
 export const NOW = new Date("2026-11-09T12:00:00Z");
 export const MINUTE = 60_000;
 
-export class FakeVaultChain implements VaultChain {
+export class FakeVaultChain implements VaultChain, ActionChain {
+  actions = new Map<string, ChainCorporateAction[]>();
   inventories = new Map<string, string>();
   balances = new Map<string, string>();
   failing = false;
@@ -25,6 +28,11 @@ export class FakeVaultChain implements VaultChain {
   async inventory(representationId: string): Promise<string> {
     if (this.failing) throw new Error("rpc down");
     return this.inventories.get(representationId) ?? "0";
+  }
+
+  async corporateActions(assetId: string): Promise<ChainCorporateAction[]> {
+    if (this.failing) throw new Error("rpc down");
+    return this.actions.get(assetId) ?? [];
   }
 
   async balanceOf(tokenAccountId: string): Promise<string> {

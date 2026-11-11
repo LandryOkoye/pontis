@@ -9,11 +9,12 @@ import { sleep as realSleep } from "../retry.ts";
 import type { Candidate } from "./finding.ts";
 import { loadRun, storeRun, withFirstSeen } from "./report.ts";
 import { settlementCandidates, stuckCandidate, stuckQuotes } from "./settlement-checks.ts";
+import { actionCandidates, readLiveWrappers, type ActionChain } from "./actions.ts";
 import { readVaults, vaultCandidates, type VaultChain } from "./vaults.ts";
 
 export interface ReconcilerOptions {
   db: Db;
-  chain: VaultChain;
+  chain: VaultChain & ActionChain;
   coreId: string;
   /** A submitted quote with no outcome event after this long is flagged. */
   stuckAfterMs: number;
@@ -72,8 +73,10 @@ export class Reconciler {
     const confirmed = suspects.filter((c) => this.vaultSuspects.has(c.key));
     this.vaultSuspects = new Set(suspects.map((c) => c.key));
 
+    const actions = await actionCandidates(chain, await readLiveWrappers(db), now);
+
     const previous = await loadRun(db);
-    const candidates: Candidate[] = [...stuck, ...settlement, ...confirmed];
+    const candidates: Candidate[] = [...stuck, ...settlement, ...confirmed, ...actions];
     const run: ReconciliationRun = {
       ranAt: now.toISOString(),
       findings: withFirstSeen(candidates, previous, now),
