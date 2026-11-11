@@ -76,3 +76,11 @@ No TimescaleDB. Candle reads use the primary key `(representation_id, interval, 
 - A simulated market will look alive in the UI. The only protection is the flag, so tests assert that every serializer fills `simulated` and `source`, and the handoff document tells the frontend to render them.
 - Candle volume for parity conversions is a count of units moved, not a market measure. The handoff document says so.
 - Later phases add their tables and extend the stats without changing these.
+
+## Amendments (data model and simulator)
+
+- **Filled candles can carry volume.** Section 4 said a bucket with no price repeats the previous close with zero volume. As built, `filled` means only that the price was carried forward; volume is whatever traded in the bucket.
+- **Where the jobs run.** The trade sync, candle rebuild, stats refresh and search index run in the indexer process every `MARKET_JOBS_INTERVAL_MS` (default 60 s), rebuilding the last `MARKET_JOBS_WINDOW_MS` (default 2 h) of candles. `apps/simulator` runs the same functions over the range it writes.
+- **Feed grid.** The simulated feed has one point per five minutes from 2026-07-01, so a given time always has the same price. One-minute and five-minute candles are built for the last two days only, and most of their buckets are `filled`.
+- **Series shape.** A claim has one base series (random walk, NAV accrual or a peg, with scheduled jumps for corporate actions). Each representation prices it per whole token and adds its own mean-reverting premium, so wrappers of one claim differ slightly. Claims with a default profile: `syn-gold-oz`, `syn-acme`, `syn-ustb`, `syn-villa`, `syn-credit`, `syn-usd`, `syn-nova`. The seed catalogue must use these canonical asset IDs.
+- **Attestations.** Off-chain format v1: the domain `pontis-price-v1` and the point's fields, one per line, signed with ed25519. The key is the `price-publisher` role of `@pontis/dev-keys`, derived from a public label. The on-chain format (phase 2) gets its own domain string.
