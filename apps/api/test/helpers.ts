@@ -38,6 +38,7 @@ export function testAppDeps(db: Db, over: Partial<AppDeps> = {}): AppDeps {
     getRoute: async () => ({
       executable: true,
       refusal: null,
+      next_freeze_ms: null,
       terms: { ratio: { num: "1000", den: "1" }, compatibility_version: 2, policy_version: 1 },
     }),
     isAllowed: async () => true,

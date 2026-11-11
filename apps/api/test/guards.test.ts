@@ -26,7 +26,7 @@ afterAll(async () => {
 
 const NOW = new Date("2026-11-07T18:00:00Z");
 const terms = { ratio: { num: "1000", den: "1" }, compatibility_version: 2, policy_version: 1 };
-const open: ChainRouteView = { executable: true, refusal: null, terms };
+const open: ChainRouteView = { executable: true, refusal: null, terms, next_freeze_ms: null };
 const line = (name: string, passed: boolean, detail: string) => ({ name, passed, detail });
 const guarded = (over: Partial<ChainRouteGuards> = {}): ChainRouteGuards => ({
   executable: true,
@@ -84,7 +84,12 @@ describe("quotes under guards", () => {
     ["an unusable price", "price_unavailable", "PRICE_UNAVAILABLE"],
   ])("refuses %s as %s", async (_name, refusal, code) => {
     const closed = async () =>
-      ({ executable: false, refusal, terms: null }) as unknown as ChainRouteView;
+      ({
+        executable: false,
+        refusal,
+        terms: null,
+        next_freeze_ms: null,
+      }) as unknown as ChainRouteView;
     expect(await errorCodeOf(createQuote(deps({ getRoute: closed }), req))).toBe(code);
   });
 

@@ -86,7 +86,13 @@ export async function createQuote(deps: QuoteDeps, req: CreateQuoteRequest): Pro
     if (!account) throw new Error(`asset ${id} vanished from the mirror`);
     return account;
   };
-  const expiresAt = new Date(now.getTime() + QUOTE_TTL_MS);
+  // A quote never outlives the next corporate-action freeze: the contract closes the route then.
+  const freezeMs = route.next_freeze_ms;
+  const expiresAt = new Date(
+    freezeMs !== null && freezeMs > now.getTime()
+      ? Math.min(now.getTime() + QUOTE_TTL_MS, freezeMs)
+      : now.getTime() + QUOTE_TTL_MS,
+  );
   const fields = {
     version: 1,
     contract: deps.coreId,

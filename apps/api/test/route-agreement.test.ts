@@ -29,6 +29,7 @@ function chainWith(num: string, den: string, feeBps: number, inventory: bigint):
   const route: ChainRouteView = {
     executable: true,
     refusal: null,
+    next_freeze_ms: null,
     terms: { ratio: { num, den }, compatibility_version: 2, policy_version: 1 },
   };
   return unguarded({

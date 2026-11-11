@@ -20,7 +20,12 @@ const app = buildApp({
   chainHeight: async () => 1,
   quotes: {
     chain: {
-      getRoute: async () => ({ executable: false, refusal: "no_relationship", terms: null }),
+      getRoute: async () => ({
+        executable: false,
+        refusal: "no_relationship",
+        terms: null,
+        next_freeze_ms: null,
+      }),
       isAllowed: async () => true,
       getInventory: async () => "0",
       getFeeBps: async () => 10,
