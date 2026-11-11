@@ -285,6 +285,9 @@ importers:
         specifier: ^7.4.0
         version: 7.4.0
     devDependencies:
+      '@pontis/market-data':
+        specifier: workspace:*
+        version: link:../packages/market-data
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
