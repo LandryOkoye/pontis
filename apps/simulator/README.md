@@ -17,7 +17,7 @@ Only representations whose canonical asset has a profile in `@pontis/market-data
 ## Run
 
 ```bash
-cp apps/simulator/.env.example apps/simulator/.env     # DATABASE_URL, SIM_BACKFILL_DAYS, SIM_TICK_MS
+cp apps/simulator/.env.example apps/simulator/.env     # DATABASE_URL, PONTIS_CORE_ACCOUNT_ID, SIM_BACKFILL_DAYS, SIM_TICK_MS
 pnpm --filter @pontis/simulator start backfill          # SIM_BACKFILL_DAYS of history (default 90), safe to repeat
 pnpm --filter @pontis/simulator start run               # continue from the newest point every SIM_TICK_MS
 ```
@@ -27,6 +27,6 @@ Both commands are idempotent: a repeated window inserts nothing new. The series 
 ## How honest it is
 
 - **Integer math only.** A seeded integer PRNG and integer random-walk steps; prices are bigint at 8 decimals.
-- **Signed, not trusted.** The attestations use a key derived from a public label (`@pontis/dev-keys`). They exercise the oracle path; they prove nothing about any price. On-chain verification arrives with the price guard (phase 2).
+- **Signed, not trusted.** The attestations use a key derived from a public label (`@pontis/dev-keys`). They exercise the oracle path; they prove nothing about any price. `submit_price` verifies them on chain (ADR 0016); each is signed for one core account (`PONTIS_CORE_ACCOUNT_ID`), so a price cannot be replayed on another deployment. Rows written before this format (`pontis-price-v1`) no longer verify: reset the simulated rows and backfill again.
 - **Candles.** One-minute and five-minute candles are built for the last two days only; most of those buckets are `filled` because the feed has one point per five minutes.
 - **Not a model of any real market.** Volatility, drift, NAV accrual and corporate-action jumps are demo numbers in `packages/market-data/src/feed/profiles.ts`.
