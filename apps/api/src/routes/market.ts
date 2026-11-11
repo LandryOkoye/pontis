@@ -9,6 +9,7 @@ import { priceChart, representationExists, resolveRange, volumeChart } from "../
 import { listDirectory } from "../market/directory.ts";
 import { marketCategories, marketMovers, marketOverview } from "../market/overview.ts";
 import { compareAssets } from "../market/compare.ts";
+import { search } from "../market/search.ts";
 import { assetActivity } from "../market/activity.ts";
 import { marketChains } from "../market/chains.ts";
 import { assetChains, assetDocuments, assetIssuerView, assetMetadata } from "../market/detail.ts";
@@ -78,6 +79,9 @@ export function registerMarketRoutes(app: FastifyInstance, deps: MarketRouteDeps
     const q = e.compareAssets.query.parse(req.query);
     return e.compareAssets.response.parse(await compareAssets(db, q.ids.split(","), q.data));
   });
+  app.get(route(e.search.path), async (req) =>
+    e.search.response.parse(await search(db, e.search.query.parse(req.query).q)),
+  );
   const charts = [
     [e.getAssetPriceChart, priceChart],
     [e.getAssetNavChart, navChart],
