@@ -79,18 +79,38 @@ CI runs this same command in the `e2e` job on every pull request and push to `ma
 
 ## Seed the demo catalogue (optional)
 
-On top of the MVP seed, the demo catalogue adds four simulated issuers in different trust states, six more fictional claims, eight tokens and two relationships. Everything is synthetic and the dossiers say so ([index](asset-dossiers/README.md)); the data is in [`scripts/lib/catalogue.ts`](../scripts/lib/catalogue.ts). It needs the MVP seed first (the quote signer) and about 22 more NEAR on the deployer on Testnet with the slim build (eight token contracts, each funded with 0.01 NEAR per KB of wasm plus 1 NEAR).
+On top of the MVP seed, the demo catalogue adds simulated issuers in different trust states, fictional claims, tokens and relationships. Everything is synthetic and the dossiers say so ([index](asset-dossiers/README.md)); the data is in [`scripts/lib/catalogue.ts`](../scripts/lib/catalogue.ts) (the four phase 1 issuers) and [`scripts/lib/catalogue-rich-*.ts`](../scripts/lib/) (the rich catalogue, [ADR 0019](decisions/0019-phase-3-scope-and-demo-issuers.md) section 3). It needs the MVP seed first (the quote signer).
+
+Every token is a deployed contract account, so the catalogue comes in three sizes, `--catalogue=mvp|demo|full`. Estimates for the slim build (`pnpm --filter @pontis/scripts catalogue-plan` prints them; the NEAR and transaction counts follow from the plan, the times use assumed latencies and were not measured, and no deploy was run for them):
+
+| Tier   | What it seeds                                                                                        | Token accounts | NEAR for the catalogue | Transactions | Time, testnet / sandbox (assumed) |
+| ------ | ---------------------------------------------------------------------------------------------------- | -------------- | ---------------------- | ------------ | --------------------------------- |
+| `mvp`  | Nothing beyond the MVP pair (`tgold-a`, `tgold-b`): what CI and the end-to-end suite use             | 0              | 0                      | 0            | none                              |
+| `demo` | The phase 1 catalogue plus 18 rich tokens: 14 issuers, 17 claims, 10 relationships (**the default**) | 26             | about 74               | 369          | about 16 min / 4 min              |
+| `full` | Everything: 19 issuers in 15 jurisdictions, 33 claims, 53 tokens, 22 relationships, every story      | 53             | about 152              | 712          | about 30 min / 8 min              |
+
+Each token account is funded with 0.00001 NEAR per wasm byte plus 1 NEAR (2.80 NEAR for the 179,598-byte slim token), and the seed tops up `pontis-core` for the registry state (about 1 NEAR for `demo`, 2 for `full`). Testnet NEAR is free but rate-limited by its faucets; use `mvp` on a sandbox or in CI and `demo` or `full` where you want the market to look populated. A sandbox needs no NEAR.
 
 ```bash
-pnpm --filter @pontis/scripts deploy-testnet --catalogue   # also creates <representation id>.<deployer> token accounts
-pnpm --filter @pontis/scripts seed-catalogue               # roles, issuers, claims, tokens, relationships, supply, allowlist, vaults
+pnpm --filter @pontis/scripts catalogue-plan                       # sizes and costs of every tier
+pnpm --filter @pontis/scripts deploy-testnet --catalogue=demo      # also creates <representation id>.<deployer> token accounts (bare --catalogue means demo)
+pnpm --filter @pontis/scripts seed-catalogue --catalogue=demo      # roles, issuers, claims, tokens, relationships, guards, supply, allowlist, vaults (default demo)
 DATABASE_URL=postgres://pontis:pontis@localhost:5432/pontis \
-  pnpm --filter @pontis/scripts seed-profiles              # off-chain asset_profiles; needs DEPLOYER_ACCOUNT_ID, no chain access
+  pnpm --filter @pontis/scripts seed-profiles --catalogue=demo     # off-chain asset_profiles; needs DEPLOYER_ACCOUNT_ID, no chain access
 ```
 
-Each step reads current state first, so repeating any of them is safe (`deploy-testnet` without `--catalogue` rewrites the deployment record with the MVP rows only, so keep passing the flag). `ALLOWLIST_ACCOUNTS` is allowlisted on every catalogue token as well. Run `seed-profiles` after the API has migrated the database; the profiles are keyed by representation ID and need no registry rows.
+**One command for a local demo.** `pnpm demo:seed` deploys and seeds the MVP pair and the chosen tier, mirrors the registry into Postgres, writes the asset profiles and backfills the simulated market. Start a sandbox (`PONTIS_SANDBOX_INFO=/tmp/sandbox.json cargo test -p pontis-integration-tests --test serve_sandbox -- --ignored --nocapture`, as the end-to-end suite does), then:
 
-What a fresh chain ends up with:
+```bash
+DATABASE_URL=postgres://pontis:pontis@localhost:5432/pontis \
+  pnpm demo:seed --catalogue=full --sandbox-info /tmp/sandbox.json   # --days 90 (default), --no-market to skip the database steps
+```
+
+Without `--sandbox-info` it targets the network in the environment, and a public testnet needs `--testnet` because the deploy spends NEAR. It prints the generated quote-signer key once; keep it. Keep passing the same `--catalogue` tier to every command (`deploy-testnet` without `--catalogue` rewrites the deployment record with the MVP rows only), and run the simulator after the registry sync, which `demo:seed` does for you.
+
+Each step reads current state first, so repeating any of them is safe. `ALLOWLIST_ACCOUNTS` is allowlisted on every catalogue token as well. Run `seed-profiles` after the API has migrated the database; the profiles are keyed by representation ID and need no registry rows.
+
+What a fresh chain ends up with from the phase 1 catalogue (the rich issuers are in the [dossier index](asset-dossiers/README.md#rich-demo-catalogue---catalogue-demo-and---catalogue-full)):
 
 | Issuer               | Status       | `verification_status` | Tokens                                                  |
 | -------------------- | ------------ | --------------------- | ------------------------------------------------------- |
@@ -106,7 +126,7 @@ Only `tustb-h` and `tustb-o` have an approved relationship (`DIRECT_EQUIVALENT`,
 The charts, directory figures and market overview need price data, and a testnet has none. [`apps/simulator`](../apps/simulator/README.md) writes labelled, fake prices, NAV, supply and trade flow for the registered assets (it reads the registry mirror, so run the API sync first, and it needs `PONTIS_CORE_ACCOUNT_ID` in its `.env`: it signs each price for that contract):
 
 ```bash
-pnpm --filter @pontis/simulator start backfill     # 90 days of history, about 90 seconds, safe to repeat
+pnpm --filter @pontis/simulator start backfill     # 90 days of history (timing per tier: the simulator README), safe to repeat
 pnpm --filter @pontis/simulator start run          # keep it moving
 ```
 

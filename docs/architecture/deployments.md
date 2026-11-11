@@ -12,7 +12,7 @@ Contracts live on sub-accounts of the deployer (`DEPLOYER_ACCOUNT_ID`), which is
 | `synthetic-token` (TGOLD-A) | `tgold-a.<deployer>.testnet`     | `TGOLD_A_ACCOUNT_ID`     |
 | `synthetic-token` (TGOLD-B) | `tgold-b.<deployer>.testnet`     | `TGOLD_B_ACCOUNT_ID`     |
 
-The demo catalogue ([local setup](../local-setup.md#seed-the-demo-catalogue-optional)) adds one `synthetic-token` per representation, named `<representation id>.<deployer>.testnet` (for example `tacme-h.<deployer>.testnet`), created by `deploy-testnet --catalogue`. There is no env var for them; the names derive from the deployer and the ids in `scripts/lib/catalogue.ts`.
+The demo catalogue ([local setup](../local-setup.md#seed-the-demo-catalogue-optional)) adds one `synthetic-token` per representation, named `<representation id>.<deployer>.testnet` (for example `tacme-h.<deployer>.testnet`), created by `deploy-testnet --catalogue=<mvp|demo|full>` (about 2.80 NEAR per token with the slim build; `pnpm --filter @pontis/scripts catalogue-plan` prices each tier). There is no env var for them; the names derive from the deployer and the ids in `scripts/lib/catalogue.ts` and `scripts/lib/catalogue-rich-*.ts`.
 
 ## Fresh deploy and seed
 

@@ -2,6 +2,7 @@
 // Deterministic per hour: the same hour always yields the same trades, so reruns insert nothing new.
 
 import { Prng, seedFrom } from "@pontis/market-data";
+import { FLOW_MAX_PER_HOUR } from "./supply-rich.ts";
 
 export interface SimRep {
   id: string;
@@ -25,6 +26,8 @@ export interface SimTrade {
 }
 
 const HOUR_MS = 3_600_000;
+/** Most conversions in an hour for a claim not listed in the rich table: the draw is `below(4)`. */
+const DEFAULT_MAX_PER_HOUR = 4;
 /** The parity fee the contract charges by default: 10 bps, rounded up for the protocol. */
 const FEE_BPS = 10n;
 
@@ -44,9 +47,10 @@ export function simulatedTrades(reps: readonly SimRep[], fromMs: number, toMs: n
   const out: SimTrade[] = [];
   for (const [claimId, group] of groups) {
     if (group.length < 2) continue;
+    const maxPerHour = FLOW_MAX_PER_HOUR[claimId] ?? DEFAULT_MAX_PER_HOUR;
     for (let hour = Math.floor(fromMs / HOUR_MS); hour * HOUR_MS < toMs; hour++) {
       const rng = new Prng(seedFrom(`flow:${claimId}:${hour}`));
-      const count = rng.below(4);
+      const count = rng.below(maxPerHour);
       for (let n = 0; n < count; n++) {
         const ts = hour * HOUR_MS + rng.below(HOUR_MS);
         const from = group[rng.below(group.length)] as SimRep;

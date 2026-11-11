@@ -1,7 +1,7 @@
 // Candle builder job (ADR 0015 section 4): reads price points and trades, writes candles.
 // Idempotent (an upsert per bucket) and backfillable (any range can be rebuilt).
 
-import { assetRepresentations, candles, pricePoints, trades, type Db } from "@pontis/db";
+import { assetRepresentations, pricePoints, trades, type Db } from "@pontis/db";
 import {
   CANDLE_INTERVALS,
   formatPrice,
@@ -11,6 +11,8 @@ import {
 } from "@pontis/domain";
 import { and, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { buildCandles, type CandleOut, type PriceIn, type TradeIn } from "./candles.ts";
+import { bulkInsert, type BulkColumn } from "./bulk.ts";
+import { mapLimit } from "./concurrency.ts";
 import { bucketStart } from "./intervals.ts";
 
 export interface RebuildOptions {
@@ -26,7 +28,10 @@ export interface RebuildResult {
   candles: number;
 }
 
-const BATCH = 1000;
+/** 12 columns a row, so this stays well under Postgres' 65,535 bind parameters per statement. */
+const BATCH = 4000;
+/** Representations rebuilt at once; each uses one connection at a time, the pool holds ten. */
+const CONCURRENCY = 4;
 
 /** Rebuilds every bucket overlapping `[from, to)` for each representation and data class. */
 export async function rebuildCandles(db: Db, options: RebuildOptions): Promise<RebuildResult> {
@@ -39,63 +44,99 @@ export async function rebuildCandles(db: Db, options: RebuildOptions): Promise<R
         ? inArray(assetRepresentations.id, [...options.representationIds])
         : undefined,
     );
-  const toMs = options.to.getTime();
   // Widest alignment, so one read covers every interval's window.
   const loadFrom = new Date(
     Math.min(...intervals.map((i) => bucketStart(options.from.getTime(), i))),
   );
-  let written = 0;
-  for (const rep of reps) {
+  const counts = await mapLimit(reps, CONCURRENCY, async (rep) => {
+    let written = 0;
     for (const simulated of [false, true]) {
-      const ofClass = (table: typeof pricePoints | typeof trades) =>
-        and(
-          eq(table === pricePoints ? pricePoints.representationId : trades.fromId, rep.id),
-          eq(table.simulated, simulated),
-        );
-      const inWindow = and(gte(pricePoints.ts, loadFrom), lt(pricePoints.ts, options.to));
-      const pointRows = await db
-        .select()
-        .from(pricePoints)
-        .where(and(ofClass(pricePoints), inWindow));
-      const [prior] = await db
-        .select()
-        .from(pricePoints)
-        .where(and(ofClass(pricePoints), lt(pricePoints.ts, loadFrom)))
-        .orderBy(desc(pricePoints.ts))
-        .limit(1);
-      const tradeRows = await db
-        .select()
-        .from(trades)
-        .where(and(ofClass(trades), gte(trades.ts, loadFrom), lt(trades.ts, options.to)));
-      if (pointRows.length === 0 && !prior) continue;
-      const points: PriceIn[] = pointRows.map((r) => ({
-        ts: r.ts.getTime(),
-        price: parsePrice(r.price),
-        source: r.source,
-      }));
-      const tradeIn: TradeIn[] = tradeRows.map((r) => ({
-        ts: r.ts.getTime(),
-        amountIn: BigInt(r.amountIn),
-        source: r.source,
-      }));
-      for (const interval of intervals) {
-        const from = bucketStart(options.from.getTime(), interval);
-        const before = points.filter((p) => p.ts < from).sort((a, b) => b.ts - a.ts)[0];
-        const built = buildCandles({
-          interval,
-          from,
-          to: toMs,
-          points: points.filter((p) => p.ts >= from),
-          trades: tradeIn.filter((t) => t.ts >= from),
-          previousClose: before ? before.price : prior ? parsePrice(prior.price) : null,
-          decimals: rep.decimals,
-        });
-        written += await upsert(db, rep.id, interval, simulated, built);
-      }
+      written += await rebuildClass(db, rep, simulated, options, intervals, loadFrom);
     }
-  }
-  return { candles: written };
+    return written;
+  });
+  return { candles: counts.reduce((sum, n) => sum + n, 0) };
 }
+
+/** One representation, one data class. Reads only the columns the builder needs. */
+async function rebuildClass(
+  db: Db,
+  rep: { id: string; decimals: number },
+  simulated: boolean,
+  options: RebuildOptions,
+  intervals: readonly CandleInterval[],
+  loadFrom: Date,
+): Promise<number> {
+  const priceOfClass = and(
+    eq(pricePoints.representationId, rep.id),
+    eq(pricePoints.simulated, simulated),
+  );
+  const pointRows = await db
+    .select({ ts: pricePoints.ts, price: pricePoints.price, source: pricePoints.source })
+    .from(pricePoints)
+    .where(and(priceOfClass, gte(pricePoints.ts, loadFrom), lt(pricePoints.ts, options.to)));
+  const [prior] = await db
+    .select({ price: pricePoints.price })
+    .from(pricePoints)
+    .where(and(priceOfClass, lt(pricePoints.ts, loadFrom)))
+    .orderBy(desc(pricePoints.ts))
+    .limit(1);
+  const tradeRows = await db
+    .select({ ts: trades.ts, amountIn: trades.amountIn, source: trades.source })
+    .from(trades)
+    .where(
+      and(
+        eq(trades.fromId, rep.id),
+        eq(trades.simulated, simulated),
+        gte(trades.ts, loadFrom),
+        lt(trades.ts, options.to),
+      ),
+    );
+  if (pointRows.length === 0 && !prior) return 0;
+  const points: PriceIn[] = pointRows.map((r) => ({
+    ts: r.ts.getTime(),
+    price: parsePrice(r.price),
+    source: r.source,
+  }));
+  const tradeIn: TradeIn[] = tradeRows.map((r) => ({
+    ts: r.ts.getTime(),
+    amountIn: BigInt(r.amountIn),
+    source: r.source,
+  }));
+  let written = 0;
+  for (const interval of intervals) {
+    const from = bucketStart(options.from.getTime(), interval);
+    const before = points.filter((p) => p.ts < from).sort((a, b) => b.ts - a.ts)[0];
+    const built = buildCandles({
+      interval,
+      from,
+      to: options.to.getTime(),
+      points: points.filter((p) => p.ts >= from),
+      trades: tradeIn.filter((t) => t.ts >= from),
+      previousClose: before ? before.price : prior ? parsePrice(prior.price) : null,
+      decimals: rep.decimals,
+    });
+    written += await upsert(db, rep.id, interval, simulated, built);
+  }
+  return written;
+}
+
+/** The candle table's columns, in the order `bulkInsert` writes them. */
+const CANDLE_COLUMNS: readonly BulkColumn[] = [
+  { name: "representation_id", type: "text" },
+  { name: "interval", type: "text" },
+  { name: "bucket_start", type: "timestamptz" },
+  { name: "simulated", type: "boolean" },
+  { name: "open", type: "numeric" },
+  { name: "high", type: "numeric" },
+  { name: "low", type: "numeric" },
+  { name: "close", type: "numeric" },
+  { name: "volume_base", type: "numeric" },
+  { name: "volume_quote", type: "numeric" },
+  { name: "trades", type: "integer" },
+  { name: "filled", type: "boolean" },
+  { name: "source_mix", type: "jsonb" },
+];
 
 async function upsert(
   db: Db,
@@ -106,50 +147,24 @@ async function upsert(
 ): Promise<number> {
   for (let i = 0; i < rows.length; i += BATCH) {
     const values = rows.slice(i, i + BATCH).map((c) => ({
-      representationId,
+      representation_id: representationId,
       interval,
+      bucket_start: new Date(c.bucketStart),
       simulated,
-      bucketStart: new Date(c.bucketStart),
       open: formatPrice(c.open),
       high: formatPrice(c.high),
       low: formatPrice(c.low),
       close: formatPrice(c.close),
-      volumeBase: c.volumeBase.toString(),
-      volumeQuote: formatPrice(c.volumeQuote),
+      volume_base: c.volumeBase.toString(),
+      volume_quote: formatPrice(c.volumeQuote),
       trades: c.trades,
       filled: c.filled,
-      sourceMix: c.sourceMix as DataSource[],
+      source_mix: c.sourceMix as DataSource[],
     }));
-    await db
-      .insert(candles)
-      .values(values)
-      .onConflictDoUpdate({
-        target: [
-          candles.representationId,
-          candles.interval,
-          candles.bucketStart,
-          candles.simulated,
-        ],
-        set: CONFLICT_UPDATE,
-      });
+    await bulkInsert(db, "candles", CANDLE_COLUMNS, values, CONFLICT_CLAUSE);
   }
   return rows.length;
 }
 
-/** The value the insert would have written, for `ON CONFLICT DO UPDATE`. */
-const sqlExcluded = (column: string) => sql.raw(`excluded."${column}"`);
-const CONFLICT_UPDATE = Object.fromEntries(
-  (
-    [
-      "open",
-      "high",
-      "low",
-      "close",
-      "volumeBase",
-      "volumeQuote",
-      "trades",
-      "filled",
-      "sourceMix",
-    ] as const
-  ).map((key) => [key, sqlExcluded(key.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`))]),
-);
+/** An upsert per bucket: a rebuilt candle replaces the stored one. */
+const CONFLICT_CLAUSE = sql`ON CONFLICT (representation_id, interval, bucket_start, simulated) DO UPDATE SET open = excluded.open, high = excluded.high, low = excluded.low, close = excluded.close, volume_base = excluded.volume_base, volume_quote = excluded.volume_quote, trades = excluded.trades, filled = excluded.filled, source_mix = excluded.source_mix`;

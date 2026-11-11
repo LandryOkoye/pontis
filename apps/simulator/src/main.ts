@@ -1,9 +1,14 @@
 // `start backfill` writes history; `start run` keeps the simulated market moving.
 // Everything it writes is flagged simulated. It needs a registry mirror (the API sync) to know what to simulate.
 
+import { availableParallelism } from "node:os";
 import { createDb, runMigrations } from "@pontis/db";
 import { loadConfig } from "./config.ts";
 import { backfill, tick } from "./simulate.ts";
+
+// Price attestations are signed on the libuv threadpool (default four threads). Size it to the
+// cores before the first signature starts it; an explicit UV_THREADPOOL_SIZE wins.
+process.env.UV_THREADPOOL_SIZE ??= String(Math.min(availableParallelism(), 16));
 
 const config = loadConfig();
 const command = process.argv[2];

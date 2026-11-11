@@ -9,6 +9,10 @@ import { type Rational, rational } from "@pontis/domain";
 
 export type Verification = "unverified" | "issuer_attested";
 export type RecordStatus = "active" | "restricted" | "deprecated" | "rejected";
+/** Only these classifications are proposed by the seed; INCOMPATIBLE and SUSPENDED are not. */
+export type SeededClassification = "DIRECT_EQUIVALENT" | "ECONOMICALLY_SIMILAR";
+/** Route-guard presets the seed can set on an approved pair (scripts/lib/catalogue-guards.ts). */
+export type GuardPreset = "fund" | "stable" | "equity" | "commodity" | "illiquid";
 
 export const CATEGORY = {
   equity: "Synthetic tokenized equity (test only)",
@@ -29,6 +33,10 @@ export interface CatalogueIssuer {
   finalStatus: RecordStatus;
   /** Dossier file (without `.md`) in docs/asset-dossiers; its hash is the issuer's evidence. */
   dossier: string;
+  /** A real place as a plain fact; the issuer itself is fictional. Absent (null on chain) in phase 1. */
+  jurisdiction?: string;
+  /** The on-chain contact text; the phase 1 project-team text when absent. */
+  contact?: string;
 }
 
 export interface CatalogueClaim {
@@ -45,6 +53,8 @@ export interface CatalogueClaim {
   eligibilityRestrictions: string;
   riskDisclosures: readonly string[];
   dossier: string;
+  /** A real place as a plain fact; the claim itself is fictional. Absent (null on chain) in phase 1. */
+  jurisdiction?: string;
 }
 
 export interface CatalogueRepresentation {
@@ -68,6 +78,10 @@ export interface CatalogueRepresentation {
   /** Off-chain profile hints (asset_profiles), not contract data. */
   convertible: boolean;
   bridgeable: boolean;
+  /** Status of the record after seeding when it is not simply `active` (a delisted wrapper). */
+  finalStatus?: "active" | "deprecated";
+  /** Why the record is in an unusual state, for the dossier and the profile. */
+  note?: string;
 }
 
 export interface CatalogueRelationship {
@@ -80,6 +94,12 @@ export interface CatalogueRelationship {
   approvalRationale: string;
   /** False when the contract cannot approve it (a representation that can never be active). */
   approve: boolean;
+  /** `DIRECT_EQUIVALENT` when absent. Only an approved DIRECT_EQUIVALENT pair converts. */
+  classification?: SeededClassification;
+  /** `reject`: proposed with evidence, then rejected by the compat approver. Needs `approve: false`. */
+  review?: "reject";
+  /** Guard set on the pair after it is approved (ADR 0016); none when absent. */
+  guard?: GuardPreset;
 }
 
 const NONE = "None";
