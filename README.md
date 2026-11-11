@@ -4,6 +4,10 @@ A NEAR-based interoperability and settlement protocol for tokenized real-world a
 
 > **Testnet and synthetic assets only.** Nothing in this repository claims real backing, custody or verification. The MVP uses fictional, unbacked test tokens.
 
+## Why Pontis
+
+Tokenized real-world assets are split across issuers, chains and transfer restrictions. The same company can exist as several tokens from different issuers with different legal claims, and a holder of one cannot exchange it for another at a published parity; they sell and buy back. Pontis targets that gap: converting between issuers' representations of the same claim, only where a reviewed relationship says they are equivalent, and only for eligible holders. It is a research project on testnet with synthetic assets, and it has no users or liquidity. [`docs/market-context.md`](docs/market-context.md) gives the sourced market picture, the competitor landscape and where Pontis is weak.
+
 ## MVP scope
 
 Two synthetic NEP-141 representations of one synthetic claim (`SYN-GOLD-OZ`) on NEAR Testnet:
@@ -30,7 +34,8 @@ Out of scope for the MVP: cross-chain bridges, market-priced exchange, dark pool
 | [`docs/runbooks/`](docs/runbooks/README.md)                      | Expired quote, failed payout, stuck submission, vault low, pause                          |
 | [`docs/known-limitations.md`](docs/known-limitations.md)         | What the MVP does not do                                                                  |
 | [`docs/definition-of-done.md`](docs/definition-of-done.md)       | Each Definition of Done item with its evidence                                            |
-| [`docs/decisions/`](docs/decisions/README.md)                    | ADRs 0001 to 0013                                                                         |
+| [`docs/decisions/`](docs/decisions/README.md)                    | ADRs 0001 to 0015                                                                         |
+| [`docs/market-context.md`](docs/market-context.md)               | Why Pontis: the problem, the landscape, what would have to be true, where we are weak     |
 | [`docs/threat-model/mvp.md`](docs/threat-model/mvp.md)           | Threats, mitigations and accepted limitations                                             |
 
 ## Layout
