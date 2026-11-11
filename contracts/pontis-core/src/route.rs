@@ -25,6 +25,12 @@ pub enum RouteRefusal {
     PriceStale,
     PriceMissing,
     PriceUnavailable,
+    CorporateActionFreeze,
+    CorporateActionPending,
+    EpochMismatch,
+    NotConvertible,
+    LifecycleBlocked,
+    NavWindowClosed,
 }
 
 /// What a quote and its execution must be bound to.
@@ -45,21 +51,27 @@ pub struct RouteView {
     pub executable: bool,
     pub refusal: Option<RouteRefusal>,
     pub terms: Option<RouteTerms>,
+    /// The earliest upcoming freeze start of an approved corporate action of either asset
+    /// (ADR 0017); a quote must not outlive it.
+    pub next_freeze_ms: Option<u64>,
 }
 
 #[near]
 impl Contract {
     pub fn get_route(&self, from_id: String, to_id: String) -> RouteView {
+        let next_freeze_ms = self.next_freeze_of_route(&from_id, &to_id);
         match self.check_route(&from_id, &to_id) {
             Ok(terms) => RouteView {
                 executable: true,
                 refusal: None,
                 terms: Some(terms),
+                next_freeze_ms,
             },
             Err(refusal) => RouteView {
                 executable: false,
                 refusal: Some(refusal),
                 terms: None,
+                next_freeze_ms,
             },
         }
     }
@@ -94,6 +106,8 @@ impl Contract {
                 return Err(RouteRefusal::AssetNotActive);
             }
         }
+        self.check_lifecycle(from_id, to_id)?;
+        self.check_actions(from_id, to_id)?;
         let key = crate::compatibility::pair_key(from_id, to_id);
         let rel = self
             .compatibilities

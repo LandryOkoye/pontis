@@ -5,16 +5,28 @@
 //! 1 yoctoNEAR (so restricted access keys cannot call it), checks the caller's role and the
 //! pause state, and emits an event.
 
+mod action_index;
+mod action_route;
+mod action_views;
+mod actions;
+mod actions_apply;
+mod actions_events;
+mod actions_types;
 mod breaker;
 mod breaker_reset;
 mod compatibility;
 mod config;
 mod conversion;
+mod epochs;
 mod events;
 mod guard;
 mod guard_exec;
 mod guard_math;
+mod lifecycle;
+mod lifecycle_route;
+mod lifecycle_types;
 mod math;
+mod nav;
 mod policy;
 mod price;
 mod quote;
@@ -22,14 +34,19 @@ mod registry;
 mod roles;
 mod route;
 mod route_guards;
+mod route_guards_actions;
 mod types;
 mod vault;
 mod wide;
 
+pub use actions_events::ActionEvent;
+pub use actions_types::*;
 pub use conversion::{ConversionPlan, ConversionRecord, Rejection};
 pub use events::{CoreEvent, PauseScope, RoleName};
 pub use guard::{RouteGuard, StalePolicy};
+pub use lifecycle_types::*;
 pub use math::{compute_amounts, Amounts, MAX_FEE_BPS};
+pub use nav::{NavAttestation, NavStrike, NAV_DOMAIN, NAV_VERSION};
 pub use price::{PriceAttestation, PriceRecord};
 pub use quote::{parse_nonce, ConversionMsg, QuoteInput, QUOTE_DOMAIN, QUOTE_VERSION};
 pub use route::{RouteRefusal, RouteTerms, RouteView};
@@ -62,6 +79,15 @@ enum StorageKey {
     Windows,
     InventoryRef,
     PairsByRep,
+    CorporateActions,
+    ActionsByAsset,
+    OpenActions,
+    Epochs,
+    RepsByAsset,
+    RelsByRep,
+    ApprovedMultipliers,
+    Lifecycles,
+    NavStrikes,
 }
 
 #[derive(PanicOnDefault)]
@@ -115,6 +141,22 @@ pub struct Contract {
     inventory_ref: LookupMap<String, u128>,
     /// Pair keys of the guarded relationships each representation takes part in.
     pairs_by_rep: LookupMap<String, Vec<String>>,
+    /// Corporate actions by ID (ADR 0017).
+    corporate_actions: LookupMap<String, actions_types::CorporateAction>,
+    /// Every action ID of an asset, oldest first; its length numbers the next one.
+    actions_by_asset: LookupMap<String, Vec<String>>,
+    /// The proposed and approved action IDs of an asset: all a route check has to read.
+    open_actions: LookupMap<String, Vec<String>>,
+    /// Multiplier schedule per representation; the first epoch is the registration multiplier.
+    epochs: LookupMap<String, Vec<actions_types::MultiplierEpoch>>,
+    reps_by_asset: LookupMap<String, Vec<String>>,
+    /// Pair keys of every relationship a representation takes part in.
+    rels_by_rep: LookupMap<String, Vec<String>>,
+    /// The multipliers `(a, b)` a relationship was last approved on, by pair key.
+    approved_multipliers: LookupMap<String, (Ratio, Ratio)>,
+    /// Lifecycle side record per representation; absent means fungible and active (ADR 0018).
+    lifecycles: LookupMap<String, lifecycle_types::Lifecycle>,
+    nav_strikes: LookupMap<String, nav::NavStrike>,
 }
 
 #[near]
@@ -152,6 +194,15 @@ impl Contract {
             windows: LookupMap::new(StorageKey::Windows),
             inventory_ref: LookupMap::new(StorageKey::InventoryRef),
             pairs_by_rep: LookupMap::new(StorageKey::PairsByRep),
+            corporate_actions: LookupMap::new(StorageKey::CorporateActions),
+            actions_by_asset: LookupMap::new(StorageKey::ActionsByAsset),
+            open_actions: LookupMap::new(StorageKey::OpenActions),
+            epochs: LookupMap::new(StorageKey::Epochs),
+            reps_by_asset: LookupMap::new(StorageKey::RepsByAsset),
+            rels_by_rep: LookupMap::new(StorageKey::RelsByRep),
+            approved_multipliers: LookupMap::new(StorageKey::ApprovedMultipliers),
+            lifecycles: LookupMap::new(StorageKey::Lifecycles),
+            nav_strikes: LookupMap::new(StorageKey::NavStrikes),
         }
     }
 }
@@ -160,6 +211,18 @@ pub(crate) fn now_ms() -> u64 {
     env::block_timestamp() / 1_000_000
 }
 
+#[cfg(test)]
+mod action_rebase_tests;
+#[cfg(test)]
+mod action_route_tests;
+#[cfg(test)]
+mod actions_apply_tests;
+#[cfg(test)]
+mod actions_review_tests;
+#[cfg(test)]
+mod actions_settle_tests;
+#[cfg(test)]
+mod actions_tests;
 #[cfg(test)]
 mod compat_lifecycle_tests;
 #[cfg(test)]
@@ -177,6 +240,8 @@ mod conversion_state_tests;
 #[cfg(test)]
 mod conversion_tests;
 #[cfg(test)]
+mod epochs_tests;
+#[cfg(test)]
 mod guard_breaker_tests;
 #[cfg(test)]
 mod guard_fee_tests;
@@ -189,7 +254,15 @@ mod guard_route_tests;
 #[cfg(test)]
 mod guard_vector_tests;
 #[cfg(test)]
+mod lifecycle_delist_tests;
+#[cfg(test)]
+mod lifecycle_tests;
+#[cfg(test)]
 mod math_tests;
+#[cfg(test)]
+mod nav_submit_tests;
+#[cfg(test)]
+mod nav_tests;
 #[cfg(test)]
 mod policy_tests;
 #[cfg(test)]

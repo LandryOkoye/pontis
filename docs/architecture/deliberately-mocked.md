@@ -31,5 +31,6 @@ Phase 0 deliverable (brief §18.3): an explicit list of what the testnet MVP fak
 | Backups                 | Local Postgres, no tested restore                                                                                                                       | Backup and restore drills                                                                      |
 | External audit          | None                                                                                                                                                    | Independent audit before real assets                                                           |
 | Legal                   | None; testnet and synthetic only                                                                                                                        | Jurisdiction- and asset-specific legal review                                                  |
+| Corporate actions, NAV  | Registrar-entered actions; NAV strikes signed by the simulator key, labelled `simulated`                                                                | Verified action feeds, fund-administrator-signed NAV, issuer-applied events                    |
 
 See also [ADR 0010](../decisions/0010-deferred-scope.md) for the deferred features and [the threat model](../threat-model/mvp.md) for accepted limitations.
