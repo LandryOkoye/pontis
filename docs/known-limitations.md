@@ -68,6 +68,20 @@ The contract side of [ADR 0017](decisions/0017-corporate-actions-and-multiplier-
 - **The overdue finding is a warning, raised on the next reconciler run after 10 minutes, once per action.** It does not say which operator should act.
 - **NAV strikes carry the feed's `simulated_feed` label.** The operator command signs the simulator's NAV (or `--nav`) with the dev publisher key; no real fund data exists.
 
+## Custody, reserves and redemption mirror (indexer, phase 4)
+
+The indexer side of [ADR 0020](decisions/0020-custody-reserves-and-redemption.md) ([report](progress/phase-4-indexer.md)). Everything here is simulated: the custodian, the reserves and the issuer back-office are test keys, and nothing is custodied, backed or audited.
+
+- **The mirror is a cache, and some of it is filled in later.** `custodian_registered` carries only the id and the key, so a custodian's name, jurisdiction and evidence are null until the indexer has read `get_custodian` (the end of each pass). Issuer reliability counters and the reserve status snapshot are read from the chain the same way, so for a few seconds after an event they can lag it.
+- **`reserve_status` has two sources.** The event columns (`state`, `attested_units`, `ratio_bps`) are what `reserve_status_changed` said; `chain_status` is a snapshot from `get_reserve_status` taken by the monitor, so it can be up to a minute old. Neither is authority: the contract computes the status on read, and the route gate never uses the mirror.
+- **Staleness has no event.** A representation whose attestations age out changes state only when someone calls `evaluate_reserve`. The reserve monitor does it every minute when it has a signer; without one it only reads, and the stored `reserve_status` row keeps its last event state.
+- **`execute_mint` emits no event**, so a mint request is `requested` in the mirror until it is `minted`, `failed` or `cancelled`; `minting` is never seen.
+- **Redemption timeline rows have no transaction hash.** The indexer reads receipt logs, which do not name the transaction that began them; `redemption_events.tx_hash` is null and the receipt id is the reference. Hash verification exists only for conversions.
+- **`redemption_refused` is stored only as a raw `settlement_events` row.** It names no redemption and has no mirror table.
+- **Reconciler escrow and breach findings need two runs**, so a real problem is reported about a minute late; a short outage of the indexer can raise one that clears on its own.
+- **`GET /v1/admin/reserve-monitor` does not exist yet.** The monitor stores its report; the endpoint is the session and role task's.
+- **The monitor key is a plain environment variable.** Only for a throwaway testnet account; the calls are permissionless and the account holds nothing.
+
 ## Demo catalogue: trust states are narrative
 
 The demo seed (`seed-catalogue`) registers four simulated issuers in four states. Read them as labels a registrar set, not as results of any process ([dossiers](asset-dossiers/README.md)).
