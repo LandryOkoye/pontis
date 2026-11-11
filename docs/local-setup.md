@@ -101,6 +101,19 @@ What a fresh chain ends up with:
 
 Only `tustb-h` and `tustb-o` have an approved relationship (`DIRECT_EQUIVALENT`, 1 whole token each = 1 unit) and a funded vault (500,000 whole tokens each); `tacme-h` / `tacme-m` is proposed and cannot be approved while `tacme-m` is not active. `tvilla-1` has one token in total and no faucet. The contract is the authority for every status; why each was chosen is in the [limitations](known-limitations.md#demo-catalogue-trust-states-are-narrative).
 
+## 5. Optional: a simulated market, or no chain at all
+
+The charts, directory figures and market overview need price data, and a testnet has none. [`apps/simulator`](../apps/simulator/README.md) writes labelled, fake prices, NAV, supply and trade flow for the registered assets (it reads the registry mirror, so run the API sync first):
+
+```bash
+pnpm --filter @pontis/simulator start backfill     # 90 days of history, about 90 seconds, safe to repeat
+pnpm --filter @pontis/simulator start run          # keep it moving
+```
+
+The indexer also runs the market jobs (candles, stats, search) every minute, so with the indexer running the figures stay current. Everything simulated says so in the API.
+
+To build a screen with no node, database or signer, run the API with `API_MODE=fixtures` ([frontend handoff](api/FRONTEND_HANDOFF.md)); it serves example data and marks every response `x-pontis-mode: fixtures`.
+
 ## RPC endpoints
 
 `https://rpc.testnet.near.org` is deprecated and answers `429`. The examples use FastNEAR's free testnet endpoint, `https://test.rpc.fastnear.com`. Check what an endpoint serves before pointing anything at it: `https://free.rpc.fastnear.com` is **mainnet**, and the scripts refuse to send a transaction when the node's chain does not match `NEAR_NETWORK_ID`.

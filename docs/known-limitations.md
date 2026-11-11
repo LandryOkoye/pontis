@@ -45,6 +45,14 @@ The demo seed (`seed-catalogue`) registers four simulated issuers in four states
 - **`syn-villa` has a supply of one only because nobody minted more.** The faucet is disabled and the owner minted one token, but the owner can mint again; the registry cannot detect a second record of the same fictional villa.
 - **Profiles are off-chain and simulated.** `asset_profiles` rows (`convertible`, `bridgeable`, a planned EVM entry) are hints written by `seed-profiles` with `simulated: true`; the contract is the authority on what can convert, and no bridge exists.
 
+## Market data (expansion)
+
+- **Almost all market data is simulated.** Prices, NAV, supply and most trade flow come from `apps/simulator`, flagged `simulated: true` ([ADR 0015](decisions/0015-market-data-platform.md)). Only conversions settled on the testnet are real, and they do not have a real price: a candle exists only where a price point does, so real conversion volume does not reach the charts today.
+- **Candle volume of a parity conversion is units moved**, not a market measure; one-minute and five-minute candles cover the last two days only and are mostly filled carry-forwards.
+- **Price attestations are not verified on chain.** The simulator signs each price with a key derived from a public label; nothing checks it until the price guard exists.
+- **The directory sorts and filters in memory** over the joined catalogue, and its cursor is an offset tied to the query. Fine for a few thousand assets; a row inserted between pages can shift one.
+- **Holders, TVL beyond the vault, pools, reserves, premium and parity-deviation charts, and realtime streams are not built yet.** Each arrives with the phase that creates its data ([handoff](api/FRONTEND_HANDOFF.md)).
+
 ## Contract behaviour worth knowing
 
 - A quote lives 60 seconds. A transaction that lands after expiry is refused and refunded.
