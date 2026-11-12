@@ -38,6 +38,9 @@ importers:
       '@fastify/rate-limit':
         specifier: ^11.2.2
         version: 11.2.2
+      '@morpho-org/morpho-sdk':
+        specifier: ^9.5.1
+        version: 9.5.1(viem@2.57.18(typescript@6.0.3)(zod@4.6.7))
       '@pontis/api-types':
         specifier: workspace:*
         version: link:../../packages/api-types
@@ -71,6 +74,9 @@ importers:
       pg:
         specifier: ^8.23.1
         version: 8.23.1
+      viem:
+        specifier: ^2.57.18
+        version: 2.57.18(typescript@6.0.3)(zod@4.6.7)
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -83,7 +89,7 @@ importers:
         version: 4.23.15
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   apps/indexer:
     dependencies:
@@ -120,7 +126,7 @@ importers:
         version: 4.23.15
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   apps/simulator:
     dependencies:
@@ -151,7 +157,7 @@ importers:
         version: 4.23.15
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   apps/web:
     dependencies:
@@ -227,7 +233,7 @@ importers:
         version: 6.3.0(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       jsdom:
         specifier: ^27.0.0
-        version: 27.4.0(@noble/hashes@2.2.0)
+        version: 27.4.0(@noble/hashes@2.4.0)
       tailwindcss:
         specifier: ^4.3.5
         version: 4.3.5
@@ -239,7 +245,7 @@ importers:
         version: 8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/api-types:
     dependencies:
@@ -264,7 +270,7 @@ importers:
         version: 4.23.15
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
@@ -298,7 +304,7 @@ importers:
         version: 4.23.15
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/dev-keys:
     dependencies:
@@ -311,7 +317,7 @@ importers:
         version: 22.20.5
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/domain:
     devDependencies:
@@ -320,7 +326,7 @@ importers:
         version: 22.20.5
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/intents-private:
     dependencies:
@@ -333,7 +339,7 @@ importers:
         version: 22.20.5
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/market-data:
     dependencies:
@@ -358,7 +364,7 @@ importers:
         version: 22.20.5
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/near-client:
     dependencies:
@@ -374,7 +380,7 @@ importers:
         version: 22.20.5
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/quote-engine:
     dependencies:
@@ -387,7 +393,7 @@ importers:
         version: 22.20.5
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   scripts:
     dependencies:
@@ -424,7 +430,7 @@ importers:
         version: 4.23.15
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   tests/e2e:
     dependencies:
@@ -461,6 +467,9 @@ packages:
 
   '@adobe/css-tools@4.5.0':
     resolution: {integrity: sha512-6OzddxPio9UiWTCemp4N8cYLV2ZN1ncRnV1cVGtve7dhPOtRkleRyx32GQCYSwDYgaHU3USMm84tNsvKzRCa1Q==}
+
+  '@adraffy/ens-normalize@1.11.1':
+    resolution: {integrity: sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==}
 
   '@apidevtools/json-schema-ref-parser@16.0.5':
     resolution: {integrity: sha512-z3LiEMqTP2FNu6u8bdUgBYErVuwMSZReOJy1MCEIB0BDHMoNgBtkciby32HOlcrfWwrOSzRU8YIsZ0CogYRuYQ==}
@@ -1177,6 +1186,33 @@ packages:
     peerDependencies:
       near-api-js: ^6.0.0
 
+  '@morpho-org/blue-sdk-viem@7.4.0':
+    resolution: {integrity: sha512-d76EyhEbEvxjEbMDu0fQNnAtwtyDW/gSTZZckhN1AhuwVSzqsVK9Mk4q5HxypB4DC2aVCYGefT5TGa/aqe50Zg==}
+    peerDependencies:
+      '@morpho-org/blue-sdk': ^8.1.0
+      '@morpho-org/morpho-ts': ^3.0.0 || ^4.0.0
+      viem: ^2.0.0
+
+  '@morpho-org/blue-sdk@8.2.1':
+    resolution: {integrity: sha512-dlDWCLaiaxwJfI48XNeyikLEtdjwNRR1SSTM4ZrdW9xC6m2MRqmeiKjOpyGMBiq1Z9UQZ/IVu1XNWW+jEQhoCg==}
+    peerDependencies:
+      '@morpho-org/morpho-ts': ^4.0.0
+      viem: ^2.0.0
+
+  '@morpho-org/midnight-sdk@2.4.0':
+    resolution: {integrity: sha512-wHuXFD70/DjLM61QsmEgjAXHRcf+rzvVH8nJuUvf6FOHoSmrO9JMjSCN35wcLx+ntaJ+Z6dIzCX1iAkZ3EB9QQ==}
+    peerDependencies:
+      '@morpho-org/morpho-ts': ^2.8.0 || ^3.0.0 || ^4.0.0
+      viem: ^2.0.0
+
+  '@morpho-org/morpho-sdk@9.5.1':
+    resolution: {integrity: sha512-/+KD4wYs0jfU2Fh5YS8aaml/rpNev4Wf4gT0HwgWYezPIQsFxAlINO/IpI5oW2EUuNJtCqpdS/Ur6QLLwY4EFA==}
+    peerDependencies:
+      viem: ^2.0.0
+
+  '@morpho-org/morpho-ts@4.2.0':
+    resolution: {integrity: sha512-MPYDko9lyPe0ewbrTfRprqH3qEY/vF3tLQGB7j82s+pJa1Pj/qTpKebhuftW1gacv/fwTkn7rz/uq0KQbyU6KA==}
+
   '@msw/url@0.1.2':
     resolution: {integrity: sha512-DdeBLQxQ+ZrtmwEmaj7GQ7lbzPCgbbbyAqOz/I4ulo68hwBpfdNvQJ5bmihJUkAAKOeCmqCIG3OFZGosqFN4mA==}
 
@@ -1309,12 +1345,20 @@ packages:
   '@near-wallet-selector/my-near-wallet@10.1.4':
     resolution: {integrity: sha512-4kwi9PkMSjKouRsq/JawDFNaXQD324knDumm9kvcuFTL3gG3OWK6qaiUDs9ecCILg1Jh6AEGfkoSwQ2tMJyNTQ==}
 
+  '@noble/ciphers@1.3.0':
+    resolution: {integrity: sha512-2I0gnIVPtfnMw9ee9h1dJG7tp81+8Ob3OJb3Mv37rx5L40/b0i7djjCVvGOVqc9AEIQyvyu1i6ypKdFw8R8gQw==}
+    engines: {node: ^14.21.3 || >=16}
+
   '@noble/ciphers@2.2.0':
     resolution: {integrity: sha512-Z6pjIZ/8IJcCGzb2S/0Px5J81yij85xASuk1teLNeg75bfT07MV3a/O2Mtn1I2se43k3lkVEcFaR10N4cgQcZA==}
     engines: {node: '>= 20.19.0'}
 
   '@noble/curves@1.8.1':
     resolution: {integrity: sha512-warwspo+UYUPep0Q+vtdVB4Ugn8GGQj8iyB3gnRWsztmUHTI3S1nhdiWNsPUGL0vud7JlRRk1XEu7Lq1KGTnMQ==}
+    engines: {node: ^14.21.3 || >=16}
+
+  '@noble/curves@1.9.1':
+    resolution: {integrity: sha512-k11yZxZg+t+gWvBbIswW0yoJlu8cHOC7dhunwOzoWH/mXGBiYyR4YY6hAEK/3EUs4UpB8la1RfdRpeGsFHkWsA==}
     engines: {node: ^14.21.3 || >=16}
 
   '@noble/curves@2.2.0':
@@ -1331,6 +1375,10 @@ packages:
 
   '@noble/hashes@2.2.0':
     resolution: {integrity: sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg==}
+    engines: {node: '>= 20.19.0'}
+
+  '@noble/hashes@2.4.0':
+    resolution: {integrity: sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==}
     engines: {node: '>= 20.19.0'}
 
   '@noble/post-quantum@0.6.1':
@@ -1450,6 +1498,12 @@ packages:
 
   '@scure/base@2.2.0':
     resolution: {integrity: sha512-b8XEupJibegiXV+tDUseI8oLQc8ei3d/4Jkb2RpbHh3MfE054ov3uIz2dhFkB3FI8iwYkEh0gGCApkrYggkPNg==}
+
+  '@scure/bip32@1.7.0':
+    resolution: {integrity: sha512-E4FFX/N3f4B80AKWp5dP6ow+flD1LQZo/w8UnLGYZO674jS6YnYeepycOOksv+vLPSpgN35wgKgy+ybfTb2SMw==}
+
+  '@scure/bip39@1.6.0':
+    resolution: {integrity: sha512-+lF0BbLiJNwVlev4eKelw1WWLaiKXw7sSl8T6FvBlWkdX+94aGJ4o8XjUdlyhTCjd8c+B3KT3JfS8P0bLRNU6A==}
 
   '@tailwindcss/node@4.3.5':
     resolution: {integrity: sha512-yT53FzV4ke0cr/BguDxhWMpm5MJu1O2muzk+tKw6lKHjODAsYArBbWwFbJiaksfzFv1tpkO9QHGzmfs1hJT66g==}
@@ -1720,6 +1774,17 @@ packages:
 
   '@vitest/spy@5.1.0':
     resolution: {integrity: sha512-2DPO5OMHWKrBngC+fCmTQqemNF0gidRhp3lxbBmRhW+M1XJrfgPpqNqWVevXtn2f2ufD5ZaR1B6B641aAlcX5A==}
+
+  abitype@1.2.3:
+    resolution: {integrity: sha512-Ofer5QUnuUdTFsBRwARMoWKOH1ND5ehwYhJ3OJ/BQO+StkwQjHw0XyVh4vDttzHB7QOFhPHa/o413PJ82gU/Tg==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+      zod: ^3.22.0 || ^4.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      zod:
+        optional: true
 
   abstract-logging@2.0.1:
     resolution: {integrity: sha512-2BjRTZxTPvheOvGbBslFSYOUkr+SjPtOnrLP33f+VIWLzezQpZcqVg7ja3L4dBXmzzgwT+a029jRx5PCi3JuiA==}
@@ -2194,6 +2259,9 @@ packages:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
 
+  eventemitter3@5.0.1:
+    resolution: {integrity: sha512-GWkBvjiSZK87ELrYOSESUYeVIc9mvLLf/nXalMOS5dYrgZq9o5OVkbZAVM06CVxYsCwH9BDZFPlQTlPA1j4ahA==}
+
   events@3.3.0:
     resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
     engines: {node: '>=0.8.x'}
@@ -2460,6 +2528,11 @@ packages:
 
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
+
+  isows@1.0.7:
+    resolution: {integrity: sha512-I1fSfDCZL5P0v33sVqeTDSpcstAg/N+wF5HS033mogOVIp4B+oHC7oOCsA3axAbBSGTJ8QubbNmnIRN/h8U7hg==}
+    peerDependencies:
+      ws: '*'
 
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
@@ -2739,6 +2812,14 @@ packages:
 
   outvariant@1.4.3:
     resolution: {integrity: sha512-+Sl2UErvtsoajRDKCE5/dBz4DIvHXQQnAxtQTF04OJxY0+DyZXSo5P5Bb7XYWOh81syohlYL24hbDwxedPUJCA==}
+
+  ox@0.14.65:
+    resolution: {integrity: sha512-K7oj+jvEP4Gf78ZOYuWAWzKEX/g5z7p6ukj84gdbFnezmFSt6SpprEp9tH5tymXsywSqRdeqk+8JL4+9o0Schw==}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   p-limit@2.3.0:
     resolution: {integrity: sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==}
@@ -3217,6 +3298,17 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
+  viem@2.57.18:
+    resolution: {integrity: sha512-D/nbOPgsHnbZLtsJOsbKzuhsncww1YogB3JNbCBKe9JR8DTSpVGstguRqty5HgoA0WR+UNRcgM98pwBHJlTqSg==}
+    peerDependencies:
+      mppx: '>=0.17.0'
+      typescript: '>=5.0.4'
+    peerDependenciesMeta:
+      mppx:
+        optional: true
+      typescript:
+        optional: true
+
   vite@8.3.6:
     resolution: {integrity: sha512-UI7dK29NnS54Fk+mmo7o+jI6U8Fp7hDl+X5Q1k45WH+d4dSlbLVUETGQ+hfkNgvLQGyoElPj837nZyv4MBc0VA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -3356,6 +3448,18 @@ packages:
     resolution: {integrity: sha512-42AtmgqjV+X1VpdOfyTGOYRi0/zsoLqtXQckTmqTeybT+BDIbM/Guxo7x3pE2vtpr1ok6xRqM9OpBe+Jyoqyww==}
     engines: {node: '>=18'}
 
+  ws@8.21.0:
+    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   ws@8.22.2:
     resolution: {integrity: sha512-/rEZ2ejown2N5gxVTHUu9bVVC7ttu0/Tgzf5hbTOixR3Fs7mbbXgn2DbdbcKgJOmpQMtrIUWivtYuVMnp/W/yA==}
     engines: {node: '>=10.0.0'}
@@ -3419,6 +3523,8 @@ snapshots:
   '@acemir/cssom@0.9.32': {}
 
   '@adobe/css-tools@4.5.0': {}
+
+  '@adraffy/ens-normalize@1.11.1': {}
 
   '@apidevtools/json-schema-ref-parser@16.0.5(@types/json-schema@7.0.15)':
     dependencies:
@@ -3777,9 +3883,9 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@exodus/bytes@1.16.0(@noble/hashes@2.2.0)':
+  '@exodus/bytes@1.16.0(@noble/hashes@2.4.0)':
     optionalDependencies:
-      '@noble/hashes': 2.2.0
+      '@noble/hashes': 2.4.0
 
   '@fastify/ajv-compiler@4.0.7':
     dependencies:
@@ -3915,6 +4021,35 @@ snapshots:
       - '@near-js/tokens'
       - '@near-js/utils'
       - encoding
+
+  '@morpho-org/blue-sdk-viem@7.4.0(@morpho-org/blue-sdk@8.2.1(@morpho-org/morpho-ts@4.2.0)(viem@2.57.18(typescript@6.0.3)(zod@4.6.7)))(@morpho-org/morpho-ts@4.2.0)(viem@2.57.18(typescript@6.0.3)(zod@4.6.7))':
+    dependencies:
+      '@morpho-org/blue-sdk': 8.2.1(@morpho-org/morpho-ts@4.2.0)(viem@2.57.18(typescript@6.0.3)(zod@4.6.7))
+      '@morpho-org/morpho-ts': 4.2.0
+      viem: 2.57.18(typescript@6.0.3)(zod@4.6.7)
+
+  '@morpho-org/blue-sdk@8.2.1(@morpho-org/morpho-ts@4.2.0)(viem@2.57.18(typescript@6.0.3)(zod@4.6.7))':
+    dependencies:
+      '@morpho-org/morpho-ts': 4.2.0
+      '@noble/hashes': 2.4.0
+      viem: 2.57.18(typescript@6.0.3)(zod@4.6.7)
+
+  '@morpho-org/midnight-sdk@2.4.0(@morpho-org/morpho-ts@4.2.0)(viem@2.57.18(typescript@6.0.3)(zod@4.6.7))':
+    dependencies:
+      '@morpho-org/morpho-ts': 4.2.0
+      viem: 2.57.18(typescript@6.0.3)(zod@4.6.7)
+
+  '@morpho-org/morpho-sdk@9.5.1(viem@2.57.18(typescript@6.0.3)(zod@4.6.7))':
+    dependencies:
+      '@morpho-org/blue-sdk': 8.2.1(@morpho-org/morpho-ts@4.2.0)(viem@2.57.18(typescript@6.0.3)(zod@4.6.7))
+      '@morpho-org/blue-sdk-viem': 7.4.0(@morpho-org/blue-sdk@8.2.1(@morpho-org/morpho-ts@4.2.0)(viem@2.57.18(typescript@6.0.3)(zod@4.6.7)))(@morpho-org/morpho-ts@4.2.0)(viem@2.57.18(typescript@6.0.3)(zod@4.6.7))
+      '@morpho-org/midnight-sdk': 2.4.0(@morpho-org/morpho-ts@4.2.0)(viem@2.57.18(typescript@6.0.3)(zod@4.6.7))
+      '@morpho-org/morpho-ts': 4.2.0
+      viem: 2.57.18(typescript@6.0.3)(zod@4.6.7)
+
+  '@morpho-org/morpho-ts@4.2.0':
+    dependencies:
+      '@noble/hashes': 2.4.0
 
   '@msw/url@0.1.2': {}
 
@@ -4133,11 +4268,17 @@ snapshots:
       - '@near-js/types'
       - encoding
 
+  '@noble/ciphers@1.3.0': {}
+
   '@noble/ciphers@2.2.0': {}
 
   '@noble/curves@1.8.1':
     dependencies:
       '@noble/hashes': 1.7.1
+
+  '@noble/curves@1.9.1':
+    dependencies:
+      '@noble/hashes': 1.8.0
 
   '@noble/curves@2.2.0':
     dependencies:
@@ -4148,6 +4289,8 @@ snapshots:
   '@noble/hashes@1.8.0': {}
 
   '@noble/hashes@2.2.0': {}
+
+  '@noble/hashes@2.4.0': {}
 
   '@noble/post-quantum@0.6.1':
     dependencies:
@@ -4211,6 +4354,17 @@ snapshots:
   '@scure/base@1.2.6': {}
 
   '@scure/base@2.2.0': {}
+
+  '@scure/bip32@1.7.0':
+    dependencies:
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/base': 1.2.6
+
+  '@scure/bip39@1.6.0':
+    dependencies:
+      '@noble/hashes': 1.8.0
+      '@scure/base': 1.2.6
 
   '@tailwindcss/node@4.3.5':
     dependencies:
@@ -4476,6 +4630,11 @@ snapshots:
       vite: 8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
   '@vitest/spy@5.1.0': {}
+
+  abitype@1.2.3(typescript@6.0.3)(zod@4.6.7):
+    optionalDependencies:
+      typescript: 6.0.3
+      zod: 4.6.7
 
   abstract-logging@2.0.1: {}
 
@@ -4935,6 +5094,8 @@ snapshots:
 
   esutils@2.0.3: {}
 
+  eventemitter3@5.0.1: {}
+
   events@3.3.0: {}
 
   expect-type@1.4.0: {}
@@ -5132,9 +5293,9 @@ snapshots:
 
   hookified@2.2.0: {}
 
-  html-encoding-sniffer@6.0.0(@noble/hashes@2.2.0):
+  html-encoding-sniffer@6.0.0(@noble/hashes@2.4.0):
     dependencies:
-      '@exodus/bytes': 1.16.0(@noble/hashes@2.2.0)
+      '@exodus/bytes': 1.16.0(@noble/hashes@2.4.0)
     transitivePeerDependencies:
       - '@noble/hashes'
 
@@ -5212,6 +5373,10 @@ snapshots:
 
   isexe@2.0.0: {}
 
+  isows@1.0.7(ws@8.21.0):
+    dependencies:
+      ws: 8.21.0
+
   jiti@2.7.0: {}
 
   js-sha256@0.9.0: {}
@@ -5222,15 +5387,15 @@ snapshots:
     dependencies:
       argparse: 3.0.4
 
-  jsdom@27.4.0(@noble/hashes@2.2.0):
+  jsdom@27.4.0(@noble/hashes@2.4.0):
     dependencies:
       '@acemir/cssom': 0.9.32
       '@asamuzakjp/dom-selector': 6.8.1
-      '@exodus/bytes': 1.16.0(@noble/hashes@2.2.0)
+      '@exodus/bytes': 1.16.0(@noble/hashes@2.4.0)
       cssstyle: 5.3.7
       data-urls: 6.0.1
       decimal.js: 10.6.0
-      html-encoding-sniffer: 6.0.0(@noble/hashes@2.2.0)
+      html-encoding-sniffer: 6.0.0(@noble/hashes@2.4.0)
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
       is-potential-custom-element-name: 1.0.1
@@ -5478,6 +5643,21 @@ snapshots:
       word-wrap: 1.2.5
 
   outvariant@1.4.3: {}
+
+  ox@0.14.65(typescript@6.0.3)(zod@4.6.7):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@6.0.3)(zod@4.6.7)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - zod
 
   p-limit@2.3.0:
     dependencies:
@@ -5931,6 +6111,23 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
+  viem@2.57.18(typescript@6.0.3)(zod@4.6.7):
+    dependencies:
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@6.0.3)(zod@4.6.7)
+      isows: 1.0.7(ws@8.21.0)
+      ox: 0.14.65(typescript@6.0.3)(zod@4.6.7)
+      ws: 8.21.0
+    optionalDependencies:
+      typescript: 6.0.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - zod
+
   vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
@@ -5946,7 +6143,7 @@ snapshots:
       tsx: 4.23.15
       yaml: 2.9.1
 
-  vitest@5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.2.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
+  vitest@5.1.0(@types/node@22.20.5)(jsdom@27.4.0(@noble/hashes@2.4.0))(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.1.0(msw@3.0.5(@types/node@22.20.5)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
@@ -5964,7 +6161,7 @@ snapshots:
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@types/node': 22.20.5
-      jsdom: 27.4.0(@noble/hashes@2.2.0)
+      jsdom: 27.4.0(@noble/hashes@2.4.0)
     transitivePeerDependencies:
       - msw
 
@@ -6021,6 +6218,8 @@ snapshots:
       ansi-styles: 6.2.3
       string-width: 7.2.0
       strip-ansi: 7.2.0
+
+  ws@8.21.0: {}
 
   ws@8.22.2: {}
 

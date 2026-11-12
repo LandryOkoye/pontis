@@ -3792,6 +3792,205 @@ components:
             $ref: "#/components/schemas/Transaction"
       required:
         - items
+    CollateralAsset:
+      type: object
+      properties:
+        id:
+          type: string
+        symbol:
+          type: string
+        underlyingReference:
+          type: string
+        chain:
+          $ref: "#/components/schemas/LendingChain"
+        tokenStandard:
+          type: string
+          enum:
+            - ERC-20
+            - NEP-141
+        token:
+          type: string
+        decimals:
+          type: integer
+          minimum: 0
+          maximum: 255
+        origin:
+          type: string
+          enum:
+            - pontis
+            - rhea
+        verified:
+          type: boolean
+        issuer:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            authorized:
+              type: boolean
+          required:
+            - id
+            - name
+            - authorized
+      required:
+        - id
+        - symbol
+        - underlyingReference
+        - chain
+        - tokenStandard
+        - token
+        - decimals
+        - origin
+        - verified
+        - issuer
+    LendingChain:
+      type: string
+      enum:
+        - ethereum-sepolia
+        - near-testnet
+    LendingProvider:
+      type: string
+      enum:
+        - morpho-blue
+        - rhea
+    CollateralEligibility:
+      type: object
+      properties:
+        eligible:
+          type: boolean
+        reasons:
+          type: array
+          items:
+            type: string
+            enum:
+              - UNKNOWN_ASSET
+              - UNVERIFIED_TOKEN
+              - UNAUTHORIZED_ISSUER
+              - POLICY_DISABLED
+              - UNSUPPORTED_CHAIN
+              - UNSUPPORTED_PROVIDER
+              - MISSING_PRICE
+              - STALE_PRICE
+              - LOW_CONFIDENCE_PRICE
+        asset:
+          allOf:
+            - $ref: "#/components/schemas/CollateralAsset"
+            - type:
+                - object
+                - "null"
+        priceObservedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - eligible
+        - reasons
+        - asset
+        - priceObservedAt
+    LendingMarket:
+      type: object
+      properties:
+        id:
+          type: string
+        provider:
+          $ref: "#/components/schemas/LendingProvider"
+        chain:
+          $ref: "#/components/schemas/LendingChain"
+        collateralAssetId:
+          type: string
+        collateralToken:
+          type: string
+        loanToken:
+          type: string
+        loanSymbol:
+          type: string
+        lltvWad:
+          $ref: "#/components/schemas/AmountString"
+        availableLiquidity:
+          $ref: "#/components/schemas/AmountString"
+        enabled:
+          type: boolean
+      required:
+        - id
+        - provider
+        - chain
+        - collateralAssetId
+        - collateralToken
+        - loanToken
+        - loanSymbol
+        - lltvWad
+        - availableLiquidity
+        - enabled
+    BorrowingCapacity:
+      type: object
+      properties:
+        collateralValue:
+          $ref: "#/components/schemas/AmountString"
+        maximumBorrowCapacity:
+          $ref: "#/components/schemas/AmountString"
+        availableBorrowAmount:
+          $ref: "#/components/schemas/AmountString"
+        outstandingDebt:
+          $ref: "#/components/schemas/AmountString"
+        currentLtvWad:
+          $ref: "#/components/schemas/AmountString"
+        liquidationThresholdWad:
+          $ref: "#/components/schemas/AmountString"
+        healthFactorWad:
+          $ref: "#/components/schemas/AmountString"
+        marketLiquidity:
+          $ref: "#/components/schemas/AmountString"
+      required:
+        - collateralValue
+        - maximumBorrowCapacity
+        - availableBorrowAmount
+        - outstandingDebt
+        - currentLtvWad
+        - liquidationThresholdWad
+        - healthFactorWad
+        - marketLiquidity
+    EvmAddress:
+      type: string
+      pattern: ^0x[0-9a-fA-F]{40}$
+    LendingPlan:
+      type: object
+      properties:
+        provider:
+          $ref: "#/components/schemas/LendingProvider"
+        marketId:
+          type: string
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LendingWalletTransaction"
+          minItems: 1
+      required:
+        - provider
+        - marketId
+        - transactions
+    LendingWalletTransaction:
+      type: object
+      properties:
+        chain:
+          $ref: "#/components/schemas/LendingChain"
+        to:
+          type: string
+        data:
+          type: string
+          pattern: ^0x[0-9a-fA-F]*$
+        value:
+          $ref: "#/components/schemas/AmountString"
+        description:
+          type: string
+      required:
+        - chain
+        - to
+        - data
+        - value
+        - description
     ReconciliationReport:
       type: object
       properties:
@@ -7050,6 +7249,459 @@ paths:
                 $ref: "#/components/schemas/TransactionList"
         "400":
           description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/lending/collateral-assets:
+    get:
+      operationId: listCollateralAssets
+      summary: List registered collateral assets
+      tags:
+        - Lending
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CollateralAsset"
+                required:
+                  - items
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/lending/wallet-assets:
+    get:
+      operationId: listEligibleWalletAssets
+      summary: List a wallet's eligible collateral
+      tags:
+        - Lending
+      parameters:
+        - schema:
+            type: string
+            minLength: 2
+            maxLength: 128
+          required: true
+          name: owner
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        asset:
+                          $ref: "#/components/schemas/CollateralAsset"
+                        balance:
+                          type: string
+                        provider:
+                          $ref: "#/components/schemas/LendingProvider"
+                      required:
+                        - asset
+                        - balance
+                        - provider
+                required:
+                  - items
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/lending/eligibility:
+    post:
+      operationId: checkCollateralEligibility
+      summary: Check collateral eligibility
+      tags:
+        - Lending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assetId:
+                  type: string
+                provider:
+                  $ref: "#/components/schemas/LendingProvider"
+                chain:
+                  $ref: "#/components/schemas/LendingChain"
+                loanToken:
+                  type: string
+              required:
+                - assetId
+                - provider
+                - chain
+                - loanToken
+              additionalProperties: false
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollateralEligibility"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/lending/markets:
+    get:
+      operationId: listLendingMarkets
+      summary: List available lending markets
+      tags:
+        - Lending
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/LendingMarket"
+                required:
+                  - items
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/lending/markets/{id}/capacity:
+    get:
+      operationId: getBorrowingCapacity
+      summary: Get current borrowing capacity
+      tags:
+        - Lending
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/EvmAddress"
+          required: true
+          name: owner
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BorrowingCapacity"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: "Request understood but refused. Codes: NOT_ELIGIBLE."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/lending/deposits:
+    post:
+      operationId: planCollateralDeposit
+      summary: Build unsigned collateral deposit calls
+      tags:
+        - Lending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                owner:
+                  $ref: "#/components/schemas/EvmAddress"
+                marketId:
+                  type: string
+                amount:
+                  $ref: "#/components/schemas/AmountString"
+              required:
+                - owner
+                - marketId
+                - amount
+              additionalProperties: false
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LendingPlan"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/lending/borrows:
+    post:
+      operationId: planBorrow
+      summary: Build unsigned borrow calls after risk checks
+      tags:
+        - Lending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                owner:
+                  $ref: "#/components/schemas/EvmAddress"
+                marketId:
+                  type: string
+                amount:
+                  $ref: "#/components/schemas/AmountString"
+              required:
+                - owner
+                - marketId
+                - amount
+              additionalProperties: false
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LendingPlan"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: "Request understood but refused. Codes: NOT_ELIGIBLE, INSUFFICIENT_INVENTORY."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/lending/repayments:
+    post:
+      operationId: planRepay
+      summary: Build unsigned repayment calls
+      tags:
+        - Lending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                owner:
+                  $ref: "#/components/schemas/EvmAddress"
+                marketId:
+                  type: string
+                amount:
+                  $ref: "#/components/schemas/AmountString"
+              required:
+                - owner
+                - marketId
+                - amount
+              additionalProperties: false
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LendingPlan"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/lending/withdrawals:
+    post:
+      operationId: planCollateralWithdrawal
+      summary: Build unsigned collateral withdrawal calls
+      tags:
+        - Lending
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                owner:
+                  $ref: "#/components/schemas/EvmAddress"
+                marketId:
+                  type: string
+                amount:
+                  $ref: "#/components/schemas/AmountString"
+              required:
+                - owner
+                - marketId
+                - amount
+              additionalProperties: false
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LendingPlan"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
           content:
             application/json:
               schema:
