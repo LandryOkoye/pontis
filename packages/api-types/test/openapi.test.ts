@@ -17,7 +17,7 @@ describe("openapi.yaml", () => {
     await expect(SwaggerParser.validate(specPath)).resolves.toBeTruthy();
   });
 
-  it("documents exactly the BuildPlan §8 endpoints plus the admin reconciliation, metrics and registered Phase 8 adapter endpoints", () => {
+  it("documents exactly the BuildPlan §8 endpoints plus the admin reconciliation, metrics, registered Phase 8 adapter and lending endpoints", () => {
     const doc = buildOpenApiDocument();
     const actual = Object.entries(doc.paths ?? {})
       .flatMap(([path, item]) =>
@@ -38,6 +38,10 @@ describe("openapi.yaml", () => {
         "GET /v1/intents/status",
         "GET /v1/private-rfq/matcher-key",
         "GET /v1/private-rfq/settlements/{settlementId}/disclosure",
+        "GET /v1/lending/collateral-assets",
+        "GET /v1/lending/wallet-assets",
+        "GET /v1/lending/markets",
+        "GET /v1/lending/markets/{id}/capacity",
         "GET /v1/assets/{id}/charts/price",
         "GET /v1/assets/{id}/charts/nav",
         "GET /v1/assets/{id}/charts/supply",
@@ -84,6 +88,11 @@ describe("openapi.yaml", () => {
         "POST /v1/intents/quote",
         "POST /v1/intents/swaps",
         "POST /v1/private-rfq/orders",
+        "POST /v1/lending/eligibility",
+        "POST /v1/lending/deposits",
+        "POST /v1/lending/borrows",
+        "POST /v1/lending/repayments",
+        "POST /v1/lending/withdrawals",
         "GET /v1/quotes/{id}",
         "POST /v1/conversions",
         "POST /v1/conversions/{id}/submitted",
