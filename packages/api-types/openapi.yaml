@@ -1423,6 +1423,129 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v1/private-rfq/matcher-key:
+    get:
+      operationId: getPrivateRfqMatcherKey
+      summary: Get the local RFQ matcher public key
+      tags:
+        - Private RFQ
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatcherKey"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/private-rfq/orders:
+    post:
+      operationId: submitPrivateRfqOrder
+      summary: Submit an encrypted RFQ order
+      description: The local matcher is operator-trusted and does not submit settlement to core.
+      tags:
+        - Private RFQ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order:
+                  $ref: "#/components/schemas/PrivateRfqEncryptedOrder"
+                disclosurePublicKey:
+                  type: string
+                  pattern: ^[A-Za-z0-9+/]+={0,2}$
+              required:
+                - order
+                - disclosurePublicKey
+              additionalProperties: false
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateRfqSubmission"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/private-rfq/settlements/{settlementId}/disclosure:
+    get:
+      operationId: getPrivateRfqDisclosure
+      summary: Get an encrypted matched-order disclosure
+      tags:
+        - Private RFQ
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: settlementId
+          in: path
+        - schema:
+            type: string
+            pattern: ^[A-Za-z0-9+/]+={0,2}$
+          required: true
+          name: publicKey
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateRfqDisclosure"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v1/issuers:
     get:
       operationId: listIssuers
