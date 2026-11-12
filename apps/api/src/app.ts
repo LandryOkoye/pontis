@@ -19,6 +19,8 @@ import { registerAdminRoutes } from "./routes/admin.ts";
 import { registerAuthRoutes } from "./routes/auth.ts";
 import { registerConversionRoutes } from "./routes/conversions.ts";
 import { registerHealthRoute, type HealthOptions } from "./routes/health.ts";
+import { registerLendingRoutes } from "./routes/lending.ts";
+import type { LendingService } from "./lending/service.ts";
 import { registerQuoteRoutes } from "./routes/quotes.ts";
 import { registerIssuerRoutes } from "./routes/issuer.ts";
 import { registerRedemptionRoutes } from "./routes/redemptions.ts";
@@ -64,6 +66,8 @@ export interface AppDeps {
   logger?: boolean;
   /** Where log lines go when `logger` is on; default is stdout. */
   logStream?: Writable;
+  /** Optional until an audited Sepolia deployment is configured. */
+  lending?: LendingService;
 }
 
 export function buildApp(deps: AppDeps): FastifyInstance {
@@ -115,6 +119,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       coreId: deps.quotes.coreId,
       ...(deps.quotes.now ? { now: deps.quotes.now } : {}),
     });
+    if (deps.lending) registerLendingRoutes(scope, deps.lending);
     const authContext = { db: deps.db, auth: deps.auth, adminApiKey: deps.adminApiKey };
     registerAuthRoutes(scope, authContext);
     const sessionRoutes = {

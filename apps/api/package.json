@@ -15,6 +15,7 @@
   "dependencies": {
     "@fastify/cors": "^11.4.1",
     "@fastify/rate-limit": "^11.2.2",
+    "@morpho-org/morpho-sdk": "^9.5.1",
     "@pontis/api-types": "workspace:*",
     "@pontis/db": "workspace:*",
     "@pontis/domain": "workspace:*",
@@ -26,6 +27,7 @@
     "fastify": "^5.12.8",
     "near-api-js": "^7.4.0",
     "pg": "^8.23.1",
+    "viem": "^2.57.18",
     "zod": "^4.6.7"
   },
   "devDependencies": {
