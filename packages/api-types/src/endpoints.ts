@@ -111,6 +111,18 @@ import {
   ProtocolMetricsSchema,
 } from "./metrics-types.ts";
 import { IssuerLeaderboardSchema, LeaderboardQuerySchema, StatusSchema } from "./status-types.ts";
+import {
+  BorrowingCapacitySchema,
+  CapacityQuerySchema,
+  CollateralAssetSchema,
+  EligibilityRequestSchema,
+  EligibilitySchema,
+  LendingMarketSchema,
+  LendingPlanSchema,
+  LendingProviderSchema,
+  ListWalletAssetsQuerySchema,
+  PlanLendingRequestSchema,
+} from "./lending-types.ts";
 
 export const IssuerListSchema = z
   .object({ items: z.array(IssuerSummarySchema) })
@@ -160,6 +172,7 @@ interface Endpoint {
     | "Issuer"
     | "Admin"
     | "Intents"
+    | "Lending"
     | "Private RFQ";
   readonly status: number;
   readonly response: z.ZodType;
@@ -873,6 +886,108 @@ export const ENDPOINTS = {
     response: TransactionListSchema,
     query: ListTransactionsQuerySchema,
     errors: { ...VALIDATION, ...COMMON },
+  },
+  listCollateralAssets: {
+    method: "get",
+    path: "/v1/lending/collateral-assets",
+    summary: "List registered collateral assets",
+    tag: "Lending",
+    status: 200,
+    response: z.object({ items: z.array(CollateralAssetSchema) }),
+    errors: { ...COMMON },
+  },
+  listEligibleWalletAssets: {
+    method: "get",
+    path: "/v1/lending/wallet-assets",
+    summary: "List a wallet's eligible collateral",
+    tag: "Lending",
+    status: 200,
+    query: ListWalletAssetsQuerySchema,
+    response: z.object({
+      items: z.array(
+        z.object({
+          asset: CollateralAssetSchema,
+          balance: z.string(),
+          provider: LendingProviderSchema,
+        }),
+      ),
+    }),
+    errors: { ...VALIDATION, ...COMMON },
+  },
+  checkCollateralEligibility: {
+    method: "post",
+    path: "/v1/lending/eligibility",
+    summary: "Check collateral eligibility",
+    tag: "Lending",
+    status: 200,
+    body: EligibilityRequestSchema,
+    response: EligibilitySchema,
+    errors: { ...VALIDATION, ...COMMON },
+  },
+  listLendingMarkets: {
+    method: "get",
+    path: "/v1/lending/markets",
+    summary: "List available lending markets",
+    tag: "Lending",
+    status: 200,
+    response: z.object({ items: z.array(LendingMarketSchema) }),
+    errors: { ...COMMON },
+  },
+  getBorrowingCapacity: {
+    method: "get",
+    path: "/v1/lending/markets/{id}/capacity",
+    summary: "Get current borrowing capacity",
+    tag: "Lending",
+    status: 200,
+    params: IdParam,
+    query: CapacityQuerySchema,
+    response: BorrowingCapacitySchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], 422: ["NOT_ELIGIBLE"], ...COMMON },
+  },
+  planCollateralDeposit: {
+    method: "post",
+    path: "/v1/lending/deposits",
+    summary: "Build unsigned collateral deposit calls",
+    tag: "Lending",
+    status: 200,
+    body: PlanLendingRequestSchema,
+    response: LendingPlanSchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+  },
+  planBorrow: {
+    method: "post",
+    path: "/v1/lending/borrows",
+    summary: "Build unsigned borrow calls after risk checks",
+    tag: "Lending",
+    status: 200,
+    body: PlanLendingRequestSchema,
+    response: LendingPlanSchema,
+    errors: {
+      ...VALIDATION,
+      404: ["NOT_FOUND"],
+      422: ["NOT_ELIGIBLE", "INSUFFICIENT_INVENTORY"],
+      ...COMMON,
+    },
+  },
+  planRepay: {
+    method: "post",
+    path: "/v1/lending/repayments",
+    summary: "Build unsigned repayment calls",
+    tag: "Lending",
+    status: 200,
+    body: PlanLendingRequestSchema,
+    response: LendingPlanSchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
+  },
+  planCollateralWithdrawal: {
+    method: "post",
+    path: "/v1/lending/withdrawals",
+    summary: "Build unsigned collateral withdrawal calls",
+    tag: "Lending",
+    status: 200,
+    body: PlanLendingRequestSchema,
+    response: LendingPlanSchema,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
   },
   getReconciliation: {
     method: "get",
