@@ -19,6 +19,44 @@ import type {
 import { config } from "./config.ts";
 import type { ChartRange, MarketChart, MarketDetail, MarketRow } from "./market-types.ts";
 
+export interface IntentAsset {
+  assetId: string;
+  symbol: string;
+  decimals: number;
+  blockchain: string;
+  simulated: boolean;
+}
+
+export interface IntentQuote {
+  quoteId: string;
+  amountIn: string;
+  amountOut: string;
+  minAmountOut: string;
+  deadline: string;
+  source: "near_intents_1click" | "simulated_intents";
+  simulated: boolean;
+}
+
+export interface IntentTokensResponse {
+  assets: IntentAsset[];
+  source: "near_intents_1click" | "simulated_intents";
+  simulated: boolean;
+}
+
+type IntentQuoteRequest = {
+  swapType: "EXACT_INPUT";
+  slippageTolerance: number;
+  originAsset: string;
+  destinationAsset: string;
+  amount: string;
+  depositType: string;
+  recipient: string;
+  recipientType: string;
+  refundTo: string;
+  refundType: string;
+  deadline: string;
+};
+
 /** A non-2xx answer from the API, carrying its stable `code`. */
 export class ApiFailure extends Error {
   readonly code: ApiError["code"] | "NETWORK";
@@ -76,6 +114,9 @@ interface List<T> {
 
 export const api = {
   health: (signal?: AbortSignal) => request<Health>("/v1/health", signal ? { signal } : {}),
+  intentTokens: () => request<IntentTokensResponse>("/v1/intents/tokens"),
+  intentQuote: (body: IntentQuoteRequest) =>
+    request<IntentQuote>("/v1/intents/quote", { method: "POST", body }),
   issuers: () => request<List<IssuerSummary>>("/v1/issuers").then((r) => r.items),
   issuer: (id: string) => request<Issuer>(`/v1/issuers/${encodeURIComponent(id)}`),
   assets: () => request<List<AssetSummary>>("/v1/assets").then((r) => r.items),

@@ -9,7 +9,7 @@ import {
   rationalFromWire,
   REFUSAL_CODES,
 } from "@pontis/domain";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDownUp,
   ArrowRight,
@@ -115,6 +115,79 @@ function Row({
       <dt className="text-[13px] text-muted">{label}</dt>
       <dd className={cn("text-right text-sm", strong && "text-base text-text")}>{children}</dd>
     </div>
+  );
+}
+
+const EVM_QUOTE_RECIPIENT = "0xcd578f02bb4d8b12ebb0874bbfa08783d087f609";
+
+function LiveIntentsQuote() {
+  const tokens = useQuery({ queryKey: ["intents", "tokens"], queryFn: api.intentTokens });
+  const origin = tokens.data?.simulated ? undefined : tokens.data?.assets.find(
+    (asset) => asset.symbol.toUpperCase() === "USDC" && asset.blockchain.toLowerCase() === "near",
+  );
+  const destination = tokens.data?.simulated ? undefined : tokens.data?.assets.find(
+    (asset) =>
+      asset.symbol.toUpperCase() === "USDC" &&
+      (asset.blockchain.toLowerCase() === "arb" ||
+        asset.blockchain.toLowerCase().includes("arbitrum")),
+  );
+  const quote = useQuery({
+    queryKey: ["intents", "quote", origin?.assetId, destination?.assetId],
+    enabled: !!origin && !!destination,
+    queryFn: () =>
+      api.intentQuote({
+        swapType: "EXACT_INPUT",
+        slippageTolerance: 100,
+        originAsset: origin!.assetId,
+        destinationAsset: destination!.assetId,
+        amount: (10n ** BigInt(origin!.decimals)).toString(),
+        depositType: "ORIGIN_CHAIN",
+        recipient: EVM_QUOTE_RECIPIENT,
+        recipientType: "DESTINATION_CHAIN",
+        refundTo: "wrap.near",
+        refundType: "ORIGIN_CHAIN",
+        deadline: new Date(Date.now() + 5 * 60_000).toISOString(),
+      }),
+    retry: false,
+  });
+
+  return (
+    <Panel aria-label="Live NEAR Intents quote" className="p-5 sm:p-6">
+      <p className="eyebrow mb-1.5 text-ion">Live NEAR Intents quote (mainnet, dry run)</p>
+      <p className="text-[13px] text-muted">
+        No deposit is submitted. Pontis&apos;s synthetic tokens are not routable through Intents.
+      </p>
+      {tokens.isLoading || (origin && destination && quote.isLoading) ? (
+        <Skeleton className="mt-4 h-20" />
+      ) : quote.data && origin && destination ? (
+        <dl className="mt-4 divide-y divide-line text-sm">
+          <Row label="Route">
+            <span className="text-[13px]">
+              {origin.symbol} on {origin.blockchain} → {destination.symbol} on {destination.blockchain}
+            </span>
+          </Row>
+          <Row label="Amount in">
+            <span className="num">{formatUnits(quote.data.amountIn, origin.decimals)} {origin.symbol}</span>
+          </Row>
+          <Row label="Estimated out">
+            <span className="num">{formatUnits(quote.data.amountOut, destination.decimals)} {destination.symbol}</span>
+          </Row>
+          <Row label="Minimum out">
+            <span className="num">{formatUnits(quote.data.minAmountOut, destination.decimals)} {destination.symbol}</span>
+          </Row>
+          <Row label="Source"><span className="num text-[13px]">{quote.data.source}</span></Row>
+          <Row label="Simulated"><span className="num">{String(quote.data.simulated)}</span></Row>
+        </dl>
+      ) : (
+        <p role="status" className="mt-4 text-[13px] text-muted">
+          {tokens.isError || quote.isError
+            ? "The live quote is unavailable from this API configuration."
+            : tokens.data?.simulated
+              ? "Connect this panel to the live API to request a mainnet quote."
+            : "The live token list has no USDC route from NEAR to Arbitrum at this time."}
+        </p>
+      )}
+    </Panel>
   );
 }
 
@@ -666,6 +739,7 @@ export function Convert() {
               </Link>
             </Notice>
           )}
+          <LiveIntentsQuote />
         </div>
       </div>
     </>

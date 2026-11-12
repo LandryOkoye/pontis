@@ -36,6 +36,25 @@ interface QuoteBody {
 
 export const handlers = [
   http.get(url("/v1/health"), () => answer(() => db.health())),
+  http.get(url("/v1/intents/tokens"), () =>
+    answer(() => ({
+      assets: [],
+      source: "simulated_intents",
+      simulated: true,
+    })),
+  ),
+  http.post(url("/v1/intents/quote"), () =>
+    answer(() => ({
+      quoteId: "sim-intents-panel",
+      amountIn: "1000000",
+      amountOut: "990000",
+      minAmountOut: "980000",
+      deadline: "2030-01-01T00:00:00.000Z",
+      source: "simulated_intents",
+      simulated: true,
+      confidentiality: "public",
+    })),
+  ),
   http.get(url("/v1/issuers"), () => answer(() => ({ items: db.issuers() }))),
   http.get(url("/v1/issuers/:id"), ({ params }) => answer(() => db.issuer(String(params.id)))),
   http.get(url("/v1/assets"), () => answer(() => ({ items: db.assets() }))),
