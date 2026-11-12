@@ -72,6 +72,156 @@ components:
         - UNAUTHORIZED
         - RATE_LIMITED
         - INTERNAL
+    IntentTokensResponse:
+      type: object
+      properties:
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/IntentAsset"
+        source:
+          type: string
+          enum:
+            - near_intents_1click
+            - simulated_intents
+        simulated:
+          type: boolean
+      required:
+        - assets
+        - source
+        - simulated
+    IntentAsset:
+      type: object
+      properties:
+        assetId:
+          type: string
+        symbol:
+          type: string
+        decimals:
+          type: integer
+          minimum: 0
+        blockchain:
+          type: string
+        simulated:
+          type: boolean
+      required:
+        - assetId
+        - symbol
+        - decimals
+        - blockchain
+        - simulated
+    IntentQuote:
+      type: object
+      properties:
+        quoteId:
+          type: string
+        amountIn:
+          type: string
+        amountOut:
+          type: string
+        minAmountOut:
+          type: string
+        depositAddress:
+          type: string
+        deadline:
+          type: string
+        source:
+          type: string
+          enum:
+            - near_intents_1click
+            - simulated_intents
+        simulated:
+          type: boolean
+        confidentiality:
+          type: string
+          enum:
+            - public
+            - basic
+            - advanced
+      required:
+        - quoteId
+        - amountIn
+        - amountOut
+        - minAmountOut
+        - deadline
+        - source
+        - simulated
+        - confidentiality
+    IntentQuoteRequest:
+      type: object
+      properties:
+        swapType:
+          type: string
+          enum:
+            - EXACT_INPUT
+            - EXACT_OUTPUT
+        slippageTolerance:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        originAsset:
+          type: string
+          minLength: 1
+        destinationAsset:
+          type: string
+          minLength: 1
+        amount:
+          type: string
+          pattern: ^\d+$
+        depositType:
+          type: string
+          minLength: 1
+        recipient:
+          type: string
+          minLength: 1
+        recipientType:
+          type: string
+          minLength: 1
+        refundTo:
+          type: string
+          minLength: 1
+        refundType:
+          type: string
+          minLength: 1
+        deadline:
+          type: string
+          format: date-time
+        confidentiality:
+          type: string
+          enum:
+            - basic
+            - advanced
+      required:
+        - swapType
+        - slippageTolerance
+        - originAsset
+        - destinationAsset
+        - amount
+        - depositType
+        - recipient
+        - recipientType
+        - refundTo
+        - refundType
+        - deadline
+      additionalProperties: false
+    IntentStatus:
+      type: object
+      properties:
+        status:
+          type: string
+        updatedAt:
+          type: string
+        source:
+          type: string
+          enum:
+            - near_intents_1click
+            - simulated_intents
+        simulated:
+          type: boolean
+      required:
+        - status
+        - source
+        - simulated
     IssuerList:
       type: object
       properties:
