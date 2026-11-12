@@ -1,0 +1,117 @@
+{
+  "description": "One reserve attestation signed by the dev reserve attester seed 201..232 (bytes 0xc9..0xe8). Rust (pontis-core reserve.rs) and an independent Python Borsh rebuild agree on message_hex; ed25519 signatures are deterministic. The negative cases must each be refused: the signature is checked over the message the contract rebuilds from the JSON fields.",
+  "seed_hex": "c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8",
+  "public_key": "ed25519:CJkp6DzFiiwzpCNvpzchjoSnayb1xe5XAJTFLEperHwD",
+  "attestation": {
+    "version": 1,
+    "contract": "core.testnet",
+    "representation_id": "tgold-a",
+    "custodian_id": "vault-co-sim",
+    "reserved_units": "1000000000000",
+    "as_of_ms": 1790000000000,
+    "report_hash": "4918d4f8506c5b2d553ed72efd0082fb2d39c1df26fb5bd4a2cc23daca361093",
+    "report_uri": "sim://reserves/tgold-a/2026-11",
+    "simulated": true,
+    "source": "simulated_custodian"
+  },
+  "message_hex": "706f6e7469732d726573657276652d7631010c000000636f72652e746573746e65740700000074676f6c642d610c0000007661756c742d636f2d73696d0010a5d4e80000000000000000000000006c50c4a00100004918d4f8506c5b2d553ed72efd0082fb2d39c1df26fb5bd4a2cc23daca3610931e00000073696d3a2f2f72657365727665732f74676f6c642d612f323032362d3131011300000073696d756c617465645f637573746f6469616e",
+  "signature_base64": "kqU0qK2mDBphjTAkrMSc9YexRSSeWS8r05eXJABhZaD/SfAFPT2tPwoEbdTvx9fn+k5pA0eN+ajBNVoc7Y20AA==",
+  "tampered": [
+    {
+      "name": "another contract",
+      "attestation": {
+        "version": 1,
+        "contract": "other.testnet",
+        "representation_id": "tgold-a",
+        "custodian_id": "vault-co-sim",
+        "reserved_units": "1000000000000",
+        "as_of_ms": 1790000000000,
+        "report_hash": "4918d4f8506c5b2d553ed72efd0082fb2d39c1df26fb5bd4a2cc23daca361093",
+        "report_uri": "sim://reserves/tgold-a/2026-11",
+        "simulated": true,
+        "source": "simulated_custodian"
+      },
+      "reason": "the payload binds the contract account, so the signature does not verify and the contract field is refused"
+    },
+    {
+      "name": "another custodian",
+      "attestation": {
+        "version": 1,
+        "contract": "core.testnet",
+        "representation_id": "tgold-a",
+        "custodian_id": "vault-co-two",
+        "reserved_units": "1000000000000",
+        "as_of_ms": 1790000000000,
+        "report_hash": "4918d4f8506c5b2d553ed72efd0082fb2d39c1df26fb5bd4a2cc23daca361093",
+        "report_uri": "sim://reserves/tgold-a/2026-11",
+        "simulated": true,
+        "source": "simulated_custodian"
+      },
+      "reason": "the signature covers custodian_id"
+    },
+    {
+      "name": "more reserves",
+      "attestation": {
+        "version": 1,
+        "contract": "core.testnet",
+        "representation_id": "tgold-a",
+        "custodian_id": "vault-co-sim",
+        "reserved_units": "1000000000001",
+        "as_of_ms": 1790000000000,
+        "report_hash": "4918d4f8506c5b2d553ed72efd0082fb2d39c1df26fb5bd4a2cc23daca361093",
+        "report_uri": "sim://reserves/tgold-a/2026-11",
+        "simulated": true,
+        "source": "simulated_custodian"
+      },
+      "reason": "the signature covers reserved_units"
+    },
+    {
+      "name": "later as_of",
+      "attestation": {
+        "version": 1,
+        "contract": "core.testnet",
+        "representation_id": "tgold-a",
+        "custodian_id": "vault-co-sim",
+        "reserved_units": "1000000000000",
+        "as_of_ms": 1790000000001,
+        "report_hash": "4918d4f8506c5b2d553ed72efd0082fb2d39c1df26fb5bd4a2cc23daca361093",
+        "report_uri": "sim://reserves/tgold-a/2026-11",
+        "simulated": true,
+        "source": "simulated_custodian"
+      },
+      "reason": "the signature covers as_of_ms"
+    },
+    {
+      "name": "another report",
+      "attestation": {
+        "version": 1,
+        "contract": "core.testnet",
+        "representation_id": "tgold-a",
+        "custodian_id": "vault-co-sim",
+        "reserved_units": "1000000000000",
+        "as_of_ms": 1790000000000,
+        "report_hash": "d9298a10d1b0735837dc4bd85dac641b0f3cef27a47e5d53a54f2f3f5b2fcffa",
+        "report_uri": "sim://reserves/tgold-a/2026-11",
+        "simulated": true,
+        "source": "simulated_custodian"
+      },
+      "reason": "the signature covers report_hash"
+    },
+    {
+      "name": "not simulated",
+      "attestation": {
+        "version": 1,
+        "contract": "core.testnet",
+        "representation_id": "tgold-a",
+        "custodian_id": "vault-co-sim",
+        "reserved_units": "1000000000000",
+        "as_of_ms": 1790000000000,
+        "report_hash": "4918d4f8506c5b2d553ed72efd0082fb2d39c1df26fb5bd4a2cc23daca361093",
+        "report_uri": "sim://reserves/tgold-a/2026-11",
+        "simulated": false,
+        "source": "simulated_custodian"
+      },
+      "reason": "the signature covers simulated"
+    }
+  ]
+}

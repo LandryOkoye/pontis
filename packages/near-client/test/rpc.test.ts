@@ -96,3 +96,66 @@ describe("RpcClient", () => {
     });
   });
 });
+
+describe("RpcClient.viewAccessKey", () => {
+  const key = "ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y";
+  const client = (handler: (body: Record<string, unknown>) => unknown) =>
+    new RpcClient({ url: "http://rpc", fetch: fakeFetch(handler) });
+
+  it("asks view_access_key for the account and key and reports a full-access key", async () => {
+    let seen: Record<string, unknown> = {};
+    const rpc = client((body) => {
+      seen = body.params as Record<string, unknown>;
+      return { result: { nonce: 1, permission: "FullAccess" } };
+    });
+    expect(await rpc.viewAccessKey("alice.testnet", key)).toEqual({ type: "full_access" });
+    expect(seen).toMatchObject({
+      request_type: "view_access_key",
+      finality: "final",
+      account_id: "alice.testnet",
+      public_key: key,
+    });
+  });
+
+  it("reports a function-call key as such", async () => {
+    const rpc = client(() => ({
+      result: {
+        nonce: 1,
+        permission: {
+          FunctionCall: { allowance: "1", receiver_id: "x.testnet", method_names: [] },
+        },
+      },
+    }));
+    expect(await rpc.viewAccessKey("alice.testnet", key)).toEqual({ type: "function_call" });
+  });
+
+  it("returns null for a missing key or account, in either way nodes say so", async () => {
+    const byCause = client(() => ({
+      error: {
+        message: "Server error",
+        data: "access key does not exist",
+        cause: { name: "UNKNOWN_ACCESS_KEY" },
+      },
+    }));
+    expect(await byCause.viewAccessKey("alice.testnet", key)).toBeNull();
+    const byResult = client(() => ({
+      result: { error: `access key ${key} does not exist while viewing`, logs: [] },
+    }));
+    expect(await byResult.viewAccessKey("alice.testnet", key)).toBeNull();
+    const noAccount = client(() => ({
+      error: { message: "Server error", cause: { name: "UNKNOWN_ACCOUNT" } },
+    }));
+    expect(await noAccount.viewAccessKey("ghost.testnet", key)).toBeNull();
+  });
+
+  it("raises for any other failure, so an outage is never read as 'no such key'", async () => {
+    const down = client(() => ({
+      error: { message: "Timeout", cause: { name: "TIMEOUT_ERROR" } },
+    }));
+    await expect(down.viewAccessKey("alice.testnet", key)).rejects.toBeInstanceOf(RpcError);
+    const odd = client(() => ({ result: { nonce: 1, permission: "Mystery" } }));
+    await expect(odd.viewAccessKey("alice.testnet", key)).rejects.toThrow(/unrecognised/);
+    const failed = client(() => ({ result: { error: "internal failure" } }));
+    await expect(failed.viewAccessKey("alice.testnet", key)).rejects.toThrow(/internal failure/);
+  });
+});

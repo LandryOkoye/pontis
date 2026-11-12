@@ -21,6 +21,18 @@ pub enum RouteRefusal {
     RelationshipNotApproved,
     RelationshipSuspended,
     NotDirectEquivalent,
+    PriceDeviation,
+    PriceStale,
+    PriceMissing,
+    PriceUnavailable,
+    CorporateActionFreeze,
+    CorporateActionPending,
+    EpochMismatch,
+    NotConvertible,
+    LifecycleBlocked,
+    NavWindowClosed,
+    ReserveRestricted,
+    ReserveStale,
 }
 
 /// What a quote and its execution must be bound to.
@@ -31,6 +43,8 @@ pub struct RouteTerms {
     pub ratio: Ratio,
     pub compatibility_version: u64,
     pub policy_version: u64,
+    /// Added to the fee when a stale or missing price is tolerated (`fail_open_with_wider_fee`).
+    pub extra_fee_bps: u16,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -39,21 +53,27 @@ pub struct RouteView {
     pub executable: bool,
     pub refusal: Option<RouteRefusal>,
     pub terms: Option<RouteTerms>,
+    /// The earliest upcoming freeze start of an approved corporate action of either asset
+    /// (ADR 0017); a quote must not outlive it.
+    pub next_freeze_ms: Option<u64>,
 }
 
 #[near]
 impl Contract {
     pub fn get_route(&self, from_id: String, to_id: String) -> RouteView {
+        let next_freeze_ms = self.next_freeze_of_route(&from_id, &to_id);
         match self.check_route(&from_id, &to_id) {
             Ok(terms) => RouteView {
                 executable: true,
                 refusal: None,
                 terms: Some(terms),
+                next_freeze_ms,
             },
             Err(refusal) => RouteView {
                 executable: false,
                 refusal: Some(refusal),
                 terms: None,
+                next_freeze_ms,
             },
         }
     }
@@ -88,6 +108,9 @@ impl Contract {
                 return Err(RouteRefusal::AssetNotActive);
             }
         }
+        self.check_lifecycle(from_id, to_id)?;
+        self.check_actions(from_id, to_id)?;
+        self.check_reserves(from_id, to_id)?;
         let key = crate::compatibility::pair_key(from_id, to_id);
         let rel = self
             .compatibilities
@@ -109,10 +132,15 @@ impl Contract {
                 den: rel.ratio.num,
             }
         };
+        let extra_fee_bps = match self.check_price_guard(from_id, to_id, ratio)? {
+            crate::guard::PriceOutcome::Ok => 0,
+            crate::guard::PriceOutcome::Degraded { extra_fee_bps } => extra_fee_bps,
+        };
         Ok(RouteTerms {
             ratio,
             compatibility_version: rel.version,
             policy_version: self.policy_version,
+            extra_fee_bps,
         })
     }
 }

@@ -1,4 +1,4 @@
-# ADR 0021: EVM permissioned token foundation
+# ADR 0022: EVM permissioned token foundation
 
 - **Status:** Proposed
 - **Date:** 2026-11-11

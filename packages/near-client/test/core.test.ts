@@ -67,6 +67,14 @@ describe("CoreClient", () => {
     await expect(bad.getInventory("tgold-a")).rejects.toThrow();
   });
 
+  it("reads the input held for in-flight conversions and rejects a non-string amount", async () => {
+    const { rpc, calls } = fakeRpc(() => "250");
+    expect(await new CoreClient(rpc, "core.testnet").getPendingInbound("tgold-a")).toBe("250");
+    expect(calls[0]).toMatchObject({ method: "get_pending_inbound" });
+    const bad = new CoreClient(fakeRpc(() => 250).rpc, "core.testnet");
+    await expect(bad.getPendingInbound("tgold-a")).rejects.toThrow();
+  });
+
   it("reads the chain height", async () => {
     expect(await new CoreClient(fakeRpc(() => null).rpc, "core.testnet").blockHeight()).toBe(42);
   });
@@ -77,11 +85,16 @@ describe("CoreClient quote-time views", () => {
 
   it("returns route terms for an executable pair and a snake_case refusal otherwise", async () => {
     const ok = new CoreClient(
-      fakeRpc(() => ({ executable: true, refusal: null, terms })).rpc,
+      fakeRpc(() => ({ executable: true, refusal: null, terms, next_freeze_ms: null })).rpc,
       "core.testnet",
     );
     expect((await ok.getRoute("tgold-a", "tgold-b")).terms?.compatibility_version).toBe(2);
-    const refused = { executable: false, refusal: "relationship_suspended", terms: null };
+    const refused = {
+      executable: false,
+      refusal: "relationship_suspended",
+      terms: null,
+      next_freeze_ms: null,
+    };
     const no = new CoreClient(fakeRpc(() => refused).rpc, "core.testnet");
     expect((await no.getRoute("tgold-a", "tgold-b")).refusal).toBe("relationship_suspended");
     const unknown = new CoreClient(
@@ -89,6 +102,66 @@ describe("CoreClient quote-time views", () => {
       "core.testnet",
     );
     await expect(unknown.getRoute("a", "b")).rejects.toThrow();
+  });
+
+  it.each([
+    "corporate_action_freeze",
+    "corporate_action_pending",
+    "epoch_mismatch",
+    "not_convertible",
+    "lifecycle_blocked",
+    "nav_window_closed",
+    "reserve_restricted",
+    "reserve_stale",
+  ])("accepts the %s refusal and the next freeze time", async (refusal) => {
+    const view = { executable: false, refusal, terms: null, next_freeze_ms: 1_794_100_000_000 };
+    const core = new CoreClient(fakeRpc(() => view).rpc, "core.testnet");
+    expect(await core.getRoute("a", "b")).toEqual(view);
+  });
+
+  it("refuses a route view without next_freeze_ms: the contract always sends it", async () => {
+    const view = { executable: false, refusal: "epoch_mismatch", terms: null };
+    const core = new CoreClient(fakeRpc(() => view).rpc, "core.testnet");
+    await expect(core.getRoute("a", "b")).rejects.toThrow();
+  });
+
+  it("reads the guard breakdown with the amount, and refuses a shape the contract never sends", async () => {
+    const view = {
+      executable: true,
+      checks: [{ name: "route", passed: true, detail: "executable" }],
+      fee_bps: 14,
+      skew_bps: 4,
+      degraded: false,
+    };
+    const { rpc, calls } = fakeRpc(() => view);
+    const core = new CoreClient(rpc, "core.testnet");
+    expect(await core.getRouteGuards("tgold-a", "tgold-b", "5000000")).toEqual(view);
+    expect(calls[0]).toEqual({
+      contractId: "core.testnet",
+      method: "get_route_guards",
+      args: { from_id: "tgold-a", to_id: "tgold-b", amount_in: "5000000" },
+    });
+    await core.getRouteGuards("tgold-a", "tgold-b");
+    expect(calls[1]?.args.amount_in).toBeNull();
+    const bad = new CoreClient(fakeRpc(() => ({ ...view, fee_bps: -1 })).rpc, "core.testnet");
+    await expect(bad.getRouteGuards("a", "b")).rejects.toThrow();
+  });
+
+  it("reads the stored price with its honesty label, null before any, and refuses a malformed one", async () => {
+    const stored = {
+      price: "10000000000",
+      currency: "USD",
+      as_of_ms: 1_790_000_000_000,
+      submitted_ms: 1_790_000_001_000,
+      simulated: true,
+      source: "simulated_feed",
+      publisher_key: "ed25519:FgcwodK7aTtn3DgvqwPuSseKgTPcMpGmK6zdf7Ri9KXm",
+    };
+    const price = (value: unknown) => new CoreClient(fakeRpc(() => value).rpc, "core.testnet");
+    expect(await price(stored).getPrice("tgold-a")).toEqual(stored);
+    expect(await price(null).getPrice("tgold-a")).toBeNull();
+    await expect(price({ ...stored, price: "1.5" }).getPrice("tgold-a")).rejects.toThrow();
+    await expect(price({ ...stored, simulated: undefined }).getPrice("tgold-a")).rejects.toThrow();
   });
 
   it("passes the account to is_allowed and validates fee and signer", async () => {
@@ -112,5 +185,21 @@ describe("TokenClient", () => {
     const token = new TokenClient(rpc, "tgold-a.testnet");
     expect(await token.ftBalanceOf("alice.testnet")).toBe("5");
     expect(await token.storageBalanceOf("alice.testnet")).toBeNull();
+  });
+});
+
+describe("CoreClient.getAccountRoles", () => {
+  it("asks get_account_roles with the account and returns the snake_case names as sent", async () => {
+    const { rpc, calls } = fakeRpc(() => ["owner", "pauser"]);
+    expect(await new CoreClient(rpc, "core.testnet").getAccountRoles("alice.testnet")).toEqual([
+      "owner",
+      "pauser",
+    ]);
+    expect(calls[0]).toMatchObject({ method: "get_account_roles" });
+  });
+
+  it("rejects a response that is not a list of strings", async () => {
+    const bad = new CoreClient(fakeRpc(() => ({ roles: [] })).rpc, "core.testnet");
+    await expect(bad.getAccountRoles("alice.testnet")).rejects.toThrow();
   });
 });

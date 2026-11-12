@@ -1,0 +1,44 @@
+{
+  "description": "Multiplier epoch rules for ADR 0017, computed with unbounded Python integers and Fractions. Products are formed on the unreduced parts and must fit in u128 (2^128 - 1); an overflow refuses an apply (exact_factor false) and counts as a mismatch. pontis-core (Rust) must reproduce every expected value.",
+  "constants": {"u128_limit":"340282366920938463463374607431768211456"},
+  "lookup": [
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"}],"at_ms":0},"expected":{"num":"1","den":"1000000"}},
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"}],"at_ms":1000000000000},"expected":{"num":"1","den":"1000000"}},
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"},{"effective_ms":1000,"multiplier":{"num":"1","den":"2000000"},"action_id":"gold-1"}],"at_ms":0},"expected":{"num":"1","den":"1000000"}},
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"},{"effective_ms":1000,"multiplier":{"num":"1","den":"2000000"},"action_id":"gold-1"}],"at_ms":999},"expected":{"num":"1","den":"1000000"}},
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"},{"effective_ms":1000,"multiplier":{"num":"1","den":"2000000"},"action_id":"gold-1"}],"at_ms":1000},"expected":{"num":"1","den":"2000000"}},
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"},{"effective_ms":1000,"multiplier":{"num":"1","den":"2000000"},"action_id":"gold-1"}],"at_ms":1001},"expected":{"num":"1","den":"2000000"}},
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"},{"effective_ms":1000,"multiplier":{"num":"1","den":"2000000"},"action_id":"gold-1"},{"effective_ms":5000,"multiplier":{"num":"1","den":"4000000"},"action_id":"gold-2"}],"at_ms":4999},"expected":{"num":"1","den":"2000000"}},
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"},{"effective_ms":1000,"multiplier":{"num":"1","den":"2000000"},"action_id":"gold-1"},{"effective_ms":5000,"multiplier":{"num":"1","den":"4000000"},"action_id":"gold-2"}],"at_ms":5000},"expected":{"num":"1","den":"4000000"}},
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"},{"effective_ms":1000,"multiplier":{"num":"1","den":"2000000"},"action_id":"gold-1"},{"effective_ms":5000,"multiplier":{"num":"1","den":"4000000"},"action_id":"gold-2"}],"at_ms":1000000000000000},"expected":{"num":"1","den":"4000000"}},
+    {"input":{"epochs":[{"effective_ms":0,"multiplier":{"num":"1","den":"1000000"},"action_id":"genesis"},{"effective_ms":7,"multiplier":{"num":"1000000","den":"1"},"action_id":"gold-1"}],"at_ms":7},"expected":{"num":"1000000","den":"1"}}
+  ],
+  "exact_factor": [
+    {"input":{"previous":{"num":"1","den":"1000000"},"change":{"num":"1","den":"2"},"proposed":{"num":"1","den":"2000000"}},"expected":true},
+    {"input":{"previous":{"num":"1","den":"1000000"},"change":{"num":"1","den":"2"},"proposed":{"num":"1","den":"2000001"}},"expected":false},
+    {"input":{"previous":{"num":"1","den":"1000000"},"change":{"num":"1","den":"2"},"proposed":{"num":"1","den":"1000000"}},"expected":false},
+    {"input":{"previous":{"num":"1","den":"1000000"},"change":{"num":"2","den":"1"},"proposed":{"num":"1","den":"500000"}},"expected":true},
+    {"input":{"previous":{"num":"1","den":"1000000"},"change":{"num":"2","den":"1"},"proposed":{"num":"1","den":"500000"}},"expected":true},
+    {"input":{"previous":{"num":"1","den":"1000000"},"change":{"num":"3","den":"2"},"proposed":{"num":"3","den":"2000000"}},"expected":true},
+    {"input":{"previous":{"num":"1","den":"1000000"},"change":{"num":"3","den":"2"},"proposed":{"num":"1","den":"666667"}},"expected":false},
+    {"input":{"previous":{"num":"3","den":"7"},"change":{"num":"7","den":"3"},"proposed":{"num":"1","den":"1"}},"expected":true},
+    {"input":{"previous":{"num":"3","den":"7"},"change":{"num":"7","den":"3"},"proposed":{"num":"9","den":"49"}},"expected":false},
+    {"input":{"previous":{"num":"1","den":"1"},"change":{"num":"1","den":"1"},"proposed":{"num":"1","den":"1"}},"expected":true},
+    {"input":{"previous":{"num":"1","den":"1000000"},"change":{"num":"1","den":"2"},"proposed":{"num":"2","den":"4000000"}},"expected":true},
+    {"input":{"previous":{"num":"1","den":"1180591620717411303424"},"change":{"num":"1","den":"1180591620717411303424"},"proposed":{"num":"1","den":"1267650600228229401496703205376"}},"expected":false},
+    {"input":{"previous":{"num":"1267650600228229401496703205376","den":"1"},"change":{"num":"1267650600228229401496703205376","den":"1"},"proposed":{"num":"1267650600228229401496703205376","den":"1"}},"expected":false},
+    {"input":{"previous":{"num":"1152921504606846976","den":"1"},"change":{"num":"1152921504606846976","den":"1"},"proposed":{"num":"1329227995784915872903807060280344576","den":"1"}},"expected":true}
+  ],
+  "mismatch": [
+    {"input":{"a_now":{"num":"1","den":"1000000"},"b_now":{"num":"1","den":"1000000000"},"a_approved":{"num":"1","den":"1000000"},"b_approved":{"num":"1","den":"1000000000"}},"expected_mismatch":false},
+    {"input":{"a_now":{"num":"1","den":"2000000"},"b_now":{"num":"1","den":"2000000000"},"a_approved":{"num":"1","den":"1000000"},"b_approved":{"num":"1","den":"1000000000"}},"expected_mismatch":false},
+    {"input":{"a_now":{"num":"1","den":"2000000"},"b_now":{"num":"1","den":"1000000000"},"a_approved":{"num":"1","den":"1000000"},"b_approved":{"num":"1","den":"1000000000"}},"expected_mismatch":true},
+    {"input":{"a_now":{"num":"1","den":"1000000"},"b_now":{"num":"1","den":"2000000000"},"a_approved":{"num":"1","den":"1000000"},"b_approved":{"num":"1","den":"1000000000"}},"expected_mismatch":true},
+    {"input":{"a_now":{"num":"1","den":"500000"},"b_now":{"num":"1","den":"500000000"},"a_approved":{"num":"1","den":"1000000"},"b_approved":{"num":"1","den":"1000000000"}},"expected_mismatch":false},
+    {"input":{"a_now":{"num":"3","den":"2000000"},"b_now":{"num":"3","den":"2000000000"},"a_approved":{"num":"1","den":"1000000"},"b_approved":{"num":"1","den":"1000000000"}},"expected_mismatch":false},
+    {"input":{"a_now":{"num":"1","den":"3"},"b_now":{"num":"1","den":"3"},"a_approved":{"num":"5","den":"7"},"b_approved":{"num":"5","den":"7"}},"expected_mismatch":false},
+    {"input":{"a_now":{"num":"1","den":"3"},"b_now":{"num":"1","den":"6"},"a_approved":{"num":"5","den":"7"},"b_approved":{"num":"5","den":"14"}},"expected_mismatch":false},
+    {"input":{"a_now":{"num":"1","den":"1180591620717411303424"},"b_now":{"num":"1","den":"1180591620717411303424"},"a_approved":{"num":"1","den":"1000000"},"b_approved":{"num":"1","den":"1000000000"}},"expected_mismatch":true},
+    {"input":{"a_now":{"num":"1","den":"1000000"},"b_now":{"num":"1","den":"1000000000"},"a_approved":{"num":"1267650600228229401496703205376","den":"1"},"b_approved":{"num":"1","den":"1267650600228229401496703205376"}},"expected_mismatch":true}
+  ]
+}

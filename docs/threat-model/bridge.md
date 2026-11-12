@@ -3,7 +3,7 @@
 - **Status:** Draft; covers only the local synthetic EVM token and shared state model
 - **Date:** 2026-11-11
 - **Scope:** local Anvil and synthetic test assets. No live bridge or real funds.
-- **Related:** [ADR 0021](../decisions/0021-evm-bridge-foundation.md), [MVP threat model](mvp.md)
+- **Related:** [ADR 0022](../decisions/0022-evm-bridge-foundation.md), [MVP threat model](mvp.md)
 
 This document records the threats the foundation addresses and the unresolved bridge threats. It
 does not certify a bridge design or authorize testnet asset movement.

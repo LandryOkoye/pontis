@@ -20,6 +20,7 @@
     "rust:test": "bash scripts/rust-ci.sh test",
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
+    "demo:seed": "pnpm --filter @pontis/scripts demo-seed",
     "check:commit-size": "bash scripts/check-commit-size.sh",
     "test:integration": "bash scripts/integration-tests.sh"
   },

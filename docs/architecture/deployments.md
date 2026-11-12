@@ -1,6 +1,6 @@
 # Deployments
 
-**Status: not deployed yet.** The deploy script overwrites this file with the real account IDs and wasm hashes after the first testnet deployment. Testnet and synthetic assets only.
+**Status: deployed to NEAR Testnet** on 2026-11-09 under `pontis.testnet`; the accounts and wasm hashes are in the [deployment record](deployment-record.md), which the deploy script rewrites. This page is the guide. Testnet and synthetic assets only.
 
 ## Account naming
 
@@ -11,6 +11,8 @@ Contracts live on sub-accounts of the deployer (`DEPLOYER_ACCOUNT_ID`), which is
 | `pontis-core`               | `pontis-core.<deployer>.testnet` | `PONTIS_CORE_ACCOUNT_ID` |
 | `synthetic-token` (TGOLD-A) | `tgold-a.<deployer>.testnet`     | `TGOLD_A_ACCOUNT_ID`     |
 | `synthetic-token` (TGOLD-B) | `tgold-b.<deployer>.testnet`     | `TGOLD_B_ACCOUNT_ID`     |
+
+The demo catalogue ([local setup](../local-setup.md#seed-the-demo-catalogue-optional)) adds one `synthetic-token` per representation, named `<representation id>.<deployer>.testnet` (for example `tacme-h.<deployer>.testnet`), created by `deploy-testnet --catalogue=<mvp|demo|full>` (about 2.80 NEAR per token with the slim build; `pnpm --filter @pontis/scripts catalogue-plan` prices each tier). There is no env var for them; the names derive from the deployer and the ids in `scripts/lib/catalogue.ts` and `scripts/lib/catalogue-rich-*.ts`.
 
 ## Fresh deploy and seed
 
@@ -27,7 +29,7 @@ scripts/deploy-testnet.sh                # build, create sub-accounts, deploy, i
 ```bash
 scripts/build-contracts.sh slim              # wasm into target/near/<crate>/<crate>.wasm; cargo build + wasm-opt, halves the size
 scripts/build-contracts.sh                   # the same with cargo-near instead
-pnpm --filter @pontis/scripts deploy-testnet # create accounts, deploy, init; writes this file
+pnpm --filter @pontis/scripts deploy-testnet # create accounts, deploy, init; writes deployment-record.md
 pnpm --filter @pontis/scripts seed           # roles, registry, relationship, signer, allowlist, vault
 ```
 

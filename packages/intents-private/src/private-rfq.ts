@@ -11,9 +11,19 @@ import {
   type MatchDisclosure,
   type PrivateOrder,
 } from "./private-crypto.ts";
-import type { MatchRecord, PrivateRfqSubmission, RestingOrder, RfqOptions, SettlementInstruction } from "./private-rfq-types.ts";
+import type {
+  MatchRecord,
+  PrivateRfqSubmission,
+  RestingOrder,
+  RfqOptions,
+  SettlementInstruction,
+} from "./private-rfq-types.ts";
 export type { EncryptedOrder, PrivateOrder, RfqKeys, Side } from "./private-crypto.ts";
-export type { PrivateRfqSubmission, RfqOptions, SettlementInstruction } from "./private-rfq-types.ts";
+export type {
+  PrivateRfqSubmission,
+  RfqOptions,
+  SettlementInstruction,
+} from "./private-rfq-types.ts";
 
 /** In-memory price-time matcher. It is simulated and the operator sees clear orders. */
 export class PrivateRfqMatcher {

@@ -2,7 +2,7 @@ import { settlementEvents } from "@pontis/db";
 import { describe, expect, it } from "vitest";
 import { readCursor } from "../src/cursor.ts";
 import { runIndexer } from "../src/indexer.ts";
-import { FakeSource, silent } from "./fake-source.ts";
+import { FakeSource, noVerifier, silent } from "./fake-source.ts";
 import { execution, useSeededDb } from "./harness.ts";
 
 const h = useSeededDb();
@@ -26,6 +26,8 @@ async function run(
   await runIndexer({
     db: h.db,
     source,
+    verifier: noVerifier,
+    coreId: "core.testnet",
     log: silent,
     confirmations: 0,
     startHeight: 10,

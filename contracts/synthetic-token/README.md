@@ -14,13 +14,16 @@ Standard: NEP-141 (`ft_transfer`, `ft_transfer_call`, `ft_total_supply`, `ft_bal
 | `pause()` / `unpause()`                                                                | owner, 1 yocto         | While paused, `ft_transfer`, `ft_transfer_call`, `mint`, `burn` and `faucet_mint` fail. `ft_resolve_transfer` still runs so in-flight refunds complete. |
 | `set_faucet_config(enabled, max_per_call, cooldown_ms)`                                | owner, 1 yocto         | `enabled = false` turns the faucet off.                                                                                                                 |
 | `faucet_mint(amount)`                                                                  | any registered account | At most `max_per_call`, once per `cooldown_ms` per account.                                                                                             |
+| `set_minter(minter?)`                                                                  | owner, 1 yocto         | Sets or clears the only account that may create supply; while set, owner `mint` and the faucet fail (ADR 0020).                                         |
+| `minter_mint(account_id, amount)`                                                      | minter, 1 yocto        | Recipient must be registered. `pontis-core` is the minter of a reserve-gated token and mints within the attested headroom.                              |
+| `minter_burn(amount)`                                                                  | minter, 1 yocto        | Burns from the minter's own balance (the redemption escrow the core holds). No other balance can be burned.                                             |
 | `owner_id()`, `is_paused()`, `faucet_config()`, `faucet_next_available_ms(account_id)` | view                   |                                                                                                                                                         |
 
 Owner-only methods require exactly 1 yoctoNEAR so restricted access keys cannot call them.
 
 ## Events
 
-NEP-141 `ft_mint` and `ft_burn` for supply changes. NEP-297 events with standard `pontis_synthetic_token`: `paused`, `unpaused`, `faucet_config_updated`, `faucet_minted`.
+NEP-141 `ft_mint` and `ft_burn` for supply changes. NEP-297 events with standard `pontis_synthetic_token`: `paused`, `unpaused`, `faucet_config_updated`, `faucet_minted`, `minter_set`.
 
 ## Known limits (testnet only)
 

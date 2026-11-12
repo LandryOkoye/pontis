@@ -1,6 +1,6 @@
 # ADR 0001: Synthetic claim, units and pricing
 
-- **Status:** Accepted
+- **Status:** Accepted; the immutability of `unit_multiplier` is superseded by [0017](0017-corporate-actions-and-multiplier-epochs.md)
 - **Date:** 2026-11-07
 - **Brief items:** §24 items 1, 2, 7
 - **Related:** [0009](0009-synthetic-evidence-labelling.md)

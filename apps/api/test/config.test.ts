@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.ts";
 
@@ -5,6 +6,7 @@ const base = {
   DATABASE_URL: "postgres://x",
   PONTIS_CORE_ACCOUNT_ID: "core.testnet",
   QUOTE_SIGNER_SECRET_KEY: "ed25519:abc",
+  NEAR_RPC_URL: "https://test.rpc.fastnear.com",
 };
 
 describe("loadConfig", () => {
@@ -14,7 +16,9 @@ describe("loadConfig", () => {
       NEAR_NETWORK_ID: "testnet",
       REGISTRY_SYNC_INTERVAL_MS: 15_000,
       QUOTE_SWEEP_INTERVAL_MS: 10_000,
-      NEAR_RPC_URL: "https://rpc.testnet.near.org",
+      INDEXER_STALE_AFTER_MS: 30_000,
+      INDEXER_MAX_LAG_BLOCKS: 50,
+      NEAR_RPC_URL: "https://test.rpc.fastnear.com",
     });
   });
 
@@ -31,6 +35,15 @@ describe("loadConfig", () => {
     );
     expect(() => loadConfig({ ...base, QUOTE_SWEEP_INTERVAL_MS: "10" })).toThrow(
       /QUOTE_SWEEP_INTERVAL_MS/,
+    );
+  });
+
+  it("reads the indexer health thresholds and refuses a stale limit under one second", () => {
+    expect(
+      loadConfig({ ...base, INDEXER_STALE_AFTER_MS: "5000", INDEXER_MAX_LAG_BLOCKS: "0" }),
+    ).toMatchObject({ INDEXER_STALE_AFTER_MS: 5000, INDEXER_MAX_LAG_BLOCKS: 0 });
+    expect(() => loadConfig({ ...base, INDEXER_STALE_AFTER_MS: "10" })).toThrow(
+      /INDEXER_STALE_AFTER_MS/,
     );
   });
 
@@ -65,5 +78,40 @@ describe("loadConfig", () => {
       /CORS_ORIGIN/,
     );
     expect(() => loadConfig({ ...base, ADMIN_API_KEY: "short" })).toThrow(/ADMIN_API_KEY/);
+  });
+
+  it("requires NEAR_RPC_URL instead of defaulting to a public endpoint", () => {
+    const { NEAR_RPC_URL: _omitted, ...withoutRpc } = base;
+    expect(() => loadConfig(withoutRpc)).toThrow(
+      /NEAR_RPC_URL: required; see docs\/local-setup\.md \(RPC endpoints\)/,
+    );
+  });
+
+  it("parses the .env.example endpoint, which is the one docs/local-setup.md recommends", () => {
+    const example = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
+    const value = /^NEAR_RPC_URL=(.+)$/m.exec(example)?.[1];
+    expect(loadConfig({ ...base, NEAR_RPC_URL: value }).NEAR_RPC_URL).toBe(
+      "https://test.rpc.fastnear.com",
+    );
+    const docs = readFileSync(new URL("../../../docs/local-setup.md", import.meta.url), "utf8");
+    expect(docs).toContain(`\`${value}\``);
+  });
+
+  it("takes the relayer account and key together, or neither", () => {
+    expect(loadConfig(base).PONTIS_RELAYER_ACCOUNT_ID).toBeUndefined();
+    const both = {
+      PONTIS_RELAYER_ACCOUNT_ID: "relayer.testnet",
+      PONTIS_RELAYER_SECRET_KEY: "ed25519:abc",
+    };
+    expect(loadConfig({ ...base, ...both })).toMatchObject(both);
+    expect(() => loadConfig({ ...base, PONTIS_RELAYER_ACCOUNT_ID: "relayer.testnet" })).toThrow(
+      /set together/,
+    );
+    expect(() => loadConfig({ ...base, PONTIS_RELAYER_SECRET_KEY: "ed25519:abc" })).toThrow(
+      /set together/,
+    );
+    expect(() => loadConfig({ ...base, ...both, PONTIS_RELAYER_SECRET_KEY: "not-a-key" })).toThrow(
+      /PONTIS_RELAYER_SECRET_KEY/,
+    );
   });
 });

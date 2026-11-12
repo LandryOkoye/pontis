@@ -28,4 +28,7 @@ export type RfqOptions = {
 };
 
 export type RestingOrder = { order: PrivateOrder; disclosurePublicKey: Uint8Array };
-export type MatchRecord = { instruction: SettlementInstruction; disclosures: Record<string, EncryptedOrder> };
+export type MatchRecord = {
+  instruction: SettlementInstruction;
+  disclosures: Record<string, EncryptedOrder>;
+};
