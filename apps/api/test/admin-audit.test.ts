@@ -2,7 +2,7 @@ import { auditLog } from "@pontis/db";
 import { createTestDb, type TestDb } from "@pontis/db/testing";
 import type { FastifyInstance } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { adminActor } from "../src/admin/audit.ts";
+import { LEGACY_ACTOR, keyFingerprint } from "../src/admin/audit.ts";
 import { buildApp } from "../src/app.ts";
 import { testAppDeps } from "./helpers.ts";
 
@@ -41,15 +41,18 @@ describe("admin audit trail", () => {
       expect(stored).not.toContain(leaked);
   });
 
-  it("records an authorized read under a fingerprint of the key, not the key", async () => {
+  it("records an authorized key read as the break-glass actor, with a fingerprint of the key, not the key", async () => {
     await call(`Bearer ${KEY}`);
     const read = (await rows()).find((r) => r.action === "admin.reconciliation.read");
-    expect(read?.actor).toBe(adminActor(KEY));
-    expect(read?.actor).toMatch(/^admin:[0-9a-f]{8}$/);
+    expect(read?.actor).toBe(LEGACY_ACTOR);
+    expect(read?.actor).toBe("legacy-admin-key");
+    expect(read?.actorKey).toBeNull();
+    expect(read?.detail).toEqual({ keyFingerprint: keyFingerprint(KEY) });
     expect(JSON.stringify(read)).not.toContain(KEY);
   });
 
   it("gives different keys different fingerprints", () => {
-    expect(adminActor("a".repeat(16))).not.toBe(adminActor("b".repeat(16)));
+    expect(keyFingerprint("a".repeat(16))).not.toBe(keyFingerprint("b".repeat(16)));
+    expect(keyFingerprint(KEY)).toMatch(/^[0-9a-f]{8}$/);
   });
 });

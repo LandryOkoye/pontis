@@ -6,12 +6,15 @@ This crate holds the **registry** (B5) and **compatibility, policy and route gat
 
 ## Roles ([ADR 0003](../../docs/decisions/0003-admin-roles-and-pause.md))
 
-| Role              | Methods                                                                                                                                                                  |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `owner`           | `grant_role`, `revoke_role`, `transfer_ownership` and `accept_ownership` (two-step), `unpause`, `unpause_asset`                                                          |
-| `registrar`       | `register_issuer`, `register_canonical_asset`, `register_representation`, `add_evidence`, `set_issuer_status`, `set_canonical_asset_status`, `set_representation_status` |
-| `pauser`          | `pause` (global), `pause_asset`. Can never unpause                                                                                                                       |
-| `compat_approver` | held now, used from B6                                                                                                                                                   |
+| Role                                              | Methods                                                                                                                                                                                                                                     |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owner`                                           | `grant_role`, `revoke_role`, `transfer_ownership` and `accept_ownership` (two-step), `unpause`, `unpause_asset`                                                                                                                             |
+| `registrar`                                       | `register_issuer`, `register_canonical_asset`, `register_representation`, `add_evidence`, `set_issuer_status`, `set_canonical_asset_status`, `set_representation_status`                                                                    |
+| `pauser`                                          | `pause` (global), `pause_asset`. Can never unpause                                                                                                                                                                                          |
+| `compat_approver`                                 | held now, used from B6                                                                                                                                                                                                                      |
+| `attester`, `reserve_attester`, `bridge_attester` | Sign attestations with a key the owner registered: `add_signer_key`, `remove_signer_key` (owner), `get_signer_keys`; `get_account_roles` lists an account's roles ([ADR 0019](../../docs/decisions/0019-phase-3-scope-and-demo-issuers.md)) |
+
+A `registrar` never holds an attester role, the owner holds none, and revoking an attester role removes that account's signer keys.
 
 The owner holds no other role implicitly; grant roles explicitly. Every state-changing method requires exactly 1 yoctoNEAR and emits an event. While the contract is globally paused, registrar methods fail; owner role management, `unpause` and pausing still work.
 
@@ -36,11 +39,21 @@ IDs are lowercase `a-z0-9-`, 2 to 64 characters. List views take `from_index` an
 
 ## Conversion and vault ([ADR 0006](../../docs/decisions/0006-quote-signing-model.md), [0007](../../docs/decisions/0007-conversion-via-ft-transfer-call.md), [0008](../../docs/decisions/0008-vault-inventory-and-funding.md))
 
-- **Funding:** the owner calls `ft_transfer_call` on a token with `msg = "fund_vault"`. Anyone else is refunded. `withdraw_inventory` (owner) debits first and restores on a failed payout. `get_inventory(id)` is the tracked balance.
+- **Funding:** the owner calls `ft_transfer_call` on a token with `msg = "fund_vault"`. Anyone else is refunded. `withdraw_inventory` (owner) debits first, can take only spendable inventory (never a pending input or a reserved output) and restores on a failed payout. `get_inventory(id)` is the spendable balance; `get_pending_inbound(id)` is what in-flight conversions hold; `get_pending_conversion(nonce)` reads one pending record.
 - **Config:** `set_quote_signer` (ed25519 only, replaces the previous key at once) and `set_fee_bps` (default 10, cap 100), both owner-only.
-- **Conversion:** the user calls `ft_transfer_call` on the source token with `msg = {"quote": {...}, "signature": "<base64>"}`. `ft_on_transfer` runs every check against live state and, on any failure, returns the whole input and emits `conversion_rejected` with a `reason`. On success it marks the nonce used and moves inventory, then pays out with `ft_transfer`; `on_payout_resolved` emits `conversion_completed`, or restores inventory, emits `conversion_failed` and returns the input if the payout failed. A failed conversion needs a new quote: the nonce stays used.
+- **Conversion:** the user calls `ft_transfer_call` on the source token with `msg = {"quote": {...}, "signature": "<base64>"}`. `ft_on_transfer` runs every check against live state and, on any failure, returns the whole input and emits `conversion_rejected` with a `reason`. On success it marks the nonce used, reserves the output (taken out of inventory) and holds the input as **pending** (`get_pending_inbound`, not spendable), then pays out with `ft_transfer`. `on_payout_resolved(nonce)` runs once per pending conversion: on success the input becomes inventory and `conversion_completed` is emitted; on failure the reserved output returns to inventory, the input is _not_ counted (the token's resolver refunds it), `conversion_failed` is emitted and the input is returned as unused. A callback with no pending record aborts. A failed conversion needs a new quote: the nonce stays used. This is callback-based settlement with a compensating refund, not an atomic transaction.
 - **Signed bytes:** `b"pontis-quote-v1" ++ borsh(payload)`, pinned by `test-vectors/quote-signing.json`. Amount math is pinned by `test-vectors/quote-math.json` and property tests.
 - **Gas:** `GAS_FT_TRANSFER` (10 Tgas) and `GAS_CALLBACK` (15 Tgas) are reserved for the payout and its callback; the sandbox burns about 1 and 2 Tgas. A whole conversion completes with 40 Tgas prepaid (`contracts/integration-tests/tests/gas.rs`).
+
+## Custody, reserves, mint gate and redemption ([ADR 0020](../../docs/decisions/0020-custody-reserves-and-redemption.md))
+
+Simulated backing and redemption; nothing is custodied or paid out.
+
+- **Custody:** `register_custodian`, `set_custodian_status`, `set_custodian_key`, `link_custody` (registrar); `get_custodian(s)`, `get_custody_link`.
+- **Reserves:** `submit_reserve_attestation` (anyone relays; the custodian's key signs `pontis-reserve-v1`, pinned by `test-vectors/reserve-attestation.json`), `set_reserve_policy` (owner), `refresh_supply` and `evaluate_reserve` (anyone). The status `get_reserve_status` is computed on read: `circulating <= attested * (1 + tolerance_bps / 10_000)`, a staleness limit and an action (`warn`, `restrict_conversions`, `pause_mint`). `check_route` refuses `reserve_restricted` and `reserve_stale`.
+- **Mint gate:** `request_mint`, `execute_mint`, `cancel_mint_request` by an account of the issuer's `controlled_accounts`; the core is the token's `minter` and mints only within `get_mint_headroom`.
+- **Redemption:** `set_redemption_terms` (registrar); a holder sends `redeem:{terms_hash}:{payout_instruction_hash}` by `ft_transfer_call`; `accept_redemption`, `reject_redemption`, `fulfil_redemption` (issuer account), `expire_redemption` (anyone), `reclaim_redemption` (the user). `get_escrow_ledger` must satisfy `escrowed_in = burned + returned + held`. Counters: `get_issuer_reliability`.
+- **Pause:** reserve submissions, mints and new redemptions stop while paused; reject, expire, reclaim, `refresh_supply` and `evaluate_reserve` do not.
 
 ## Events
 

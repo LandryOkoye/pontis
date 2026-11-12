@@ -4,8 +4,9 @@
 //! `ft_transfer_call` with `msg = "fund_vault"`. Everything the receiver does not accept is
 //! returned in full (the unused amount), so the token refunds the sender.
 
-use crate::conversion::Rejection;
+use crate::conversion::{ConversionRecord, Rejection};
 use crate::events::CoreEvent;
+use crate::quote::parse_nonce;
 use crate::types::*;
 use crate::{now_ms, Contract, ContractExt};
 use near_sdk::json_types::U128;
@@ -35,6 +36,15 @@ impl Contract {
         msg: String,
     ) -> PromiseOrValue<U128> {
         let token = env::predecessor_account_id();
+        if msg.starts_with(crate::redemption_types::REDEEM_PREFIX) {
+            return match self.try_redeem(&token, &sender_id, amount, &msg) {
+                Ok(_) => PromiseOrValue::Value(U128(0)),
+                Err(reason) => {
+                    self.refuse_redemption(reason, sender_id, token, amount);
+                    PromiseOrValue::Value(amount)
+                }
+            };
+        }
         let Some(rep_id) = self.representation_by_account.get(&token).cloned() else {
             return self.refuse(RejectReason::UnknownToken, None, sender_id, token, amount);
         };
@@ -46,7 +56,14 @@ impl Contract {
         }
         match self.validate_conversion(&token, &sender_id, amount, &msg) {
             Ok(plan) => self.execute_conversion(plan),
-            Err(Rejection { reason, nonce }) => {
+            Err(Rejection {
+                reason,
+                nonce,
+                price_pair,
+            }) => {
+                if let Some((from_id, to_id)) = price_pair {
+                    self.record_deviation_refusal(&from_id, &to_id);
+                }
                 self.refuse(reason, nonce, sender_id, token, amount)
             }
         }
@@ -54,6 +71,18 @@ impl Contract {
 
     pub fn get_inventory(&self, representation_id: String) -> U128 {
         U128(self.inventory.get(&representation_id).copied().unwrap_or(0))
+    }
+
+    /// Input tokens held for conversions whose payout has not resolved. They are in the token
+    /// balance of this contract but are not spendable inventory.
+    pub fn get_pending_inbound(&self, representation_id: String) -> U128 {
+        U128(self.pending_inbound_of(&representation_id))
+    }
+
+    /// The conversion awaiting its payout result, if any. `nonce` is the 32-hex-character quote nonce.
+    pub fn get_pending_conversion(&self, nonce: String) -> Option<ConversionRecord> {
+        let nonce = parse_nonce(&nonce)?;
+        self.pending_conversions.get(&nonce).cloned()
     }
 }
 
@@ -88,11 +117,12 @@ impl Contract {
         if *sender_id != self.owner_id {
             return Err(RejectReason::NotOwner);
         }
-        let inventory = self.get_inventory(rep_id.to_string()).0;
-        let inventory = inventory
-            .checked_add(amount.0)
+        // Neither the spendable total nor what a settling conversion will add may overflow.
+        self.accounted_of(rep_id)
+            .and_then(|total| total.checked_add(amount.0))
             .ok_or(RejectReason::InventoryOverflow)?;
-        self.inventory.insert(rep_id.to_string(), inventory);
+        self.credit_inventory(rep_id, amount.0);
+        let inventory = self.get_inventory(rep_id.to_string()).0;
         CoreEvent::VaultFunded {
             representation_id: rep_id.to_string(),
             amount,
@@ -102,6 +132,58 @@ impl Contract {
         }
         .emit();
         Ok(())
+    }
+
+    pub(crate) fn pending_inbound_of(&self, rep_id: &str) -> u128 {
+        self.pending_inbound.get(rep_id).copied().unwrap_or(0)
+    }
+
+    /// Spendable inventory plus pending input: every token this contract accounts for. `None`
+    /// on overflow.
+    pub(crate) fn accounted_of(&self, rep_id: &str) -> Option<u128> {
+        self.get_inventory(rep_id.to_string())
+            .0
+            .checked_add(self.pending_inbound_of(rep_id))
+    }
+
+    /// Adds to spendable inventory. Callers have already ruled overflow out (`accounted_of`),
+    /// so an overflow here is a broken invariant and aborts instead of saturating.
+    pub(crate) fn credit_inventory(&mut self, rep_id: &str, amount: u128) {
+        let inventory = self
+            .get_inventory(rep_id.to_string())
+            .0
+            .checked_add(amount)
+            .unwrap_or_else(|| env::panic_str("inventory overflow"));
+        self.inventory.insert(rep_id.to_string(), inventory);
+        self.raise_inventory_reference(rep_id);
+    }
+
+    /// Removes from spendable inventory. Underflow is a broken invariant and aborts.
+    pub(crate) fn debit_inventory(&mut self, rep_id: &str, amount: u128) {
+        let inventory = self
+            .get_inventory(rep_id.to_string())
+            .0
+            .checked_sub(amount)
+            .unwrap_or_else(|| env::panic_str("inventory underflow"));
+        self.inventory.insert(rep_id.to_string(), inventory);
+    }
+
+    /// Moves `amount` into the pending-input counter for `rep_id`.
+    pub(crate) fn add_pending_inbound(&mut self, rep_id: &str, amount: u128) {
+        let pending = self
+            .pending_inbound_of(rep_id)
+            .checked_add(amount)
+            .unwrap_or_else(|| env::panic_str("pending inbound overflow"));
+        self.pending_inbound.insert(rep_id.to_string(), pending);
+    }
+
+    /// Releases `amount` from the pending-input counter for `rep_id`.
+    pub(crate) fn release_pending_inbound(&mut self, rep_id: &str, amount: u128) {
+        let pending = self
+            .pending_inbound_of(rep_id)
+            .checked_sub(amount)
+            .unwrap_or_else(|| env::panic_str("pending inbound underflow"));
+        self.pending_inbound.insert(rep_id.to_string(), pending);
     }
 }
 
@@ -126,8 +208,8 @@ impl Contract {
             .clone();
         let inventory = self.get_inventory(representation_id.clone()).0;
         check(inventory >= amount.0, "insufficient inventory");
-        self.inventory
-            .insert(representation_id.clone(), inventory - amount.0);
+        self.debit_inventory(&representation_id, amount.0);
+        self.clamp_inventory_reference(&representation_id);
         ext_ft::ext(token)
             .with_attached_deposit(NearToken::from_yoctonear(1))
             .with_static_gas(GAS_FT_TRANSFER)
@@ -154,11 +236,7 @@ impl Contract {
     ) -> bool {
         let success = result.is_ok();
         if !success {
-            let restored = self
-                .get_inventory(representation_id.clone())
-                .0
-                .saturating_add(amount.0);
-            self.inventory.insert(representation_id.clone(), restored);
+            self.credit_inventory(&representation_id, amount.0);
         }
         CoreEvent::VaultWithdrawn {
             representation_id,

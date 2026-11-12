@@ -31,8 +31,8 @@ pub(crate) fn new_issuer(id: &str) -> NewIssuer {
         id: id.to_string(),
         name: "Synthetic Issuer".to_string(),
         jurisdiction: None,
-        authorized_categories: vec!["synthetic test claims".to_string()],
-        controlled_accounts: vec![token_a()],
+        authorized_categories: vec!["Synthetic commodity claim".to_string()],
+        controlled_accounts: vec![token_a(), token_b()],
         contact: None,
         synthetic: true,
         verification_status: VerificationStatus::Unverified,
@@ -226,25 +226,110 @@ fn issuer_with_evidence_becomes_active_and_is_reviewed() {
 fn verification_status_cannot_exceed_the_evidence() {
     let mut c = core();
     let mut i = new_issuer("iss");
-    i.verification_status = VerificationStatus::IndependentlyVerified;
+    i.verification_status = VerificationStatus::ThirdPartyAttested;
     c.register_issuer(i);
     attest(&mut c, SubjectType::Issuer, "iss"); // issuer_provided only
     c.set_issuer_status("iss".into(), Status::Active);
 }
 
 #[test]
-fn verification_status_is_allowed_when_the_evidence_supports_it() {
+fn a_recorded_third_party_attestation_backs_that_status_but_is_not_authenticated() {
+    // The registrar labels the evidence; the contract checks the label, not who made it.
+    let mut c = core();
+    let mut i = new_issuer("iss");
+    i.verification_status = VerificationStatus::ThirdPartyAttested;
+    c.register_issuer(i);
+    c.add_evidence(
+        SubjectType::Issuer,
+        "iss".into(),
+        evidence(Provenance::ThirdPartyAttested),
+    );
+    c.set_issuer_status("iss".into(), Status::Active);
+    assert_eq!(c.get_issuer("iss".into()).unwrap().status, Status::Active);
+}
+
+#[test]
+#[should_panic(expected = "independently_verified is not available")]
+fn independently_verified_cannot_be_claimed_on_an_issuer() {
     let mut c = core();
     let mut i = new_issuer("iss");
     i.verification_status = VerificationStatus::IndependentlyVerified;
     c.register_issuer(i);
+}
+
+#[test]
+#[should_panic(expected = "independently_verified is not available")]
+fn independently_verified_cannot_be_claimed_on_a_canonical_asset() {
+    let mut c = core();
+    let mut a = new_asset("gold");
+    a.verification_status = VerificationStatus::IndependentlyVerified;
+    c.register_canonical_asset(a);
+}
+
+#[test]
+#[should_panic(expected = "independently_verified is not available")]
+fn independently_verified_cannot_be_claimed_on_a_representation() {
+    let mut c = core();
+    active_registry(&mut c);
+    let mut r = new_rep("tgold-b", "iss", "gold", token_b());
+    r.verification_status = VerificationStatus::IndependentlyVerified;
+    c.register_representation(r);
+}
+
+#[test]
+#[should_panic(expected = "independently_verified evidence is not accepted")]
+fn evidence_cannot_carry_the_independently_verified_label() {
+    let mut c = core();
+    c.register_issuer(new_issuer("iss"));
     c.add_evidence(
         SubjectType::Issuer,
         "iss".into(),
         evidence(Provenance::IndependentlyVerified),
     );
-    c.set_issuer_status("iss".into(), Status::Active);
-    assert_eq!(c.get_issuer("iss".into()).unwrap().status, Status::Active);
+}
+
+// ---- issuer authorization (ADR 0009) ----
+
+#[test]
+#[should_panic(expected = "issuer is not authorized for the category")]
+fn a_representation_needs_an_issuer_authorized_for_the_asset_category() {
+    let mut c = core();
+    let mut i = new_issuer("iss");
+    i.authorized_categories = vec!["Real estate claim".to_string()];
+    c.register_issuer(i);
+    c.register_canonical_asset(new_asset("gold"));
+    c.register_representation(new_rep("tgold-a", "iss", "gold", token_a()));
+}
+
+#[test]
+#[should_panic(expected = "not among the issuer's controlled accounts")]
+fn a_representation_must_use_an_account_the_issuer_controls() {
+    let mut c = core();
+    c.register_issuer(new_issuer("iss")); // controls token_a and token_b
+    c.register_canonical_asset(new_asset("gold"));
+    let rogue = account("rogue-token.testnet");
+    c.register_representation(new_rep("rogue", "iss", "gold", rogue));
+}
+
+#[test]
+fn an_issuer_with_no_controlled_accounts_declares_no_account_constraint() {
+    let mut c = core();
+    let mut i = new_issuer("iss");
+    i.controlled_accounts.clear();
+    c.register_issuer(i);
+    c.register_canonical_asset(new_asset("gold"));
+    c.register_representation(new_rep("tgold-b", "iss", "gold", token_b()));
+    assert!(c.get_representation("tgold-b".into()).is_some());
+}
+
+#[test]
+fn an_authorized_category_and_a_controlled_account_register_and_activate() {
+    let mut c = core();
+    active_registry(&mut c);
+    assert_eq!(
+        c.get_representation("tgold-a".into()).unwrap().status,
+        Status::Active
+    );
 }
 
 #[test]

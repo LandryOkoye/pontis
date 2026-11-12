@@ -1,0 +1,17 @@
+{
+  "description": "One price attestation signed by the dev publisher seed 101..132 (bytes 0x65..0x84). Rust (pontis-core price.rs), TypeScript (@pontis/market-data) and an independent Python Borsh rebuild agree on message_hex; ed25519 signatures are deterministic.",
+  "seed_hex": "65666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f8081828384",
+  "public_key": "ed25519:FgcwodK7aTtn3DgvqwPuSseKgTPcMpGmK6zdf7Ri9KXm",
+  "attestation": {
+    "version": 1,
+    "contract": "core.testnet",
+    "representation_id": "tgold-a",
+    "price": "268142585338",
+    "currency": "USD",
+    "as_of_ms": 1790000000000,
+    "simulated": true,
+    "source": "simulated_feed"
+  },
+  "message_hex": "706f6e7469732d70726963652d7632010c000000636f72652e746573746e65740700000074676f6c642d61fa258b6e3e000000000000000000000003000000555344006c50c4a0010000010e00000073696d756c617465645f66656564",
+  "signature_base64": "25Lc51IHvlebVtoQx/BB0wVWagAmYepMCG4UTt5PFO/rT1eX5jkVRKlEtr9PZO1VG18fDmIjHXIwu/EkaJV2DQ=="
+}

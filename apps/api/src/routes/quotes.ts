@@ -5,6 +5,7 @@ import { ENDPOINTS } from "@pontis/api-types";
 import type { FastifyInstance } from "fastify";
 import { notFound } from "../errors.ts";
 import { compareRoutes } from "../quotes/compare.ts";
+import { routeGuards } from "../quotes/guards.ts";
 import { getQuote } from "../quotes/lifecycle.ts";
 import { createQuote, type QuoteDeps } from "../quotes/service.ts";
 
@@ -15,6 +16,14 @@ export function registerQuoteRoutes(app: FastifyInstance, deps: QuoteDeps): void
   app.post(e.compareRoutes.path, async (req) => {
     const body = e.compareRoutes.body.parse(req.body);
     return e.compareRoutes.response.parse(await compareRoutes(deps.db, deps.chain, body));
+  });
+  app.get(route(e.getRouteGuards.path), async (req) => {
+    const { fromId, toId } = e.getRouteGuards.params.parse(req.params);
+    const { amount } = e.getRouteGuards.query.parse(req.query);
+    const now = (deps.now ?? (() => new Date()))();
+    return e.getRouteGuards.response.parse(
+      await routeGuards(deps.db, deps.chain, fromId, toId, amount, now),
+    );
   });
   app.post(e.createQuote.path, async (req, reply) => {
     const body = e.createQuote.body.parse(req.body);

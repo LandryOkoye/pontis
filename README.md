@@ -4,6 +4,14 @@ A NEAR-based interoperability and settlement protocol for tokenized real-world a
 
 > **Testnet and synthetic assets only.** Nothing in this repository claims real backing, custody or verification. The MVP uses fictional, unbacked test tokens.
 
+## Why Pontis
+
+Tokenized real-world assets are split across issuers, chains and transfer restrictions. The same company can exist as several tokens from different issuers with different legal claims, and a holder of one cannot exchange it for another at a published parity; they sell and buy back. Pontis targets that gap: converting between issuers' representations of the same claim, only where a reviewed relationship says they are equivalent, and only for eligible holders. It is a research project on testnet with synthetic assets, and it has no users or liquidity. [`docs/market-context.md`](docs/market-context.md) gives the sourced market picture, the competitor landscape and where Pontis is weak.
+
+### How we measure success
+
+[`docs/success-metrics.md`](docs/success-metrics.md) defines each metric (conversion success and refund rates, quote-to-settle latency, route coverage, volume, trust and price integrity), its formula, its data source and demo and pilot targets. The endpoints that serve them (`GET /v1/metrics/protocol`, `GET /v1/admin/metrics`, `/metrics`) are not built yet; the document marks which metrics the MVP tables can already compute.
+
 ## MVP scope
 
 Two synthetic NEP-141 representations of one synthetic claim (`SYN-GOLD-OZ`) on NEAR Testnet:
@@ -11,7 +19,7 @@ Two synthetic NEP-141 representations of one synthetic claim (`SYN-GOLD-OZ`) on 
 - registered with their issuers and evidence,
 - assessed as `DIRECT_EQUIVALENT` by an approved compatibility relationship,
 - quoted by the backend (ed25519-signed, 60 s expiry),
-- converted atomically from a controlled vault via `ft_transfer_call`,
+- converted from a controlled vault via `ft_transfer_call` (same-chain, callback-based settlement over several receipts with a refund if the payout fails; not atomic),
 - indexed and reconciled against contract events.
 
 This is a **parity conversion** of a synthetic test asset. It is not a bridge and not an exchange.
@@ -30,7 +38,9 @@ Out of scope for the MVP: cross-chain bridges, market-priced exchange, dark pool
 | [`docs/runbooks/`](docs/runbooks/README.md)                      | Expired quote, failed payout, stuck submission, vault low, pause                          |
 | [`docs/known-limitations.md`](docs/known-limitations.md)         | What the MVP does not do                                                                  |
 | [`docs/definition-of-done.md`](docs/definition-of-done.md)       | Each Definition of Done item with its evidence                                            |
-| [`docs/decisions/`](docs/decisions/README.md)                    | ADRs 0001 to 0013                                                                         |
+| [`docs/decisions/`](docs/decisions/README.md)                    | ADRs 0001 to 0015                                                                         |
+| [`docs/success-metrics.md`](docs/success-metrics.md)             | Success metrics: definitions, formulas, sources, targets                                  |
+| [`docs/market-context.md`](docs/market-context.md)               | Why Pontis: the problem, the landscape, what would have to be true, where we are weak     |
 | [`docs/threat-model/mvp.md`](docs/threat-model/mvp.md)           | Threats, mitigations and accepted limitations                                             |
 
 ## Layout
@@ -38,7 +48,7 @@ Out of scope for the MVP: cross-chain bridges, market-priced exchange, dark pool
 ```text
 apps/api/            Fastify REST API
 apps/indexer/        NEAR event indexer and reconciler
-apps/web/            React frontend (separate branch and pull request)
+apps/web/            React frontend (not in main yet; no pull request open)
 contracts/           Rust: synthetic-token (NEP-141) and pontis-core
 packages/            domain, api-types, db, near-client, quote-engine
 scripts/             deploy, seed, allowlist, ops (operator commands), check-commit-size
@@ -68,7 +78,7 @@ pnpm rust:fmt                # cargo fmt --check  (also: rust:clippy, rust:test)
 pnpm build:contracts         # cargo-near build of every contract (cargo install cargo-near --locked)
 ```
 
-The Rust toolchain is pinned in `rust-toolchain.toml`. Each app has an `.env.example`; copy it to `.env` (never committed). CI (`.github/workflows/ci.yml`) runs the same commands. Setup steps are in [`docs/local-setup.md`](docs/local-setup.md).
+The Rust toolchain is pinned in `rust-toolchain.toml`. Each app has an `.env.example`; copy it to `.env` (never committed). CI (`.github/workflows/ci.yml`) runs the same commands, plus the contract sandbox tests and a full system end-to-end run (`pnpm --filter @pontis/e2e e2e` on a local sandbox, see [`tests/e2e`](tests/e2e/README.md)). Setup steps are in [`docs/local-setup.md`](docs/local-setup.md).
 
 ## Testnet deployment
 

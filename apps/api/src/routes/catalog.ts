@@ -4,13 +4,7 @@
 
 import { ENDPOINTS } from "@pontis/api-types";
 import type { FastifyInstance } from "fastify";
-import {
-  getAsset,
-  getAssetCompatibility,
-  getIssuer,
-  listAssets,
-  listIssuers,
-} from "../catalog/repository.ts";
+import { getAsset, getAssetCompatibility, getIssuer, listIssuers } from "../catalog/repository.ts";
 import type { Db } from "@pontis/db";
 import { notFound } from "../errors.ts";
 
@@ -28,9 +22,6 @@ export function registerCatalogRoutes(app: FastifyInstance, db: Db): void {
     if (!issuer) throw notFound("Issuer");
     return e.getIssuer.response.parse(issuer);
   });
-  app.get(route(e.listAssets.path), async () =>
-    e.listAssets.response.parse({ items: await listAssets(db) }),
-  );
   app.get(route(e.getAsset.path), async (req) => {
     const { id } = e.getAsset.params.parse(req.params);
     const asset = await getAsset(db, id);

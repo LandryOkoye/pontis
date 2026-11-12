@@ -14,7 +14,15 @@ pnpm --filter @pontis/api start          # migrates, starts on :3000, syncs the 
 
 ## Endpoints
 
-`POST /v1/routes/compare`, `POST /v1/quotes` (201, or 422 with a reason code), `GET /v1/quotes/{id}`, `POST /v1/conversions` (needs an `Idempotency-Key` header), `POST /v1/conversions/{id}/submitted`, `GET /v1/transactions/{id}`, `GET /v1/transactions?account=`, `GET /v1/health`, `/v1/issuers`, `/v1/issuers/{id}`, `/v1/assets`, `/v1/assets/{id}`, `/v1/assets/{id}/compatibility`. Paths and schemas come from `@pontis/api-types`, and each response is validated against its schema before it is sent. Errors are `{code, message, details?}`.
+`POST /v1/routes/compare`, `POST /v1/quotes` (201, or 422 with a reason code), `GET /v1/quotes/{id}`, `POST /v1/conversions` (needs an `Idempotency-Key` header), `POST /v1/conversions/{id}/submitted`, `GET /v1/transactions/{id}`, `GET /v1/transactions?account=`, `GET /v1/health`, `GET /v1/health/live`, `GET /v1/health/ready`, `/v1/issuers`, `/v1/issuers/{id}`, `/v1/assets`, `/v1/assets/{id}`, `/v1/assets/{id}/compatibility`, `/v1/assets/{id}/lifecycle`, `/v1/assets/{id}/corporate-actions`, `/v1/assets/{id}/nav` (the last three are read live from the chain), `GET /v1/metrics/protocol`, `GET /v1/admin/metrics`, `GET /metrics` (see Metrics below). Paths and schemas come from `@pontis/api-types`, and each response is validated against its schema before it is sent. Errors are `{code, message, details?}`.
+
+## Market reads
+
+`GET /v1/assets` is the asset directory: `q` (all words, matched against symbol, name, claim, issuer, category and tags), `category`, `issuerId`, `chain`, `verification`, `status`, `convertible`, `bridgeable`, `sort` (`id` by default, or `name`, `price`, `marketCap`, `tvl`, `volume24h`, `change24h`, `change7d`, `change30d`), `order`, `limit` (25, at most 100) and an opaque `cursor` that only works for the query it came from. Each row carries a `market` block and a 7 day `sparkline`; both are null for an asset with no price.
+
+`GET /v1/assets/{id}/charts/{price,nav,supply,volume}` take `interval` (`1m` to `1d`), `from`, `to` (at most 5000 buckets) and return `{points, interval, from, to, source, simulated, filledPoints}`.
+
+**Real and simulated data are never mixed in one figure.** `data=real|simulated|all` picks the class (`all` prefers real and falls back to simulated), and every `market` block, sparkline, chart and point says `simulated` and its `sources`. Today almost everything is simulated by [`apps/simulator`](../simulator/README.md). Screens, endpoints and caveats for the frontend are in [`docs/api/FRONTEND_HANDOFF.md`](../../docs/api/FRONTEND_HANDOFF.md); `API_MODE=fixtures` serves the example data with no chain or database. The reads are public and carry an `ETag` and `Cache-Control: public, max-age=5`; send `If-None-Match` to get a `304`.
 
 ## Quotes
 
@@ -34,21 +42,86 @@ Settings are in `.env.example`; reasons are in [ADR 0013](../../docs/decisions/0
 | `RATE_LIMIT_READ` / `RATE_LIMIT_WRITE` / `RATE_LIMIT_ADMIN` | `120` / `30` / `10`     | Requests per client per window, by class                             |
 | `RATE_LIMIT_WINDOW_MS`                                      | `60000`                 | Window length                                                        |
 | `TRUST_PROXY`                                               | `false`                 | Read the client address from `X-Forwarded-For` (behind a proxy only) |
-| `ADMIN_API_KEY`                                             | unset                   | Bearer key for `/v1/admin/*`; at least 16 characters                 |
+| `ADMIN_API_KEY`                                             | unset                   | Break-glass bearer key for `/v1/admin/*`; at least 16 characters     |
+| `AUTH_RECIPIENT`                                            | `pontis-api.<network>`  | The NEP-413 `recipient` a wallet is told a sign-in is for            |
 
 An excess request gets `429` with `Retry-After`. Logs hold method and path only; every admin call is written to `audit_log`.
 
-### Admin
+### Health
 
-`GET /v1/admin/reconciliation` returns the reconciler's last run (findings, each vault's inventory against the tokens the core holds) and the quotes waiting in `REQUIRES_RECONCILIATION`. It needs `Authorization: Bearer $ADMIN_API_KEY` (at least 16 characters); with no key set it refuses everyone.
+Three probes, each answering a different question. None of them needs a key.
+
+| Endpoint               | Question                     | Answers                                                                                                                                                                                       |
+| ---------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/health/live`  | Is the process up?           | Always `200 {"status":"ok"}`. Touches no database, RPC or indexer state. Use it for restart probes.                                                                                           |
+| `GET /v1/health/ready` | Can it do its job right now? | `200` when the database and RPC answer and the indexer is `running` or `lagging`; `503` when the database or RPC is down or the indexer is `never_run` or `stale`. Same body as `/v1/health`. |
+| `GET /v1/health`       | The combined view            | Always `200` while the process answers; the body carries the verdict. Keeps `status`, `chainHeight` and `indexerLagBlocks`, and adds `database`, `rpc` and `indexer`.                         |
+
+`/v1/health` stays `200` so existing callers (the web app, the e2e harness) that read the body keep working; use `/v1/health/ready` when a load balancer or monitor should react to the status code. A lagging indexer is still ready: quotes and catalog reads work and only settlement is late, and the body says `degraded` with the lag. A database outage, a chain RPC outage (no quoting) or an indexer that never ran or went silent is not ready.
+
+The body:
+
+```json
+{
+  "status": "ok",
+  "chainHeight": 200000000,
+  "indexerLagBlocks": 2,
+  "database": true,
+  "rpc": true,
+  "indexer": {
+    "state": "running",
+    "lagBlocks": 2,
+    "lastHeartbeatAt": "2026-11-07T18:00:00.000Z",
+    "heartbeatAgeMs": 1500
+  }
+}
+```
+
+- `status` is `ok` only when `database` and `rpc` are true and `indexer.state` is `running`. Anything else is `degraded`. A never-run or stale indexer can never give `ok`.
+- `database` is false when `select 1` or the cursor read fails. The indexer is then unknown: `indexer` is `null`.
+- `rpc` is false when the chain height cannot be read. `chainHeight` and the lag are then `null`, and a fresh indexer is reported `running` because its lag cannot be judged; `status` is still `degraded`.
+- `indexer.state`:
+  - `never_run`: the indexer has not written its cursor.
+  - `stale`: the last heartbeat is older than `INDEXER_STALE_AFTER_MS`. This covers a stopped process, a crashed one and one that fails every pass (for example its RPC is down); they cannot be told apart, because the indexer writes no stop marker. Look at the indexer's log. A first pass that creates the cursor and then fails also reads `stale`: the cursor starts with an epoch heartbeat.
+  - `lagging`: the heartbeat is fresh but the indexer is more than `INDEXER_MAX_LAG_BLOCKS` behind the chain.
+  - `running`: heartbeat fresh and within the lag limit.
+- The heartbeat is `indexer_cursor.updated_at`, set by the database clock. The indexer stamps it each time it applies a block and each time a pass succeeds with nothing new; a failed pass does not. The age is measured with the API's clock, so a large clock difference between the API host and the database shifts it (a negative age is shown as `0`).
+
+| Variable                 | Default | Meaning                                                                                                                                                                                               |
+| ------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INDEXER_STALE_AFTER_MS` | `30000` | Heartbeat age after which the indexer is `stale` (at least 1000). Keep it well above the indexer's poll and retry pauses (default poll 2 s, retries back off up to 60 s, so a long outage goes stale) |
+| `INDEXER_MAX_LAG_BLOCKS` | `50`    | Blocks behind the chain after which a live indexer is `lagging`                                                                                                                                       |
+
+### Sign-in and admin
+
+Operators sign in with a wallet (NEP-413): `POST /v1/auth/challenge`, the wallet's `signMessage`, `POST /v1/auth/verify` for a session token (15 minutes, renewed by use up to 8 hours), then `Authorization: Bearer <token>`; `GET /v1/auth/me` and `POST /v1/auth/logout`. Roles come from the contract's `get_account_roles` and are checked against `src/auth/policy.ts`. Fixtures mode answers 404 for all four. Runbook: [operator sign-in](../../docs/runbooks/auth.md).
+
+`GET /v1/admin/reconciliation` returns the reconciler's last run (findings, each vault's inventory against the tokens the core holds) and the quotes waiting in `REQUIRES_RECONCILIATION`. It needs a session whose account holds the owner, registrar, compat_approver or pauser role, or the break-glass `Authorization: Bearer $ADMIN_API_KEY` (at least 16 characters, audited as `legacy-admin-key`); with no key set and no session it refuses everyone.
 
 ```bash
 curl -s -H "Authorization: Bearer $ADMIN_API_KEY" $API/v1/admin/reconciliation
 ```
 
+### Metrics
+
+Three endpoints serve the success metrics (`docs/success-metrics.md` on the docs branch), all from one query module set in `src/metrics/`, so they cannot disagree. Every number is computed from the database when asked; nothing is hand-entered, and nothing simulated becomes real by being counted (each metric says `simulated`).
+
+| Endpoint                   | Audience                                                                                                    | Cache                |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------- |
+| `GET /v1/metrics/protocol` | Public aggregates                                                                                           | `public, max-age=30` |
+| `GET /v1/admin/metrics`    | Admin key; adds per-representation amounts and the IDs of open `REQUIRES_RECONCILIATION` quotes             | `no-store`, audited  |
+| `GET /metrics`             | Prometheus text 0.0.4, admin key, `pontis_<key>` gauges with labels `window`, `representation`, `simulated` | `no-store`, audited  |
+
+`/metrics` takes the admin bearer key (use the scrape config's `authorization`) because it exports the per-representation amounts the public endpoint omits. Windows `24h` and `7d` roll back from `asOf`; `all` has no lower bound. Rates are decimal strings at 6 places, latencies seconds at 3 places, both from integer arithmetic; a rate with no denominator is `null`. `indexer_lag_blocks` reads the chain head and is `null` when the RPC fails. Metrics that need later-phase data are listed with `available: false` and `availableFrom`. Each metric's `note` records how an ambiguous formula was read.
+
+```bash
+curl -s $API/v1/metrics/protocol
+curl -s -H "Authorization: Bearer $ADMIN_API_KEY" $API/metrics
+```
+
 ### Running with the indexer
 
-The API alone accepts quotes and records hashes. Run the indexer next to it so conversions settle without the wallet's help and `GET /v1/health` reports a real `indexerLagBlocks`:
+The API alone accepts quotes and records hashes. Run the indexer next to it so conversions settle without the wallet's help. Without it `GET /v1/health` reports `degraded` (`indexer.state` is `never_run`) and `/v1/health/ready` answers `503`:
 
 ```bash
 pnpm --filter @pontis/api start        # terminal 1
@@ -68,7 +141,10 @@ curl -s $API/v1/quotes -H 'content-type: application/json' \
   -d '{"fromId":"tgold-a","toId":"tgold-b","amountIn":"1000000","accountId":"alice.testnet"}'
 # 3. Accept it: the response lists the unsigned actions for the wallet to sign
 curl -s $API/v1/conversions -H 'content-type: application/json' -H "Idempotency-Key: $(uuidgen)" -d '{"quoteId":"<quote id>"}'
-# 4. After the wallet sends the transaction, report its hash
+# 4. After the wallet sends the transaction, report its hash. The API checks it against the chain:
+#    another wallet's or another quote's transaction is 422; a hash the node does not know yet is kept
+#    as `reportedTxHash` (`txHashStatus: REPORTED`) and `txHash` stays null until it is verified.
+#    Link to an explorer only when `txHash` is set.
 curl -s $API/v1/conversions/<conversion id>/submitted -H 'content-type: application/json' -d '{"txHash":"<hash>"}'
 curl -s "$API/v1/transactions?account=alice.testnet"
 ```

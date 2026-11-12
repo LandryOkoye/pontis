@@ -1,0 +1,47 @@
+# Phase 0 report: orientation and scope
+
+Phase 0 of the expansion in [ADR 0014](../decisions/0014-scope-expansion-beyond-mvp.md). It ships documents and one CI job and changes no runtime behaviour.
+
+## What shipped
+
+| Item                                                                                                                  | Real, testnet or simulated             |
+| --------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| [ADR 0014](../decisions/0014-scope-expansion-beyond-mvp.md): scope supersession, invariants, trust assumptions        | Documentation                          |
+| [ADR 0010](../decisions/0010-deferred-scope.md) status line marks the superseded rows                                 | Documentation                          |
+| `docs/research/` stubs for Chain Signatures, NEAR Intents and Confidential Intents                                    | Documentation. Nothing is verified yet |
+| Optional `evm` CI job: runs `forge fmt`, `build` and `test` once `contracts-evm/foundry.toml` exists, skips otherwise | CI only. No EVM code exists yet        |
+
+## Orientation notes
+
+Read: `README.md`, `BuildPlan.md`, `docs/known-limitations.md`, `docs/architecture/overview.md` and `deliberately-mocked.md`, ADRs 0001 to 0013 (0003, 0005, 0006 and 0010 in full), the MVP threat model's threat list, `contracts/pontis-core/src` (types, roles, route, conversion, vault, quote, events, config), the API's route, admin and quote modules, the DB schema file list and the CI workflow. `ProjectBrief.md` was not re-read for this phase.
+
+What the code is today, and where it meets the expansion:
+
+| Area                | State in the code                                                                                                                                                                                                       | Consequence for the expansion                                                                                                         |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Roles               | `roles.rs`: `owner`, `registrar`, `compat_approver`, `pauser`. Grants are owner-only. No conflict checks. Proposer and approver may be the same account ([ADR 0003](../decisions/0003-admin-roles-and-pause.md) item 5) | Workstreams B, C and G add roles and role-conflict checks. A new ADR supersedes ADR 0003 items 5 and 7 first                          |
+| Route gate          | `route.rs`: `RouteRefusal` has 7 values. Only `DIRECT_EQUIVALENT` routes execute. `check_route` runs at quote and at execution                                                                                          | Guards (deviation, freeze, lifecycle, reserves) become new refusals. Every refusal needs an API code, an explanation and a hint       |
+| Conversion refusals | `RejectReason` has 23 values in `types.rs`; each rejection refunds the whole input and emits `conversion_rejected`                                                                                                      | New reasons extend this enum. API reason mapping lives in `apps/api/src/quotes/reasons.ts`                                            |
+| Multiplier          | `Representation.unit_multiplier` is a `Ratio`, immutable after registration ([ADR 0001](../decisions/0001-synthetic-claim-and-units.md))                                                                                | Workstream B replaces "immutable forever" with epochs behind a corporate-action ADR; a ratio change must bump `compatibility_version` |
+| Status              | `Status` is `Active`, `Restricted`, `Paused`, `Deprecated`, `Rejected`. There is no lifecycle history and no corporate-action or NAV state                                                                              | Workstream B adds the lifecycle state machine and an append-only history                                                              |
+| Verification        | `VerificationStatus::IndependentlyVerified` is never supported by evidence (`supported_by` returns false). `ThirdPartyAttested` needs only evidence labelled so by the registrar                                        | Workstream C replaces the label with signed, verified attestations. Until then no record may rise above what its evidence supports    |
+| Bridge              | `BridgeStatus` (`None`, `Bridged`, `Wrapped`) is a label on a representation, not a state machine                                                                                                                       | Workstream F adds the real state machine and `bridge_model`                                                                           |
+| Eligibility         | `policy.rs` allowlist per representation. `EligibilityProvider` exists only in the API ([ADR 0005](../decisions/0005-allowlist-eligibility.md) item 5); the contract never calls an adapter                             | Attestation-backed credentials verified on chain need a new ADR; the contract-side seam does not exist yet                            |
+| Quote signer        | One ed25519 key. `set_quote_signer` replaces it with no overlap ([ADR 0006](../decisions/0006-quote-signing-model.md) item 6). The API holds it in `QUOTE_SIGNER_SECRET_KEY`                                            | Workstream G adds overlapping keys and the signer abstraction                                                                         |
+| Admin auth          | `apps/api/src/admin/auth.ts`: one `ADMIN_API_KEY` bearer token; audit rows name a key fingerprint                                                                                                                       | Workstream C replaces it with NEP-413 sign-in and account-based audit rows                                                            |
+| Liquidity           | Owner-funded vault in `vault.rs`; inventory is a per-representation number                                                                                                                                              | Workstream E turns it into protocol-owned liquidity inside a pool. Existing parity behaviour must keep working                        |
+| Upgrades            | None. `known-limitations.md` says contracts are redeployed                                                                                                                                                              | Workstream G adds `migrate()` and a timelock                                                                                          |
+| API                 | Catalog, quotes, route comparison, conversions, history, health, one admin reconciliation route. `packages/api-types` holds Zod schemas and fixtures, OpenAPI is generated                                              | Workstream J adds the data platform on the same pattern. API changes are additive and come with fixtures                              |
+| DB                  | `registry.ts` and `trading.ts` schemas; migrations `0000` to `0004` under `packages/db/drizzle`                                                                                                                         | Price, candle and stats tables need an ADR (brief §12.2) before the migration                                                         |
+| Dev keys            | No `scripts/lib/dev-keys`. The seed script generates a quote-signer key and prints it once                                                                                                                              | A dev-only keystore is created in the workstream that first needs simulated attesters or publishers                                   |
+| EVM                 | No `contracts-evm/`, no Foundry in CI before this phase                                                                                                                                                                 | The `evm` job added here stays inert until the directory exists                                                                       |
+
+Where the expansion brief and the repository disagree, the repository and the latest ADR win. No contradiction needed a code change in this phase.
+
+## Open risks and notes
+
+- **The brief file is not in the repository.** `.gitignore` in the working checkout lists `PONTIS_MVP_TO_DEMOABLE-BACKEND.md`, so ADR 0014 restates the scope instead of depending on it.
+- **`BuildPlan.md` still says the scope is MVP-only.** It is a frozen plan; ADR 0014 governs what comes after it. `README.md` is revised with Workstream A.
+- **Research is not done.** Every `docs/research/` file is a list of questions. Phases 6 and 8 must fill them before integration code.
+- **The Foundry version is pinned to `v1.8.1`**, the version used for local development. `foundry-rs/foundry-toolchain@v1` accepts a SemVer `version` input (its README). The workflow has not been seen running on GitHub.
+- **Phase 1 next:** Workstream A documents, then the Workstream J data model ADR, price-feed adapter, simulator and seed catalogue.

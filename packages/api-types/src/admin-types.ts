@@ -13,8 +13,9 @@ import {
 
 export const AdminAuthHeaderSchema = z.object({
   authorization: z.string().meta({
-    description: "`Bearer <ADMIN_API_KEY>`.",
-    example: "Bearer 0123456789abcdef0123456789abcdef",
+    description:
+      "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`.",
+    example: "Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c",
   }),
 });
 

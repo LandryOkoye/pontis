@@ -1,6 +1,28 @@
 import { describe, expect, it } from "vitest";
 import {
   ApiErrorSchema,
+  AssetLifecycleSchema,
+  AssetNavSchema,
+  CorporateActionListSchema,
+  ActivityListSchema,
+  AssetChainListSchema,
+  AssetDocumentListSchema,
+  AssetIssuerViewSchema,
+  AssetListSchema,
+  AssetMetadataSchema,
+  CategoryListSchema,
+  CompareQuerySchema,
+  CompareResponseSchema,
+  IssuerLeaderboardSchema,
+  SearchResultSchema,
+  StatusSchema,
+  AdminMetricsSchema,
+  MetricBreakdownSchema,
+  MetricSchema,
+  ProtocolMetricsSchema,
+  ChainListSchema,
+  MarketMoversSchema,
+  MarketOverviewSchema,
   AssetSchema,
   AssetSummarySchema,
   CompareRoutesRequestSchema,
@@ -14,10 +36,17 @@ import {
   PrivateRfqSubmissionSchema,
   IssuerSchema,
   ListTransactionsQuerySchema,
+  ListAssetsQuerySchema,
+  NavChartSchema,
+  PriceChartSchema,
+  PriceString,
+  SupplyChartSchema,
+  VolumeChartSchema,
   QuoteSchema,
   ReconciliationFindingSchema,
   ReconciliationReportSchema,
   SubmittedRequestSchema,
+  RouteGuardsResponseSchema,
   TransactionSchema,
 } from "./helpers.ts";
 import * as fx from "../src/fixtures.ts";
@@ -36,6 +65,30 @@ describe("fixtures round-trip through the schemas", () => {
     ["health", HealthSchema, fx.health],
     ["simulated Intents quote", IntentQuoteSchema, fx.simulatedIntentQuote],
     ["simulated private RFQ", PrivateRfqSubmissionSchema, fx.simulatedPrivateRfqSubmission],
+    ["asset directory", AssetListSchema, fx.assetDirectory],
+    ["price chart", PriceChartSchema, fx.priceChart],
+    ["NAV chart", NavChartSchema, fx.navChart],
+    ["supply chart", SupplyChartSchema, fx.supplyChart],
+    ["volume chart", VolumeChartSchema, fx.volumeChart],
+    ["market overview", MarketOverviewSchema, fx.marketOverview],
+    ["market movers", MarketMoversSchema, fx.marketMovers],
+    ["category breakdown", CategoryListSchema, fx.categoryList],
+    ["chain breakdown", ChainListSchema, fx.chainList],
+    ["asset metadata", AssetMetadataSchema, fx.assetMetadata],
+    ["asset issuer view", AssetIssuerViewSchema, fx.assetIssuerView],
+    ["asset chains", AssetChainListSchema, fx.assetChainList],
+    ["asset documents", AssetDocumentListSchema, fx.assetDocumentList],
+    ["asset activity", ActivityListSchema, fx.activityList],
+    ["compare", CompareResponseSchema, fx.compareResponse],
+    ["search", SearchResultSchema, fx.searchResult],
+    ["issuer leaderboard", IssuerLeaderboardSchema, fx.issuerLeaderboard],
+    ["status", StatusSchema, fx.status],
+    ["route guards", RouteGuardsResponseSchema, fx.routeGuards],
+    ["asset lifecycle", AssetLifecycleSchema, fx.assetLifecycle],
+    ["corporate actions", CorporateActionListSchema, fx.corporateActionList],
+    ["asset NAV", AssetNavSchema, fx.assetNav],
+    ["protocol metrics", ProtocolMetricsSchema, fx.protocolMetrics],
+    ["admin metrics", AdminMetricsSchema, fx.adminMetrics],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));
@@ -161,6 +214,27 @@ describe("requests and errors", () => {
   });
 });
 
+describe("actions and lifecycle responses", () => {
+  it("keeps the honesty labels of a NAV strike required", () => {
+    const { simulated: _s, ...unlabelled } = fx.assetNav.strike!;
+    expect(AssetNavSchema.safeParse({ ...fx.assetNav, strike: unlabelled }).success).toBe(false);
+    expect(AssetNavSchema.safeParse({ ...fx.assetNav, strike: null }).success).toBe(true);
+  });
+
+  it("refuses a stage or action kind the contract does not know", () => {
+    expect(AssetLifecycleSchema.safeParse({ ...fx.assetLifecycle, stage: "retired" }).success).toBe(
+      false,
+    );
+    const [action] = fx.corporateActionList.items;
+    expect(
+      CorporateActionListSchema.safeParse({
+        ...fx.corporateActionList,
+        items: [{ ...action, kind: "bonus" }],
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("reconciliation report", () => {
   const finding = {
     key: "vault:tgold-b:insolvent",
@@ -213,5 +287,123 @@ describe("reconciliation report", () => {
         ],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("transaction hashes", () => {
+  const unverified = {
+    ...fx.transactionSettled,
+    txHash: null,
+    reportedTxHash: fx.transactionSettled.txHash,
+    txHashStatus: "REPORTED",
+  };
+
+  it("keeps the verified hash apart from the reported one", () => {
+    expect(TransactionSchema.parse(fx.transactionSettled)).toMatchObject({
+      txHash: fx.transactionSettled.reportedTxHash,
+      txHashStatus: "VERIFIED",
+    });
+    expect(TransactionSchema.parse(unverified)).toMatchObject({
+      txHash: null,
+      txHashStatus: "REPORTED",
+    });
+    expect(
+      TransactionSchema.parse({ ...unverified, reportedTxHash: null, txHashStatus: "NONE" }),
+    ).toBeTruthy();
+  });
+
+  it("requires the reported hash and its status, and knows only four statuses", () => {
+    const { reportedTxHash: _r, ...withoutReported } = unverified;
+    expect(TransactionSchema.safeParse(withoutReported).success).toBe(false);
+    const { txHashStatus: _s, ...withoutStatus } = unverified;
+    expect(TransactionSchema.safeParse(withoutStatus).success).toBe(false);
+    expect(TransactionSchema.safeParse({ ...unverified, txHashStatus: "TRUSTED" }).success).toBe(
+      false,
+    );
+    for (const status of ["NONE", "REPORTED", "VERIFIED", "REJECTED"])
+      expect(TransactionSchema.safeParse({ ...unverified, txHashStatus: status }).success).toBe(
+        true,
+      );
+  });
+});
+
+describe("market strings and queries", () => {
+  it("accepts decimal prices with up to eight places", () => {
+    for (const price of ["0", "1", "2681.42585338", "0.00000001", "100.5"]) {
+      expect(PriceString.safeParse(price).success, price).toBe(true);
+    }
+  });
+
+  it.each(["", "-1", "01", "1.", ".5", "1e3", "1.123456789", " 1", "NaN"])(
+    "rejects price %j",
+    (price) => {
+      expect(PriceString.safeParse(price).success).toBe(false);
+    },
+  );
+
+  it("rejects a JSON number for a price", () => {
+    expect(PriceString.safeParse(2681.4).success).toBe(false);
+  });
+
+  it("defaults the directory query and bounds the page size", () => {
+    expect(ListAssetsQuerySchema.parse({})).toMatchObject({
+      sort: "id",
+      order: "asc",
+      limit: 25,
+      data: "all",
+    });
+    expect(ListAssetsQuerySchema.parse({ limit: "100" }).limit).toBe(100);
+    expect(ListAssetsQuerySchema.safeParse({ limit: "101" }).success).toBe(false);
+    expect(ListAssetsQuerySchema.safeParse({ sort: "rank" }).success).toBe(false);
+    expect(ListAssetsQuerySchema.safeParse({ data: "fake" }).success).toBe(false);
+  });
+
+  it("accepts two to six comma-separated asset IDs to compare, and nothing else", () => {
+    expect(CompareQuerySchema.parse({ ids: "a-1,b-2" }).data).toBe("all");
+    expect(CompareQuerySchema.safeParse({ ids: "a,b,c,d,e,f" }).success).toBe(true);
+    for (const ids of ["a", "a,b,c,d,e,f,g", "a,,b", "A,b", "a b"]) {
+      expect(CompareQuerySchema.safeParse({ ids }).success, ids).toBe(false);
+    }
+  });
+});
+
+describe("metrics", () => {
+  const rate = {
+    key: "refund_rate",
+    unit: "ratio",
+    scope: "window",
+    available: true,
+    simulated: false,
+    values: { "24h": null, "7d": "0.010000", all: "0.025000" },
+  };
+
+  it("accepts null for an empty window and rejects floats and malformed decimals", () => {
+    expect(MetricSchema.safeParse(rate).success).toBe(true);
+    for (const bad of [0.5, "1", ".5", "0.5e1", -1, "-0.5"]) {
+      expect(
+        MetricSchema.safeParse({ ...rate, values: { ...rate.values, all: bad } }).success,
+        String(bad),
+      ).toBe(false);
+    }
+  });
+
+  it("ties availability to the fields: unavailable needs availableFrom and no value", () => {
+    const off = { key: "tvl_usd", unit: "usd", scope: "now", available: false };
+    expect(MetricSchema.safeParse(off).success).toBe(false);
+    expect(MetricSchema.safeParse({ ...off, availableFrom: "phase 1" }).success).toBe(true);
+    expect(MetricSchema.safeParse({ ...off, availableFrom: "phase 1", value: 0 }).success).toBe(
+      false,
+    );
+    expect(MetricSchema.safeParse({ ...rate, simulated: undefined }).success).toBe(false);
+    expect(MetricSchema.safeParse({ ...rate, values: undefined }).success).toBe(false);
+    expect(MetricSchema.safeParse({ ...rate, availableFrom: "phase 1" }).success).toBe(false);
+  });
+
+  it("keeps per-representation amounts as integer strings", () => {
+    const b = fx.adminMetrics.breakdowns[0];
+    expect(MetricBreakdownSchema.safeParse(b).success).toBe(true);
+    expect(MetricBreakdownSchema.safeParse({ ...b, value: { "tgold-a": "1.5" } }).success).toBe(
+      false,
+    );
   });
 });

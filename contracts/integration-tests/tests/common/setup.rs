@@ -7,10 +7,14 @@ const SHA: &str = "a3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8
 impl Env {
     pub(super) async fn init_and_register(&self) -> anyhow::Result<()> {
         let owner = self.owner.id();
-        for (token, name, symbol, decimals) in [
-            (&self.token_a, "SYNTHETIC TEST Gold A", "TGOLD-A", 6),
-            (&self.token_b, "SYNTHETIC TEST Gold B", "TGOLD-B", 8),
-        ] {
+        if self.fixture_b {
+            self.token_b.call("new").transact().await?.into_result()?;
+        }
+        let mut synthetic = vec![(&self.token_a, "SYNTHETIC TEST Gold A", "TGOLD-A", 6)];
+        if !self.fixture_b {
+            synthetic.push((&self.token_b, "SYNTHETIC TEST Gold B", "TGOLD-B", 8));
+        }
+        for (token, name, symbol, decimals) in synthetic {
             token
                 .call("new")
                 .args_json(
@@ -35,9 +39,9 @@ impl Env {
             json!({"uri": format!("docs/asset-dossiers/{d}.md"), "sha256": SHA,
             "provenance": "issuer_provided", "description": "Self-attested synthetic dossier"})
         };
-        for id in ["issuer-a", "issuer-b"] {
+        for (id, token) in [("issuer-a", &self.token_a), ("issuer-b", &self.token_b)] {
             self.ok("register_issuer", json!({"issuer": {"id": id, "name": format!("Synthetic {id}"), "jurisdiction": null,
-                "authorized_categories": ["synthetic test claims"], "controlled_accounts": [], "contact": null,
+                "authorized_categories": ["Synthetic commodity claim"], "controlled_accounts": [token.id(), self.carol.id()], "contact": null,
                 "synthetic": true, "verification_status": "unverified"}})).await?;
             self.ok("add_evidence", json!({"subject_type": "issuer", "subject_id": id, "evidence": evidence("TGOLD-A")})).await?;
             self.ok("set_issuer_status", json!({"id": id, "status": "active"}))
@@ -105,7 +109,13 @@ impl Env {
             self.ok("set_allowlist", json!({"representation_id": rep, "account_ids": [self.alice.id(), self.bob.id(), self.carol.id()], "allowed": true})).await?;
         }
         // Core must be registered on both tokens to hold them; alice and bob on both to trade.
-        for token in [&self.token_a, &self.token_b] {
+        // The payout fixture keeps no balances, so it has no registration.
+        let registered = if self.fixture_b {
+            vec![&self.token_a]
+        } else {
+            vec![&self.token_a, &self.token_b]
+        };
+        for token in registered {
             for who in [self.core.id(), self.alice.id(), self.bob.id()] {
                 self.register(token, who).await?;
             }
