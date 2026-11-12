@@ -1,4 +1,4 @@
-# ADR 0019: Issuer onboarding and authenticated attestations
+# ADR 0021: Issuer onboarding and authenticated attestations
 
 - **Status:** Proposed
 - **Date:** 2026-11-11

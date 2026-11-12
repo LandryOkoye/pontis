@@ -69,7 +69,7 @@ export interface SeededQuote {
 export async function seedQuote(
   db: Db,
   state: QuoteState,
-  txHash: string | null = null,
+  reportedTxHash: string | null = null,
 ): Promise<SeededQuote> {
   const nonce = randomBytes(16).toString("hex");
   const [quote] = await db
@@ -101,7 +101,12 @@ export async function seedQuote(
   }
   const [conversion] = await db
     .insert(conversions)
-    .values({ quoteId: quote.id, idempotencyKey: `key-${nonce}`, txHash })
+    .values({
+      quoteId: quote.id,
+      idempotencyKey: `key-${nonce}`,
+      reportedTxHash,
+      txHashStatus: reportedTxHash ? "REPORTED" : "NONE",
+    })
     .returning({ id: conversions.id });
   return { nonce, quoteId: quote.id, conversionId: conversion?.id };
 }

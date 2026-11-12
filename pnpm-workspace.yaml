@@ -5,3 +5,4 @@ packages:
   - "tests/e2e"
 allowBuilds:
   esbuild: true
+  secp256k1: true

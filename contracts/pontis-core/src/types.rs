@@ -66,16 +66,17 @@ pub enum VerificationStatus {
 }
 
 impl VerificationStatus {
-    /// A record may not claim more verification than its evidence supports (ADR 0009).
+    /// A record may not claim more verification than its evidence supports (ADR 0009). Provenance
+    /// is a label the registrar supplies, so `IndependentlyVerified` is never supported: it is
+    /// reserved for a future authenticated verifier.
     pub fn supported_by(self, evidence: &[EvidenceRef]) -> bool {
-        let has = |p: Provenance| evidence.iter().any(|e| e.provenance == p);
         match self {
             VerificationStatus::Unverified => true,
             VerificationStatus::IssuerAttested => !evidence.is_empty(),
-            VerificationStatus::ThirdPartyAttested => {
-                has(Provenance::ThirdPartyAttested) || has(Provenance::IndependentlyVerified)
-            }
-            VerificationStatus::IndependentlyVerified => has(Provenance::IndependentlyVerified),
+            VerificationStatus::ThirdPartyAttested => evidence
+                .iter()
+                .any(|e| e.provenance == Provenance::ThirdPartyAttested),
+            VerificationStatus::IndependentlyVerified => false,
         }
     }
 }
@@ -371,6 +372,12 @@ pub enum ReviewAction {
     Rejected,
     Suspended,
     Reapproved,
+    /// A route guard was set or replaced (ADR 0016); the terms changed, so the version moves.
+    GuardSet,
+    /// A multiplier epoch was applied to a representation of the pair (ADR 0017).
+    MultiplierEpoch,
+    /// A representation's lifecycle kind or flags changed (ADR 0018).
+    LifecycleFlags,
 }
 
 /// One immutable entry of a relationship's append-only history. `version` equals the entry's
@@ -419,6 +426,10 @@ pub fn validate_new_evidence(evidence: &NewEvidence) {
     );
     validate_sha256(&evidence.sha256);
     require_text(&evidence.description, "description");
+    check(
+        evidence.provenance != Provenance::IndependentlyVerified,
+        "independently_verified evidence is not accepted: no authenticated verifier exists in this MVP",
+    );
 }
 
 /// Why `ft_on_transfer` returned the input instead of converting or funding. Emitted in
@@ -450,4 +461,19 @@ pub enum RejectReason {
     AmountTooSmall,
     InsufficientInventory,
     NonceUsed,
+    PriceDeviation,
+    PriceStale,
+    PriceMissing,
+    PriceUnavailable,
+    AmountBelowMin,
+    AmountAboveMax,
+    WindowLimitExceeded,
+    CorporateActionFreeze,
+    CorporateActionPending,
+    EpochMismatch,
+    NotConvertible,
+    LifecycleBlocked,
+    NavWindowClosed,
+    ReserveRestricted,
+    ReserveStale,
 }

@@ -1,0 +1,27 @@
+{
+  "name": "@pontis/simulator",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Opt-in market simulator: writes labelled, simulated prices, NAV, supply and trades so the demo has a market (ADR 0015)",
+  "license": "MIT",
+  "scripts": {
+    "start": "tsx --env-file-if-exists=.env src/main.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pontis/db": "workspace:*",
+    "@pontis/dev-keys": "workspace:*",
+    "@pontis/domain": "workspace:*",
+    "@pontis/market-data": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,6 +1,6 @@
 # ADR 0010: Deferred scope
 
-- **Status:** Accepted
+- **Status:** Accepted; items 9, 10, 11 and the "also deferred" list are superseded in part by [0014](0014-scope-expansion-beyond-mvp.md)
 - **Date:** 2026-11-07
 - **Brief items:** §24 items 9–14, §18.2, §26
 - **Related:** [0005](0005-allowlist-eligibility.md)

@@ -1,5 +1,6 @@
 // Conversion history: a conversion joined with its quote and the settlement events the indexer
-// (B12) attributed to it. `state` is the quote state; `txHash` is what the frontend reported.
+// (B12) attributed to it. `state` is the quote state; `txHash` is the verified hash only (null until the chain
+// confirmed it), `reportedTxHash` is what the wallet sent.
 
 import type { Transaction } from "@pontis/api-types";
 import { desc, eq, inArray } from "drizzle-orm";
@@ -19,6 +20,8 @@ function toTransaction(c: ConversionRow, q: QuoteRow, events: EventRow[]): Trans
     quote: quoteFromRow(q),
     state: q.state,
     txHash: c.txHash,
+    reportedTxHash: c.reportedTxHash,
+    txHashStatus: c.txHashStatus,
     failureReason: c.failureReason,
     events: events.map((e) => ({
       eventName: e.eventName,

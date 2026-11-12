@@ -400,7 +400,7 @@ function TicketSpecimen() {
             ["You send", "1 TGOLD-A"],
             ["Approved ratio", "1 A = 10 B"],
             ["Protocol fee (0.10%)", "− 0.01 TGOLD-B"],
-            ["Route", "Test vault · atomic"],
+            ["Route", "Test vault · async"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-4">
               <dt className="text-em-100/55">{k}</dt>

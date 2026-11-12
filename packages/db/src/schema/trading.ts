@@ -1,7 +1,7 @@
 // Quote and settlement tables (used from B10 on) plus the indexer cursor and audit log.
 
 import type { ReconciliationRun, WalletAction } from "@pontis/api-types";
-import type { QuoteState } from "@pontis/domain";
+import type { QuoteState, TxHashStatus } from "@pontis/domain";
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -69,7 +69,13 @@ export const conversions = pgTable("conversions", {
     .$type<WalletAction[]>()
     .notNull()
     .default(sql`'[]'::jsonb`),
+  /** The hash the wallet reported; unchecked unless `txHashStatus` is VERIFIED. */
+  reportedTxHash: text(),
+  /** Only ever a hash that was checked against the chain (see tx-hash.ts); null until then. */
   txHash: text(),
+  txHashStatus: text().$type<TxHashStatus>().notNull().default("NONE"),
+  /** Last time the indexer tried to verify the reported hash; it retries a while after. */
+  txHashCheckedAt: at("tx_hash_checked_at"),
   failureReason: text(),
   submittedAt: at("submitted_at"),
   settledAt: at("settled_at"),
@@ -84,7 +90,7 @@ export const settlementEvents = pgTable(
     logIndex: integer().notNull(),
     blockHeight: bigint({ mode: "number" }).notNull(),
     blockTimestamp: at("block_timestamp").notNull(),
-    /** Null when the origin transaction is unknown: a receipt does not say which transaction began it. */
+    /** Null until the origin transaction is verified: a receipt does not say which transaction began it. */
     txHash: text(),
     eventName: text().notNull(),
     data: jsonb().$type<unknown>().notNull(),
@@ -99,6 +105,8 @@ export const auditLog = pgTable("audit_log", {
   action: text().notNull(),
   subject: text().notNull(),
   detail: jsonb().$type<unknown>().notNull(),
+  /** The access key behind a wallet sign-in (ADR 0019); null for the legacy admin key and refusals. */
+  actorKey: text(),
   at: at("at").notNull().defaultNow(),
 });
 

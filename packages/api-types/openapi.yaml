@@ -17,6 +17,7 @@ components:
           enum:
             - ok
             - degraded
+          description: "`ok` only when the database and RPC answer and the indexer state is `running`."
         chainHeight:
           type:
             - integer
@@ -27,10 +28,57 @@ components:
             - integer
             - "null"
           minimum: 0
+        database:
+          type: boolean
+          description: The database answered. Required to serve anything.
+        rpc:
+          type: boolean
+          description: The chain RPC answered. Required to quote.
+        indexer:
+          type:
+            - object
+            - "null"
+          properties:
+            state:
+              type: string
+              enum:
+                - never_run
+                - running
+                - lagging
+                - stale
+              description: "`never_run`: no cursor row. `stale`: the last heartbeat is older than the API's INDEXER_STALE_AFTER_MS (stopped or crashed; the two cannot be told apart). `lagging`: heartbeat fresh but more than INDEXER_MAX_LAG_BLOCKS behind the chain. `running`: heartbeat fresh and within the lag limit."
+            lagBlocks:
+              type:
+                - integer
+                - "null"
+              minimum: 0
+            lastHeartbeatAt:
+              $ref: "#/components/schemas/Timestamp"
+            heartbeatAgeMs:
+              type:
+                - integer
+                - "null"
+              minimum: 0
+          required:
+            - state
+            - lagBlocks
+            - lastHeartbeatAt
+            - heartbeatAgeMs
+          description: "`null` when the database is unreachable, so the cursor could not be read."
       required:
         - status
         - chainHeight
         - indexerLagBlocks
+        - database
+        - rpc
+        - indexer
+    Timestamp:
+      type:
+        - string
+        - "null"
+      format: date-time
+      description: ISO-8601 UTC timestamp.
+      example: 2026-11-07T18:00:00.000Z
     ApiError:
       type: object
       properties:
@@ -67,11 +115,42 @@ components:
         - ASSET_PAUSED
         - NOT_ELIGIBLE
         - INSUFFICIENT_INVENTORY
+        - PRICE_DEVIATION
+        - PRICE_STALE
+        - PRICE_UNAVAILABLE
+        - AMOUNT_BELOW_MIN
+        - AMOUNT_ABOVE_MAX
+        - WINDOW_LIMIT_EXCEEDED
+        - CORPORATE_ACTION_FREEZE
+        - CORPORATE_ACTION_PENDING
+        - EPOCH_MISMATCH
+        - NOT_CONVERTIBLE
+        - LIFECYCLE_BLOCKED
+        - NAV_WINDOW_CLOSED
+        - RESERVE_RESTRICTED
+        - RESERVE_STALE
+        - REDEMPTION_WINDOW_CLOSED
+        - REDEMPTION_BELOW_MIN
+        - REDEMPTION_ABOVE_MAX
+        - REDEMPTION_TERMS_CHANGED
         - QUOTE_EXPIRED
         - QUOTE_ALREADY_USED
+        - ATTESTATION_REJECTED
         - UNAUTHORIZED
         - RATE_LIMITED
         - INTERNAL
+        - FORBIDDEN
+        - STATE_CONFLICT
+        - MINT_REFUSED
+    Liveness:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+      required:
+        - status
     IssuerList:
       type: object
       properties:
@@ -169,13 +248,6 @@ components:
       pattern: ^[a-z0-9]+([_.-][a-z0-9]+)*$
       description: NEAR account ID.
       example: alice.testnet
-    Timestamp:
-      type:
-        - string
-        - "null"
-      format: date-time
-      description: ISO-8601 UTC timestamp.
-      example: 2026-11-07T18:00:00.000Z
     Evidence:
       type: object
       properties:
@@ -227,10 +299,19 @@ components:
         items:
           type: array
           items:
-            $ref: "#/components/schemas/AssetSummary"
+            $ref: "#/components/schemas/AssetDirectoryItem"
+        nextCursor:
+          type:
+            - string
+            - "null"
+        total:
+          type: integer
+          minimum: 0
       required:
         - items
-    AssetSummary:
+        - nextCursor
+        - total
+    AssetDirectoryItem:
       type: object
       properties:
         id:
@@ -261,6 +342,24 @@ components:
           type: boolean
         verificationStatus:
           $ref: "#/components/schemas/VerificationStatus"
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        chains:
+          type: array
+          items:
+            type: string
+        convertible:
+          type: boolean
+        bridgeable:
+          type: boolean
+        market:
+          $ref: "#/components/schemas/MarketSnapshot"
+        sparkline:
+          $ref: "#/components/schemas/Sparkline"
       required:
         - id
         - symbol
@@ -275,6 +374,13 @@ components:
         - issuer
         - synthetic
         - verificationStatus
+        - category
+        - tags
+        - chains
+        - convertible
+        - bridgeable
+        - market
+        - sparkline
     Network:
       type: string
       enum:
@@ -295,6 +401,597 @@ components:
       example:
         num: "1000"
         den: "1"
+    MarketSnapshot:
+      type:
+        - object
+        - "null"
+      properties:
+        price:
+          $ref: "#/components/schemas/PriceString"
+        currency:
+          type: string
+        priceAsOf:
+          $ref: "#/components/schemas/Timestamp"
+        change24hBps:
+          type:
+            - integer
+            - "null"
+        change7dBps:
+          type:
+            - integer
+            - "null"
+        change30dBps:
+          type:
+            - integer
+            - "null"
+        supply:
+          $ref: "#/components/schemas/AmountString"
+        marketCap:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        volume24h:
+          $ref: "#/components/schemas/PriceString"
+        tvl:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        rank:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+      required:
+        - price
+        - currency
+        - priceAsOf
+        - change24hBps
+        - change7dBps
+        - change30dBps
+        - supply
+        - marketCap
+        - volume24h
+        - tvl
+        - rank
+        - sources
+        - simulated
+    PriceString:
+      type: string
+      pattern: ^(0|[1-9][0-9]*)(\.[0-9]{1,8})?$
+      description: "Decimal with up to 8 fractional digits: a price or a value in the quote currency. Never a float."
+      example: "2681.42585338"
+    AmountString:
+      type:
+        - string
+        - "null"
+      pattern: ^(0|[1-9][0-9]*)$
+      description: Non-negative integer in smallest token units, as a decimal string (max u128).
+      example: "1000000"
+    DataSource:
+      type: string
+      enum:
+        - pontis_trades
+        - simulated_feed
+      description: "`pontis_trades` is real testnet activity. `simulated_feed` is the labelled demo market."
+    Sparkline:
+      type:
+        - object
+        - "null"
+      properties:
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceString"
+        simulated:
+          type: boolean
+      required:
+        - interval
+        - points
+        - simulated
+    CandleInterval:
+      type: string
+      enum:
+        - 1m
+        - 5m
+        - 15m
+        - 1h
+        - 4h
+        - 1d
+    DataFilter:
+      type: string
+      enum:
+        - real
+        - simulated
+        - all
+      default: all
+      description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+    PriceChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/PricePoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    PricePoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        open:
+          $ref: "#/components/schemas/PriceString"
+        high:
+          $ref: "#/components/schemas/PriceString"
+        low:
+          $ref: "#/components/schemas/PriceString"
+        close:
+          $ref: "#/components/schemas/PriceString"
+        volumeBase:
+          $ref: "#/components/schemas/AmountString"
+        volumeQuote:
+          $ref: "#/components/schemas/PriceString"
+        trades:
+          type: integer
+          minimum: 0
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - open
+        - high
+        - low
+        - close
+        - volumeBase
+        - volumeQuote
+        - trades
+        - filled
+    NavChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/NavPoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    NavPoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        nav:
+          $ref: "#/components/schemas/PriceString"
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - nav
+        - filled
+    SupplyChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplyPoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    SupplyPoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        supply:
+          $ref: "#/components/schemas/AmountString"
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - supply
+        - filled
+    VolumeChart:
+      type: object
+      properties:
+        representationId:
+          type: string
+        interval:
+          $ref: "#/components/schemas/CandleInterval"
+        from:
+          $ref: "#/components/schemas/Timestamp"
+        to:
+          $ref: "#/components/schemas/Timestamp"
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/VolumePoint"
+        source:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        filledPoints:
+          type: integer
+          minimum: 0
+      required:
+        - representationId
+        - interval
+        - from
+        - to
+        - points
+        - source
+        - simulated
+        - filledPoints
+    VolumePoint:
+      type: object
+      properties:
+        t:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        volumeBase:
+          $ref: "#/components/schemas/AmountString"
+        volumeQuote:
+          $ref: "#/components/schemas/PriceString"
+        trades:
+          type: integer
+          minimum: 0
+        filled:
+          type: boolean
+      required:
+        - t
+        - simulated
+        - volumeBase
+        - volumeQuote
+        - trades
+        - filled
+    MarketOverview:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        assetCount:
+          type: integer
+          minimum: 0
+        pricedAssetCount:
+          type: integer
+          minimum: 0
+        issuerCount:
+          type: integer
+          minimum: 0
+        chainCount:
+          type: integer
+          minimum: 0
+        convertibleAssetCount:
+          type: integer
+          minimum: 0
+        totalMarketCap:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        totalTvl:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        volume24h:
+          $ref: "#/components/schemas/PriceString"
+        change24hBps:
+          type:
+            - integer
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+      required:
+        - data
+        - asOf
+        - assetCount
+        - pricedAssetCount
+        - issuerCount
+        - chainCount
+        - convertibleAssetCount
+        - totalMarketCap
+        - totalTvl
+        - volume24h
+        - change24hBps
+        - simulated
+        - sources
+    MarketMovers:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        gainers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mover"
+        losers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mover"
+        topByVolume:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mover"
+        topByTvl:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mover"
+        newlyListed:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              symbol:
+                type: string
+              name:
+                type: string
+              registeredAt:
+                $ref: "#/components/schemas/Timestamp"
+              market:
+                allOf:
+                  - $ref: "#/components/schemas/Mover"
+                  - type:
+                      - object
+                      - "null"
+            required:
+              - id
+              - symbol
+              - name
+              - registeredAt
+              - market
+      required:
+        - data
+        - gainers
+        - losers
+        - topByVolume
+        - topByTvl
+        - newlyListed
+    Mover:
+      type: object
+      properties:
+        id:
+          type: string
+        symbol:
+          type: string
+        name:
+          type: string
+        price:
+          $ref: "#/components/schemas/PriceString"
+        change24hBps:
+          type:
+            - integer
+            - "null"
+        marketCap:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        volume24h:
+          $ref: "#/components/schemas/PriceString"
+        tvl:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        simulated:
+          type: boolean
+      required:
+        - id
+        - symbol
+        - name
+        - price
+        - change24hBps
+        - marketCap
+        - volume24h
+        - tvl
+        - simulated
+    CategoryList:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryBreakdown"
+      required:
+        - data
+        - items
+    CategoryBreakdown:
+      type: object
+      properties:
+        category:
+          type: string
+        assetCount:
+          type: integer
+          minimum: 0
+        marketCap:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        volume24h:
+          $ref: "#/components/schemas/PriceString"
+        tvl:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+      required:
+        - category
+        - assetCount
+        - marketCap
+        - volume24h
+        - tvl
+        - simulated
+        - sources
+    ChainList:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChainBreakdown"
+      required:
+        - data
+        - items
+    ChainBreakdown:
+      type: object
+      properties:
+        chain:
+          type: string
+        assetCount:
+          type: integer
+          minimum: 0
+        value:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        supplies:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              supply:
+                $ref: "#/components/schemas/AmountString"
+            required:
+              - id
+              - supply
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSource"
+      required:
+        - chain
+        - assetCount
+        - value
+        - supplies
+        - simulated
+        - sources
     Asset:
       type: object
       properties:
@@ -440,11 +1137,6 @@ components:
         - lastReviewedAt
         - synthetic
         - verificationStatus
-    AmountString:
-      type: string
-      pattern: ^(0|[1-9][0-9]*)$
-      description: Non-negative integer in smallest token units, as a decimal string (max u128).
-      example: "1000000"
     CompatibilityList:
       type: object
       properties:
@@ -563,6 +1255,825 @@ components:
         - rejected
         - suspended
         - reapproved
+        - guard_set
+        - multiplier_epoch
+        - lifecycle_flags
+    AssetMetadata:
+      type: object
+      properties:
+        id:
+          type: string
+        canonicalAssetId:
+          type: string
+        category:
+          type: string
+        profile:
+          $ref: "#/components/schemas/AssetProfile"
+      required:
+        - id
+        - canonicalAssetId
+        - category
+        - profile
+    AssetProfile:
+      type:
+        - object
+        - "null"
+      properties:
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        sections:
+          type: object
+          additionalProperties:
+            type: string
+        convertible:
+          type: boolean
+        bridgeable:
+          type: boolean
+        source:
+          $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - description
+        - tags
+        - sections
+        - convertible
+        - bridgeable
+        - source
+        - simulated
+        - updatedAt
+    AssetIssuerView:
+      type: object
+      properties:
+        issuer:
+          $ref: "#/components/schemas/Issuer"
+        assets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              symbol:
+                type: string
+              name:
+                type: string
+              status:
+                type: string
+            required:
+              - id
+              - symbol
+              - name
+              - status
+      required:
+        - issuer
+        - assets
+    AssetChainList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetChain"
+      required:
+        - items
+    AssetChain:
+      type: object
+      properties:
+        chain:
+          type: string
+        contract:
+          type:
+            - string
+            - "null"
+        role:
+          type: string
+        supply:
+          $ref: "#/components/schemas/AmountString"
+        supplyAsOf:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type:
+            - boolean
+            - "null"
+      required:
+        - chain
+        - contract
+        - role
+        - supply
+        - supplyAsOf
+        - simulated
+    AssetDocumentList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetDocument"
+      required:
+        - items
+    AssetDocument:
+      type: object
+      properties:
+        title:
+          type: string
+        uri:
+          type: string
+        sha256:
+          type:
+            - string
+            - "null"
+        origin:
+          type: string
+          enum:
+            - dossier
+            - registry_evidence
+        provenance:
+          type:
+            - string
+            - "null"
+          enum:
+            - issuer_provided
+            - third_party_attested
+            - independently_verified
+            - null
+      required:
+        - title
+        - uri
+        - sha256
+        - origin
+        - provenance
+    ActivityList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+        nextCursor:
+          type:
+            - string
+            - "null"
+      required:
+        - items
+        - nextCursor
+    ActivityItem:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - conversion
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        fromId:
+          type: string
+        toId:
+          type: string
+        amountIn:
+          $ref: "#/components/schemas/AmountString"
+        amountOut:
+          $ref: "#/components/schemas/AmountString"
+        fee:
+          $ref: "#/components/schemas/AmountString"
+        source:
+          $ref: "#/components/schemas/DataSource"
+        simulated:
+          type: boolean
+      required:
+        - kind
+        - at
+        - accountId
+        - fromId
+        - toId
+        - amountIn
+        - amountOut
+        - fee
+        - source
+        - simulated
+    AssetLifecycle:
+      type: object
+      properties:
+        assetId:
+          type: string
+        kind:
+          $ref: "#/components/schemas/AssetKind"
+        stage:
+          $ref: "#/components/schemas/LifecycleStage"
+        noConversion:
+          type: boolean
+        bridgeOnly:
+          type: boolean
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/LifecycleEntry"
+        delistRequest:
+          $ref: "#/components/schemas/DelistRequest"
+      required:
+        - assetId
+        - kind
+        - stage
+        - noConversion
+        - bridgeOnly
+        - history
+        - delistRequest
+    AssetKind:
+      type: string
+      enum:
+        - fungible
+        - nav_fund
+        - term_instrument
+        - unique
+    LifecycleStage:
+      type: string
+      enum:
+        - active
+        - nav_strike_window
+        - matured
+        - redeeming
+        - redeemed
+        - delisted
+    LifecycleEntry:
+      type: object
+      properties:
+        from:
+          $ref: "#/components/schemas/LifecycleStage"
+        to:
+          $ref: "#/components/schemas/LifecycleStage"
+        by:
+          $ref: "#/components/schemas/AccountId"
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        evidenceHash:
+          type:
+            - string
+            - "null"
+        note:
+          type: string
+      required:
+        - from
+        - to
+        - by
+        - at
+        - evidenceHash
+        - note
+    DelistRequest:
+      type:
+        - object
+        - "null"
+      properties:
+        by:
+          $ref: "#/components/schemas/AccountId"
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        evidenceHash:
+          type:
+            - string
+            - "null"
+        note:
+          type: string
+      required:
+        - by
+        - at
+        - evidenceHash
+        - note
+    CorporateActionList:
+      type: object
+      properties:
+        assetId:
+          type: string
+        canonicalAssetId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CorporateAction"
+        multiplierEpochs:
+          type: array
+          items:
+            $ref: "#/components/schemas/WrapperEpochs"
+      required:
+        - assetId
+        - canonicalAssetId
+        - items
+        - multiplierEpochs
+    CorporateAction:
+      type: object
+      properties:
+        id:
+          type: string
+        canonicalAssetId:
+          type: string
+        kind:
+          $ref: "#/components/schemas/ActionKind"
+        status:
+          $ref: "#/components/schemas/ActionStatus"
+        announcedAt:
+          $ref: "#/components/schemas/Timestamp"
+        exDate:
+          $ref: "#/components/schemas/Timestamp"
+        effectiveAt:
+          $ref: "#/components/schemas/Timestamp"
+        freezeFrom:
+          $ref: "#/components/schemas/Timestamp"
+        freezeUntil:
+          $ref: "#/components/schemas/Timestamp"
+        freezeActive:
+          type: boolean
+        multiplierChange:
+          allOf:
+            - $ref: "#/components/schemas/Rational"
+            - type:
+                - object
+                - "null"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionEvidence"
+        proposedBy:
+          $ref: "#/components/schemas/AccountId"
+        approvedBy:
+          allOf:
+            - $ref: "#/components/schemas/AccountId"
+            - type:
+                - string
+                - "null"
+        wrappers:
+          type: array
+          items:
+            $ref: "#/components/schemas/WrapperApplication"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionHistoryEntry"
+      required:
+        - id
+        - canonicalAssetId
+        - kind
+        - status
+        - announcedAt
+        - exDate
+        - effectiveAt
+        - freezeFrom
+        - freezeUntil
+        - freezeActive
+        - multiplierChange
+        - evidence
+        - proposedBy
+        - approvedBy
+        - wrappers
+        - history
+    ActionKind:
+      type: string
+      enum:
+        - split
+        - reverse_split
+        - dividend_cash
+        - dividend_stock
+        - merger
+        - spin_off
+        - delisting
+        - symbol_change
+        - custom
+    ActionStatus:
+      type: string
+      enum:
+        - proposed
+        - approved
+        - applied
+        - cancelled
+    ActionEvidence:
+      type: object
+      properties:
+        uri:
+          type: string
+        sha256:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        provenance:
+          $ref: "#/components/schemas/EvidenceProvenance"
+        description:
+          type: string
+        addedBy:
+          $ref: "#/components/schemas/AccountId"
+        addedAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - uri
+        - sha256
+        - provenance
+        - description
+        - addedBy
+        - addedAt
+    WrapperApplication:
+      type: object
+      properties:
+        representationId:
+          type: string
+        live:
+          type: boolean
+        applied:
+          type: boolean
+      required:
+        - representationId
+        - live
+        - applied
+    ActionHistoryEntry:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/ActionStatus"
+        by:
+          $ref: "#/components/schemas/AccountId"
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        note:
+          type: string
+      required:
+        - status
+        - by
+        - at
+        - note
+    WrapperEpochs:
+      type: object
+      properties:
+        representationId:
+          type: string
+        epochs:
+          type: array
+          items:
+            $ref: "#/components/schemas/MultiplierEpoch"
+      required:
+        - representationId
+        - epochs
+    MultiplierEpoch:
+      type: object
+      properties:
+        effectiveAt:
+          $ref: "#/components/schemas/Timestamp"
+        multiplier:
+          $ref: "#/components/schemas/Rational"
+        actionId:
+          type:
+            - string
+            - "null"
+      required:
+        - effectiveAt
+        - multiplier
+        - actionId
+    AssetNav:
+      type: object
+      properties:
+        assetId:
+          type: string
+        kind:
+          $ref: "#/components/schemas/AssetKind"
+        strike:
+          $ref: "#/components/schemas/NavStrike"
+      required:
+        - assetId
+        - kind
+        - strike
+    NavStrike:
+      type:
+        - object
+        - "null"
+      properties:
+        navPerUnit:
+          $ref: "#/components/schemas/PriceString"
+        currency:
+          type: string
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        cutoff:
+          $ref: "#/components/schemas/Timestamp"
+        submittedAt:
+          $ref: "#/components/schemas/Timestamp"
+        source:
+          type: string
+        simulated:
+          type: boolean
+        publisherKey:
+          type: string
+        windowState:
+          $ref: "#/components/schemas/NavWindowState"
+      required:
+        - navPerUnit
+        - currency
+        - asOf
+        - cutoff
+        - submittedAt
+        - source
+        - simulated
+        - publisherKey
+        - windowState
+    NavWindowState:
+      type: string
+      enum:
+        - upcoming
+        - open
+        - closed
+    CompareResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CompareItem"
+        pairs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParityPair"
+      required:
+        - data
+        - items
+        - pairs
+    CompareItem:
+      type: object
+      properties:
+        id:
+          type: string
+        symbol:
+          type: string
+        name:
+          type: string
+        canonicalAssetId:
+          type: string
+        issuer:
+          $ref: "#/components/schemas/IssuerSummary"
+        status:
+          $ref: "#/components/schemas/RecordStatus"
+        verificationStatus:
+          $ref: "#/components/schemas/VerificationStatus"
+        chains:
+          type: array
+          items:
+            type: string
+        convertible:
+          type: boolean
+        bridgeable:
+          type: boolean
+        market:
+          $ref: "#/components/schemas/MarketSnapshot"
+        navPerToken:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        premiumToNavBps:
+          type:
+            - integer
+            - "null"
+      required:
+        - id
+        - symbol
+        - name
+        - canonicalAssetId
+        - issuer
+        - status
+        - verificationStatus
+        - chains
+        - convertible
+        - bridgeable
+        - market
+        - navPerToken
+        - premiumToNavBps
+    ParityPair:
+      type: object
+      properties:
+        fromId:
+          type: string
+        toId:
+          type: string
+        parityRatio:
+          $ref: "#/components/schemas/PriceString"
+        impliedRatio:
+          allOf:
+            - $ref: "#/components/schemas/PriceString"
+            - type:
+                - string
+                - "null"
+        deviationBps:
+          type:
+            - integer
+            - "null"
+        simulated:
+          type:
+            - boolean
+            - "null"
+      required:
+        - fromId
+        - toId
+        - parityRatio
+        - impliedRatio
+        - deviationBps
+        - simulated
+    SearchResult:
+      type: object
+      properties:
+        q:
+          type: string
+        assets:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              symbol:
+                type: string
+              name:
+                type: string
+              canonicalAssetName:
+                type: string
+              issuer:
+                $ref: "#/components/schemas/IssuerSummary"
+            required:
+              - id
+              - symbol
+              - name
+              - canonicalAssetName
+              - issuer
+        issuers:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssuerSummary"
+        chains:
+          type: array
+          items:
+            type: object
+            properties:
+              chain:
+                type: string
+              assetCount:
+                type: integer
+                minimum: 0
+            required:
+              - chain
+              - assetCount
+      required:
+        - q
+        - assets
+        - issuers
+        - chains
+    IssuerLeaderboard:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/DataFilter"
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              rank:
+                type: integer
+                exclusiveMinimum: 0
+              issuer:
+                $ref: "#/components/schemas/IssuerSummary"
+              assetCount:
+                type: integer
+                minimum: 0
+              totalMarketCap:
+                allOf:
+                  - $ref: "#/components/schemas/PriceString"
+                  - type:
+                      - string
+                      - "null"
+              simulated:
+                type:
+                  - boolean
+                  - "null"
+              reliabilityScore:
+                type:
+                  - integer
+                  - "null"
+                minimum: 0
+                maximum: 100
+            required:
+              - rank
+              - issuer
+              - assetCount
+              - totalMarketCap
+              - simulated
+              - reliabilityScore
+      required:
+        - data
+        - items
+    Status:
+      type: object
+      properties:
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        health:
+          $ref: "#/components/schemas/Health"
+        prices:
+          type: object
+          properties:
+            real:
+              type: object
+              properties:
+                latestAt:
+                  $ref: "#/components/schemas/Timestamp"
+                ageSeconds:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 0
+                stale:
+                  type: boolean
+              required:
+                - latestAt
+                - ageSeconds
+                - stale
+            simulated:
+              type: object
+              properties:
+                latestAt:
+                  $ref: "#/components/schemas/Timestamp"
+                ageSeconds:
+                  type:
+                    - integer
+                    - "null"
+                  minimum: 0
+                stale:
+                  type: boolean
+              required:
+                - latestAt
+                - ageSeconds
+                - stale
+          required:
+            - real
+            - simulated
+        marketJobs:
+          type: object
+          properties:
+            latestAt:
+              $ref: "#/components/schemas/Timestamp"
+            ageSeconds:
+              type:
+                - integer
+                - "null"
+              minimum: 0
+            stale:
+              type: boolean
+          required:
+            - latestAt
+            - ageSeconds
+            - stale
+        routes:
+          type: object
+          properties:
+            approved:
+              type: integer
+              minimum: 0
+            suspended:
+              type: integer
+              minimum: 0
+            proposed:
+              type: integer
+              minimum: 0
+          required:
+            - approved
+            - suspended
+            - proposed
+        reserves:
+          type: "null"
+        bridge:
+          type: "null"
+        incidents:
+          type: array
+          items:
+            type: object
+            properties:
+              at:
+                $ref: "#/components/schemas/Timestamp"
+              summary:
+                type: string
+            required:
+              - at
+              - summary
+      required:
+        - asOf
+        - health
+        - prices
+        - marketJobs
+        - routes
+        - reserves
+        - bridge
+        - incidents
     CompareRoutesResponse:
       type: object
       properties:
@@ -604,6 +2115,20 @@ components:
         - ASSET_PAUSED
         - NOT_ELIGIBLE
         - INSUFFICIENT_INVENTORY
+        - PRICE_DEVIATION
+        - PRICE_STALE
+        - PRICE_UNAVAILABLE
+        - AMOUNT_BELOW_MIN
+        - AMOUNT_ABOVE_MAX
+        - WINDOW_LIMIT_EXCEEDED
+        - CORPORATE_ACTION_FREEZE
+        - CORPORATE_ACTION_PENDING
+        - EPOCH_MISMATCH
+        - NOT_CONVERTIBLE
+        - LIFECYCLE_BLOCKED
+        - NAV_WINDOW_CLOSED
+        - RESERVE_RESTRICTED
+        - RESERVE_STALE
     CompareRoutesRequest:
       type: object
       properties:
@@ -616,6 +2141,1135 @@ components:
       required:
         - fromId
         - toId
+      additionalProperties: false
+    RouteGuardsResponse:
+      type: object
+      properties:
+        fromId:
+          type: string
+        toId:
+          type: string
+        amount:
+          $ref: "#/components/schemas/AmountString"
+        executable:
+          type: boolean
+        guarded:
+          type: boolean
+        degraded:
+          type: boolean
+        feeBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        skewBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/GuardCheck"
+        prices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReferencePrice"
+      required:
+        - fromId
+        - toId
+        - amount
+        - executable
+        - guarded
+        - degraded
+        - feeBps
+        - skewBps
+        - checks
+        - prices
+    GuardCheck:
+      type: object
+      properties:
+        name:
+          type: string
+        passed:
+          type: boolean
+        detail:
+          type: string
+        reasonCode:
+          $ref: "#/components/schemas/RefusalCode"
+      required:
+        - name
+        - passed
+        - detail
+    ReferencePrice:
+      type: object
+      properties:
+        representationId:
+          type: string
+        price:
+          $ref: "#/components/schemas/PriceString"
+        currency:
+          type: string
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        ageMs:
+          type: integer
+          minimum: 0
+        source:
+          type: string
+        simulated:
+          type: boolean
+      required:
+        - representationId
+        - price
+        - currency
+        - asOf
+        - ageMs
+        - source
+        - simulated
+    CustodianList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Custodian"
+        total:
+          type: integer
+          minimum: 0
+        nextCursor:
+          type:
+            - string
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - items
+        - total
+        - nextCursor
+        - simulated
+        - sources
+        - notice
+    Custodian:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        jurisdiction:
+          type:
+            - string
+            - "null"
+        attesterKey:
+          type: string
+        status:
+          $ref: "#/components/schemas/CustodianStatus"
+        synthetic:
+          type: boolean
+        verificationStatus:
+          $ref: "#/components/schemas/VerificationStatus"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActionEvidence"
+        registeredBy:
+          $ref: "#/components/schemas/AccountId"
+        registeredAt:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - id
+        - name
+        - jurisdiction
+        - attesterKey
+        - status
+        - synthetic
+        - verificationStatus
+        - evidence
+        - registeredBy
+        - registeredAt
+        - simulated
+        - sources
+        - notice
+    CustodianStatus:
+      type: string
+      enum:
+        - active
+        - suspended
+        - retired
+    AssetCustody:
+      type: object
+      properties:
+        assetId:
+          type: string
+        linked:
+          type: boolean
+        structure:
+          $ref: "#/components/schemas/CustodyStructure"
+        custodians:
+          type: array
+          items:
+            $ref: "#/components/schemas/Custodian"
+        linkedBy:
+          allOf:
+            - $ref: "#/components/schemas/AccountId"
+            - type:
+                - string
+                - "null"
+        linkedAt:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - assetId
+        - linked
+        - structure
+        - custodians
+        - linkedBy
+        - linkedAt
+        - simulated
+        - sources
+        - notice
+    CustodyStructure:
+      type:
+        - string
+        - "null"
+      enum:
+        - segregated
+        - omnibus
+        - on_chain_vault
+        - null
+    AssetReserves:
+      type: object
+      properties:
+        assetId:
+          type: string
+        monitored:
+          type: boolean
+        state:
+          $ref: "#/components/schemas/ReserveState"
+        policy:
+          $ref: "#/components/schemas/ReservePolicy"
+        attestedUnits:
+          $ref: "#/components/schemas/AmountString"
+        limitUnits:
+          $ref: "#/components/schemas/AmountString"
+        circulatingUnits:
+          $ref: "#/components/schemas/AmountString"
+        headroomUnits:
+          $ref: "#/components/schemas/AmountString"
+        ratioBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        ratioPercent:
+          type:
+            - string
+            - "null"
+        freshness:
+          $ref: "#/components/schemas/ReserveFreshness"
+        oldestAsOf:
+          $ref: "#/components/schemas/Timestamp"
+        ageMs:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        supplyReadAt:
+          $ref: "#/components/schemas/Timestamp"
+        restrictsConversions:
+          type: boolean
+        mintPaused:
+          type: boolean
+        custodians:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReserveCustodianLine"
+        explanation:
+          type: string
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - assetId
+        - monitored
+        - state
+        - policy
+        - attestedUnits
+        - limitUnits
+        - circulatingUnits
+        - headroomUnits
+        - ratioBps
+        - ratioPercent
+        - freshness
+        - oldestAsOf
+        - ageMs
+        - supplyReadAt
+        - restrictsConversions
+        - mintPaused
+        - custodians
+        - explanation
+        - simulated
+        - sources
+        - notice
+    ReserveState:
+      type: string
+      enum:
+        - ok
+        - breached
+        - stale
+        - no_attestation
+        - unmonitored
+      description: "`ok`, `breached` (supply above attested reserves plus tolerance), `stale` (oldest attestation older than the policy allows), `no_attestation`, or `unmonitored` (no reserve policy: nothing is enforced)."
+    ReservePolicy:
+      type:
+        - object
+        - "null"
+      properties:
+        action:
+          $ref: "#/components/schemas/ReservePolicyAction"
+        toleranceBps:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        maxReserveAgeMs:
+          type: integer
+          exclusiveMinimum: 0
+      required:
+        - action
+        - toleranceBps
+        - maxReserveAgeMs
+    ReservePolicyAction:
+      type: string
+      enum:
+        - warn
+        - restrict_conversions
+        - pause_mint
+    ReserveFreshness:
+      type: string
+      enum:
+        - fresh
+        - stale
+        - none
+    ReserveCustodianLine:
+      type: object
+      properties:
+        custodianId:
+          type: string
+        custodianName:
+          type: string
+        custodianStatus:
+          $ref: "#/components/schemas/CustodianStatus"
+        counted:
+          type: boolean
+        latest:
+          $ref: "#/components/schemas/LatestReserveAttestation"
+      required:
+        - custodianId
+        - custodianName
+        - custodianStatus
+        - counted
+        - latest
+    LatestReserveAttestation:
+      type:
+        - object
+        - "null"
+      properties:
+        seq:
+          type: integer
+          minimum: 0
+        custodianId:
+          type: string
+        reservedUnits:
+          $ref: "#/components/schemas/AmountString"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        submittedAt:
+          $ref: "#/components/schemas/Timestamp"
+        reportUri:
+          type: string
+        reportHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        attesterKey:
+          type: string
+        simulated:
+          type: boolean
+        source:
+          type: string
+        ageMs:
+          type: integer
+          minimum: 0
+        fresh:
+          type: boolean
+      required:
+        - seq
+        - custodianId
+        - reservedUnits
+        - asOf
+        - submittedAt
+        - reportUri
+        - reportHash
+        - attesterKey
+        - simulated
+        - source
+        - ageMs
+        - fresh
+    ReserveHistory:
+      type: object
+      properties:
+        assetId:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReserveAttestation"
+        total:
+          type: integer
+          minimum: 0
+        nextCursor:
+          type:
+            - string
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - assetId
+        - items
+        - total
+        - nextCursor
+        - simulated
+        - sources
+        - notice
+    ReserveAttestation:
+      type: object
+      properties:
+        seq:
+          type: integer
+          minimum: 0
+        custodianId:
+          type: string
+        reservedUnits:
+          $ref: "#/components/schemas/AmountString"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        submittedAt:
+          $ref: "#/components/schemas/Timestamp"
+        reportUri:
+          type: string
+        reportHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        attesterKey:
+          type: string
+        simulated:
+          type: boolean
+        source:
+          type: string
+      required:
+        - seq
+        - custodianId
+        - reservedUnits
+        - asOf
+        - submittedAt
+        - reportUri
+        - reportHash
+        - attesterKey
+        - simulated
+        - source
+    AssetRedemptionTerms:
+      type: object
+      properties:
+        assetId:
+          type: string
+        description:
+          type: string
+        terms:
+          $ref: "#/components/schemas/RedemptionTermsBody"
+        version:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+        termsHash:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9a-f]{64}$
+        setBy:
+          allOf:
+            - $ref: "#/components/schemas/AccountId"
+            - type:
+                - string
+                - "null"
+        setAt:
+          $ref: "#/components/schemas/Timestamp"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - assetId
+        - description
+        - terms
+        - version
+        - termsHash
+        - setBy
+        - setAt
+        - simulated
+        - sources
+        - notice
+    RedemptionTermsBody:
+      type:
+        - object
+        - "null"
+      properties:
+        minAmount:
+          $ref: "#/components/schemas/AmountString"
+        maxAmount:
+          $ref: "#/components/schemas/AmountString"
+        feeBps:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        window:
+          $ref: "#/components/schemas/RedemptionWindow"
+        acceptWithinMs:
+          type: integer
+          exclusiveMinimum: 0
+        settlementDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+      required:
+        - minAmount
+        - maxAmount
+        - feeBps
+        - window
+        - acceptWithinMs
+        - settlementDays
+    RedemptionWindow:
+      type: object
+      properties:
+        alwaysOpen:
+          type: boolean
+        anchorAt:
+          $ref: "#/components/schemas/Timestamp"
+        lengthMs:
+          type: integer
+          minimum: 0
+        periodMs:
+          type: integer
+          minimum: 0
+        open:
+          type: boolean
+        nextOpenAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - alwaysOpen
+        - anchorAt
+        - lengthMs
+        - periodMs
+        - open
+        - nextOpenAt
+    IssuerReliability:
+      type: object
+      properties:
+        issuerId:
+          type: string
+        requested:
+          type: integer
+          minimum: 0
+        accepted:
+          type: integer
+          minimum: 0
+        fulfilled:
+          type: integer
+          minimum: 0
+        rejected:
+          type: integer
+          minimum: 0
+        expired:
+          type: integer
+          minimum: 0
+        acceptMisses:
+          type: integer
+          minimum: 0
+        fulfilMisses:
+          type: integer
+          minimum: 0
+        reclaimed:
+          type: integer
+          minimum: 0
+        lastMissAt:
+          $ref: "#/components/schemas/Timestamp"
+        score:
+          $ref: "#/components/schemas/IssuerReliabilityScore"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - issuerId
+        - requested
+        - accepted
+        - fulfilled
+        - rejected
+        - expired
+        - acceptMisses
+        - fulfilMisses
+        - reclaimed
+        - lastMissAt
+        - score
+        - simulated
+        - sources
+        - notice
+    IssuerReliabilityScore:
+      type: object
+      properties:
+        fulfilmentRateBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 10000
+        acceptMissRateBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 10000
+        fulfilMissRateBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 10000
+        avgAcceptLatencyMs:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        avgSettleLatencyMs:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+      required:
+        - fulfilmentRateBps
+        - acceptMissRateBps
+        - fulfilMissRateBps
+        - avgAcceptLatencyMs
+        - avgSettleLatencyMs
+    RedemptionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RedemptionSummary"
+        nextCursor:
+          type:
+            - string
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - items
+        - nextCursor
+        - simulated
+        - sources
+        - notice
+    RedemptionSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9]+$
+        user:
+          $ref: "#/components/schemas/AccountId"
+        assetId:
+          type: string
+        issuerId:
+          type: string
+        amount:
+          $ref: "#/components/schemas/AmountString"
+        feeBps:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        feeUnits:
+          $ref: "#/components/schemas/AmountString"
+        netUnits:
+          $ref: "#/components/schemas/AmountString"
+        termsHash:
+          type: string
+        termsVersion:
+          type: integer
+          exclusiveMinimum: 0
+        payoutInstructionHash:
+          type: string
+        status:
+          $ref: "#/components/schemas/RedemptionStatus"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        acceptDeadline:
+          $ref: "#/components/schemas/Timestamp"
+        acceptedAt:
+          $ref: "#/components/schemas/Timestamp"
+        fulfilDeadline:
+          $ref: "#/components/schemas/Timestamp"
+        resolvedAt:
+          $ref: "#/components/schemas/Timestamp"
+        fulfilmentEvidenceHash:
+          type:
+            - string
+            - "null"
+        rejectReason:
+          type:
+            - string
+            - "null"
+        miss:
+          type:
+            - string
+            - "null"
+          enum:
+            - accept
+            - fulfil
+            - null
+        settlementDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+        reclaimable:
+          type: boolean
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - id
+        - user
+        - assetId
+        - issuerId
+        - amount
+        - feeBps
+        - feeUnits
+        - netUnits
+        - termsHash
+        - termsVersion
+        - payoutInstructionHash
+        - status
+        - createdAt
+        - acceptDeadline
+        - acceptedAt
+        - fulfilDeadline
+        - resolvedAt
+        - fulfilmentEvidenceHash
+        - rejectReason
+        - miss
+        - settlementDays
+        - reclaimable
+        - simulated
+        - sources
+        - notice
+    RedemptionStatus:
+      type: string
+      enum:
+        - requested
+        - accepted
+        - fulfilled
+        - rejected
+        - expired
+        - reclaimed
+    Redemption:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9]+$
+        user:
+          $ref: "#/components/schemas/AccountId"
+        assetId:
+          type: string
+        issuerId:
+          type: string
+        amount:
+          $ref: "#/components/schemas/AmountString"
+        feeBps:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        feeUnits:
+          $ref: "#/components/schemas/AmountString"
+        netUnits:
+          $ref: "#/components/schemas/AmountString"
+        termsHash:
+          type: string
+        termsVersion:
+          type: integer
+          exclusiveMinimum: 0
+        payoutInstructionHash:
+          type: string
+        status:
+          $ref: "#/components/schemas/RedemptionStatus"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        acceptDeadline:
+          $ref: "#/components/schemas/Timestamp"
+        acceptedAt:
+          $ref: "#/components/schemas/Timestamp"
+        fulfilDeadline:
+          $ref: "#/components/schemas/Timestamp"
+        resolvedAt:
+          $ref: "#/components/schemas/Timestamp"
+        fulfilmentEvidenceHash:
+          type:
+            - string
+            - "null"
+        rejectReason:
+          type:
+            - string
+            - "null"
+        miss:
+          type:
+            - string
+            - "null"
+          enum:
+            - accept
+            - fulfil
+            - null
+        settlementDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+        reclaimable:
+          type: boolean
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+        timeline:
+          type: array
+          items:
+            $ref: "#/components/schemas/RedemptionEvent"
+      required:
+        - id
+        - user
+        - assetId
+        - issuerId
+        - amount
+        - feeBps
+        - feeUnits
+        - netUnits
+        - termsHash
+        - termsVersion
+        - payoutInstructionHash
+        - status
+        - createdAt
+        - acceptDeadline
+        - acceptedAt
+        - fulfilDeadline
+        - resolvedAt
+        - fulfilmentEvidenceHash
+        - rejectReason
+        - miss
+        - settlementDays
+        - reclaimable
+        - simulated
+        - sources
+        - notice
+        - timeline
+    RedemptionEvent:
+      type: object
+      properties:
+        event:
+          $ref: "#/components/schemas/RedemptionStatus"
+        at:
+          $ref: "#/components/schemas/Timestamp"
+        txHash:
+          type:
+            - string
+            - "null"
+      required:
+        - event
+        - at
+        - txHash
+    PrepareRedemptionResponse:
+      type: object
+      properties:
+        prepareId:
+          $ref: "#/components/schemas/Uuid"
+        representationId:
+          type: string
+        amount:
+          $ref: "#/components/schemas/AmountString"
+        termsHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        termsVersion:
+          type: integer
+          exclusiveMinimum: 0
+        payoutInstructionHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        msg:
+          type: string
+        feeUnits:
+          $ref: "#/components/schemas/AmountString"
+        netUnits:
+          $ref: "#/components/schemas/AmountString"
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletAction"
+          minItems: 1
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - prepareId
+        - representationId
+        - amount
+        - termsHash
+        - termsVersion
+        - payoutInstructionHash
+        - msg
+        - feeUnits
+        - netUnits
+        - actions
+        - simulated
+        - sources
+        - notice
+    Uuid:
+      type: string
+      format: uuid
+    WalletAction:
+      type: object
+      properties:
+        receiverId:
+          $ref: "#/components/schemas/AccountId"
+        methodName:
+          type: string
+        args:
+          type: object
+          additionalProperties: {}
+        gas:
+          type: string
+          pattern: ^[0-9]+$
+        deposit:
+          type: string
+          pattern: ^[0-9]+$
+      required:
+        - receiverId
+        - methodName
+        - args
+        - gas
+        - deposit
+    PrepareRedemptionRequest:
+      type: object
+      properties:
+        representationId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        amount:
+          type: string
+          pattern: ^(0|[1-9][0-9]*)$
+          description: Non-negative integer in smallest token units, as a decimal string (max u128).
+          example: "1000000"
+        payoutInstruction:
+          $ref: "#/components/schemas/PayoutInstruction"
+        termsHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      required:
+        - representationId
+        - amount
+        - payoutInstruction
+      additionalProperties: false
+    PayoutInstruction:
+      type: string
+      minLength: 4
+      maxLength: 6000
+      pattern: ^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$
+      description: The payout instruction, **encrypted by the client**, as padded base64 (at most 4,096 bytes before encoding). The API stores it unread and never returns it; only the SHA-256 of the decoded bytes goes on chain. Never send a plain-text account number or address.
+    RedemptionIntent:
+      type: object
+      properties:
+        redemptionId:
+          type: string
+          pattern: ^[0-9]+$
+        intent:
+          $ref: "#/components/schemas/RedemptionIntentKind"
+        status:
+          $ref: "#/components/schemas/RedemptionStatus"
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletAction"
+          minItems: 1
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - redemptionId
+        - intent
+        - status
+        - actions
+        - simulated
+        - sources
+        - notice
+    RedemptionIntentKind:
+      type: string
+      enum:
+        - reclaim
+        - accept
+        - reject
+        - fulfil
+    SubmitReserveAttestationResponse:
+      type: object
+      properties:
+        txHash:
+          type: string
+        representationId:
+          type: string
+        custodianId:
+          type: string
+        simulated:
+          type: boolean
+      required:
+        - txHash
+        - representationId
+        - custodianId
+        - simulated
+    SubmitReserveAttestationRequest:
+      type: object
+      properties:
+        attestation:
+          $ref: "#/components/schemas/ReserveAttestationInput"
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 200
+        publicKey:
+          type: string
+          minLength: 10
+          maxLength: 120
+      required:
+        - attestation
+        - signature
+        - publicKey
+      additionalProperties: false
+    ReserveAttestationInput:
+      type: object
+      properties:
+        version:
+          type: number
+          enum:
+            - 1
+        contract:
+          $ref: "#/components/schemas/AccountId"
+        representationId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        custodianId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        reservedUnits:
+          $ref: "#/components/schemas/AmountString"
+        asOfMs:
+          type: integer
+          minimum: 0
+        reportHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        reportUri:
+          type: string
+          maxLength: 256
+        simulated:
+          type: boolean
+        source:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required:
+        - version
+        - contract
+        - representationId
+        - custodianId
+        - reservedUnits
+        - asOfMs
+        - reportHash
+        - reportUri
+        - simulated
+        - source
       additionalProperties: false
     Quote:
       type: object
@@ -678,9 +3332,6 @@ components:
         - warnings
         - state
         - createdAt
-    Uuid:
-      type: string
-      format: uuid
     RouteDescriptor:
       type: object
       properties:
@@ -695,7 +3346,7 @@ components:
         settlement:
           type: string
           enum:
-            - ATOMIC
+            - ASYNC_CALLBACK_WITH_REFUND
         description:
           type: string
       required:
@@ -761,28 +3412,6 @@ components:
         - conversionId
         - quoteId
         - actions
-    WalletAction:
-      type: object
-      properties:
-        receiverId:
-          $ref: "#/components/schemas/AccountId"
-        methodName:
-          type: string
-        args:
-          type: object
-          additionalProperties: {}
-        gas:
-          type: string
-          pattern: ^[0-9]+$
-        deposit:
-          type: string
-          pattern: ^[0-9]+$
-      required:
-        - receiverId
-        - methodName
-        - args
-        - gas
-        - deposit
     CreateConversionRequest:
       type: object
       properties:
@@ -802,6 +3431,10 @@ components:
           $ref: "#/components/schemas/QuoteState"
         txHash:
           $ref: "#/components/schemas/TxHash"
+        reportedTxHash:
+          $ref: "#/components/schemas/TxHash"
+        txHashStatus:
+          $ref: "#/components/schemas/TxHashStatus"
         failureReason:
           type:
             - string
@@ -821,6 +3454,8 @@ components:
         - quote
         - state
         - txHash
+        - reportedTxHash
+        - txHashStatus
         - failureReason
         - events
         - createdAt
@@ -834,6 +3469,14 @@ components:
       maxLength: 64
       description: NEAR transaction hash (base58).
       example: 9ZkBqE3nVhJ2pJt8h4Y8yH5m3xKcM6W7kQ1sF2dRnA4T
+    TxHashStatus:
+      type: string
+      enum:
+        - NONE
+        - REPORTED
+        - VERIFIED
+        - REJECTED
+      description: "NONE: no hash reported. REPORTED: sent by the wallet, not confirmed on chain. VERIFIED: the chain shows it is this conversion's transaction. REJECTED: the chain shows it is not."
     SettlementEvent:
       type: object
       properties:
@@ -936,6 +3579,11 @@ components:
         - SETTLEMENT_MISMATCH
         - VAULT_INSOLVENT
         - VAULT_UNTRACKED_BALANCE
+        - CORPORATE_ACTION_OVERDUE
+        - RESERVE_BREACH
+        - RESERVE_STALE
+        - REDEMPTION_OVERDUE
+        - ESCROW_MISMATCH
     FindingSeverity:
       type: string
       enum:
@@ -979,12 +3627,621 @@ components:
         - conversionId
         - reason
         - flaggedAt
+    IssuerRedemptionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RedemptionSummary"
+        issuerIds:
+          type: array
+          items:
+            type: string
+        nextCursor:
+          type:
+            - string
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - items
+        - issuerIds
+        - nextCursor
+        - simulated
+        - sources
+        - notice
+    RejectRedemptionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+      required:
+        - reason
+      additionalProperties: false
+    FulfilRedemptionRequest:
+      type: object
+      properties:
+        evidenceHash:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+      required:
+        - evidenceHash
+      additionalProperties: false
+    MintRequestList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MintRequest"
+        issuerIds:
+          type: array
+          items:
+            type: string
+        nextCursor:
+          type:
+            - string
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - items
+        - issuerIds
+        - nextCursor
+        - simulated
+        - sources
+        - notice
+    MintRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^[0-9]+$
+        assetId:
+          type: string
+        recipient:
+          $ref: "#/components/schemas/AccountId"
+        amount:
+          $ref: "#/components/schemas/AmountString"
+        reference:
+          type: string
+        status:
+          $ref: "#/components/schemas/MintRequestStatus"
+        requestedBy:
+          $ref: "#/components/schemas/AccountId"
+        requestedAt:
+          $ref: "#/components/schemas/Timestamp"
+        resolvedAt:
+          $ref: "#/components/schemas/Timestamp"
+        failure:
+          type:
+            - string
+            - "null"
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - id
+        - assetId
+        - recipient
+        - amount
+        - reference
+        - status
+        - requestedBy
+        - requestedAt
+        - resolvedAt
+        - failure
+        - simulated
+        - sources
+        - notice
+    MintRequestStatus:
+      type: string
+      enum:
+        - requested
+        - minting
+        - minted
+        - failed
+        - cancelled
+    MintIntent:
+      type: object
+      properties:
+        intent:
+          type: string
+          enum:
+            - request
+            - execute
+        requestId:
+          type:
+            - string
+            - "null"
+          pattern: ^[0-9]+$
+        assetId:
+          type: string
+        amount:
+          $ref: "#/components/schemas/AmountString"
+        headroomUnits:
+          $ref: "#/components/schemas/AmountString"
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletAction"
+          minItems: 1
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        notice:
+          type: string
+      required:
+        - intent
+        - requestId
+        - assetId
+        - amount
+        - headroomUnits
+        - actions
+        - simulated
+        - sources
+        - notice
+    CreateMintRequest:
+      type: object
+      properties:
+        representationId:
+          type: string
+          minLength: 1
+          maxLength: 64
+        recipient:
+          $ref: "#/components/schemas/AccountId"
+        amount:
+          type: string
+          pattern: ^(0|[1-9][0-9]*)$
+          description: Non-negative integer in smallest token units, as a decimal string (max u128).
+          example: "1000000"
+        reference:
+          type: string
+          default: ""
+      required:
+        - representationId
+        - recipient
+        - amount
+      additionalProperties: false
+    ReserveMonitorReport:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - OK
+            - ATTENTION
+            - NEVER_RUN
+        ranAt:
+          $ref: "#/components/schemas/Timestamp"
+        signer:
+          allOf:
+            - $ref: "#/components/schemas/AccountId"
+            - type:
+                - string
+                - "null"
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReserveMonitorEntry"
+        breaches:
+          type: array
+          items:
+            type: string
+        stale:
+          type: array
+          items:
+            type: string
+        failed:
+          type: array
+          items:
+            type: string
+        simulated:
+          type: boolean
+          enum:
+            - true
+        source:
+          type: string
+          enum:
+            - reserve_monitor
+        notice:
+          type: string
+      required:
+        - status
+        - ranAt
+        - signer
+        - entries
+        - breaches
+        - stale
+        - failed
+        - simulated
+        - source
+        - notice
+    ReserveMonitorEntry:
+      type: object
+      properties:
+        representationId:
+          type: string
+        state:
+          type:
+            - string
+            - "null"
+          enum:
+            - ok
+            - breached
+            - stale
+            - no_attestation
+            - unmonitored
+            - null
+        action:
+          type:
+            - string
+            - "null"
+          enum:
+            - warn
+            - restrict_conversions
+            - pause_mint
+            - null
+        attestedUnits:
+          $ref: "#/components/schemas/AmountString"
+        circulatingUnits:
+          $ref: "#/components/schemas/AmountString"
+        limitUnits:
+          $ref: "#/components/schemas/AmountString"
+        ratioBps:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        ageMs:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        maxReserveAgeMs:
+          type: integer
+          minimum: 0
+        refreshedSupply:
+          type: boolean
+        evaluated:
+          type: boolean
+        simulated:
+          type: boolean
+        sources:
+          type: array
+          items:
+            type: string
+        error:
+          type:
+            - string
+            - "null"
+      required:
+        - representationId
+        - state
+        - action
+        - attestedUnits
+        - circulatingUnits
+        - limitUnits
+        - ratioBps
+        - ageMs
+        - maxReserveAgeMs
+        - refreshedSupply
+        - evaluated
+        - simulated
+        - sources
+        - error
+    ProtocolMetrics:
+      type: object
+      properties:
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricWindow"
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Metric"
+      required:
+        - asOf
+        - windows
+        - metrics
+    MetricWindow:
+      type: string
+      enum:
+        - 24h
+        - 7d
+        - all
+      description: Rolling window ending at `asOf`; `all` has no lower bound.
+    Metric:
+      type: object
+      properties:
+        key:
+          type: string
+        unit:
+          $ref: "#/components/schemas/MetricUnit"
+        scope:
+          type: string
+          enum:
+            - window
+            - now
+        available:
+          type: boolean
+        availableFrom:
+          type: string
+        simulated:
+          type: boolean
+        note:
+          type: string
+        values:
+          $ref: "#/components/schemas/WindowedValues"
+        value:
+          $ref: "#/components/schemas/MetricValue"
+      required:
+        - key
+        - unit
+        - scope
+        - available
+    MetricUnit:
+      type: string
+      enum:
+        - count
+        - ratio
+        - percent
+        - seconds
+        - blocks
+        - base_units
+        - usd
+        - bps
+      description: "`ratio` is a share from 0 to 1 and `percent` a share from 0 to 100, both with 6 decimals; `seconds` has 3 decimals."
+    WindowedValues:
+      type: object
+      properties:
+        24h:
+          $ref: "#/components/schemas/MetricValue"
+        7d:
+          $ref: "#/components/schemas/MetricValue"
+        all:
+          $ref: "#/components/schemas/MetricValue"
+      required:
+        - 24h
+        - 7d
+        - all
+    MetricValue:
+      anyOf:
+        - type: integer
+          minimum: 0
+        - type: string
+          pattern: ^[0-9]+\.[0-9]+$
+        - type: "null"
+      description: An integer count, or a decimal string for rates and latencies; null when it cannot be computed (no data in the window, or an unreachable chain head).
+    AdminMetrics:
+      type: object
+      properties:
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        windows:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricWindow"
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Metric"
+        breakdowns:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetricBreakdown"
+        requiresReconciliationQuoteIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/Uuid"
+      required:
+        - asOf
+        - windows
+        - metrics
+        - breakdowns
+        - requiresReconciliationQuoteIds
+    MetricBreakdown:
+      type: object
+      properties:
+        key:
+          type: string
+        unit:
+          type: string
+          enum:
+            - base_units
+        scope:
+          type: string
+          enum:
+            - window
+            - now
+        simulated:
+          type: boolean
+        note:
+          type: string
+        values:
+          type: object
+          properties:
+            24h:
+              $ref: "#/components/schemas/RepresentationAmounts"
+            7d:
+              $ref: "#/components/schemas/RepresentationAmounts"
+            all:
+              $ref: "#/components/schemas/RepresentationAmounts"
+          required:
+            - 24h
+            - 7d
+            - all
+        value:
+          $ref: "#/components/schemas/RepresentationAmounts"
+      required:
+        - key
+        - unit
+        - scope
+        - simulated
+    RepresentationAmounts:
+      type: object
+      additionalProperties:
+        $ref: "#/components/schemas/AmountString"
+    PrometheusText:
+      type: string
+      description: "Prometheus text exposition format 0.0.4: `# HELP` and `# TYPE` lines, then samples named `pontis_<key>` with labels `window`, `representation` and `simulated`."
+    AuthChallengeResponse:
+      type: object
+      properties:
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        nonce:
+          type: string
+          pattern: ^[A-Za-z0-9+/]{43}=$
+          description: 32 random bytes, base64 (44 characters).
+        recipient:
+          type: string
+        message:
+          type: string
+        expiresAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - accountId
+        - nonce
+        - recipient
+        - message
+        - expiresAt
+      description: Call the wallet's NEP-413 `signMessage({ message, recipient, nonce })` with `nonce` decoded from base64 to its 32 bytes, then send the result to `POST /v1/auth/verify`.
+    AuthChallengeRequest:
+      type: object
+      properties:
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+      required:
+        - accountId
+    AuthVerifyResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        tokenType:
+          type: string
+          enum:
+            - Bearer
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleName"
+        keyType:
+          $ref: "#/components/schemas/AuthKeyType"
+        expiresAt:
+          $ref: "#/components/schemas/Timestamp"
+        maxExpiresAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - token
+        - tokenType
+        - accountId
+        - roles
+        - keyType
+        - expiresAt
+        - maxExpiresAt
+    RoleName:
+      type: string
+      enum:
+        - owner
+        - registrar
+        - compat_approver
+        - pauser
+        - attester
+        - reserve_attester
+        - bridge_attester
+      description: A role held on pontis-core. `owner` is listed when the account is the contract owner.
+    AuthKeyType:
+      type: string
+      enum:
+        - full_access
+        - function_call
+      description: The kind of access key that signed. NEP-413 asks for a full-access key; a function-call key proves the account issued it, and is accepted but recorded.
+    AuthVerifyRequest:
+      type: object
+      properties:
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        publicKey:
+          type: string
+          pattern: ^ed25519:[1-9A-HJ-NP-Za-km-z]{32,64}$
+          example: ed25519:6TupyNrcHGTt5XRLmHTc2KGaiSbjhQi1KHtCXTgbcr4Y
+        signature:
+          type: string
+          pattern: ^[A-Za-z0-9+/]{86}==$
+          description: Base64 of the 64-byte ed25519 signature.
+        nonce:
+          type: string
+          pattern: ^[A-Za-z0-9+/]{43}=$
+          description: 32 random bytes, base64 (44 characters).
+        callbackUrl:
+          type: string
+          minLength: 1
+          maxLength: 2048
+      required:
+        - accountId
+        - publicKey
+        - signature
+        - nonce
+    AuthLogoutResponse:
+      type: object
+      properties:
+        revoked:
+          type: boolean
+          enum:
+            - true
+      required:
+        - revoked
+    AuthMeResponse:
+      type: object
+      properties:
+        accountId:
+          $ref: "#/components/schemas/AccountId"
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleName"
+        expiresAt:
+          $ref: "#/components/schemas/Timestamp"
+      required:
+        - accountId
+        - roles
+        - expiresAt
   parameters: {}
 paths:
   /v1/health:
     get:
       operationId: getHealth
-      summary: Service health
+      summary: Combined service health
+      description: Always 200 while the process can answer; the body carries the verdict. `status` is `ok` only when the database and RPC answer and the indexer state is `running`; otherwise `degraded`. Use `/v1/health/ready` for a probe that fails on non-readiness.
       tags:
         - Health
       responses:
@@ -1006,6 +4263,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v1/health/live:
+    get:
+      operationId: getHealthLive
+      summary: Liveness
+      description: Answers 200 whenever the process is up. Touches no database, RPC or indexer state, so it is safe for restart probes.
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Liveness"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/health/ready:
+    get:
+      operationId: getHealthReady
+      summary: Readiness
+      description: 200 when the database and RPC answer and the indexer is `running` or `lagging`; 503 otherwise. A lagging indexer is still ready, but `status` in the body is `degraded`.
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: "Not ready: the database or RPC is unreachable, or the indexer never ran or is stale. Same body as `/v1/health`."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
   /v1/issuers:
     get:
       operationId: listIssuers
@@ -1071,10 +4386,112 @@ paths:
   /v1/assets:
     get:
       operationId: listAssets
-      summary: List asset representations
-      description: Each representation embeds its canonical claim name and issuer summary. Canonical claim and representation are separate records; use `GET /v1/assets/{id}` for the claim detail.
+      summary: "Asset directory: search, filter, sort, paginate"
+      description: One row per representation with its canonical claim name, issuer summary, filter facts, latest market figures and a 7 day sparkline. `market` is null when the asset has no price. Every market figure carries `simulated` and `sources`; `data` selects real rows, simulated rows, or real where they exist (`all`). Sorting by a figure that is null for some assets puts those last. Cursors are opaque and valid only for the same query.
       tags:
-        - Registry
+        - Market
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          required: false
+          name: q
+          in: query
+        - schema:
+            type: string
+            maxLength: 100
+          required: false
+          name: category
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: issuerId
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: chain
+          in: query
+        - schema:
+            type: string
+            enum:
+              - unverified
+              - issuer_attested
+              - third_party_attested
+              - independently_verified
+          required: false
+          name: verification
+          in: query
+        - schema:
+            $ref: "#/components/schemas/RecordStatus"
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: convertible
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: bridgeable
+          in: query
+        - schema:
+            type: string
+            enum:
+              - id
+              - name
+              - price
+              - marketCap
+              - tvl
+              - volume24h
+              - change24h
+              - change7d
+              - change30d
+            default: id
+          required: false
+          name: sort
+          in: query
+        - schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: asc
+          required: false
+          name: order
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
       responses:
         "200":
           description: Success
@@ -1082,6 +4499,442 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/price:
+    get:
+      operationId: getAssetPriceChart
+      summary: OHLCV candles
+      description: "Candles in `[from, to)`, ascending. `from` defaults to a window of at most 500 buckets before `to`, `to` to now; a range of more than 5000 buckets is refused. A bucket without an observation repeats the previous close and has `filled: true`. Volume of parity conversions is units moved, not a market measure."
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/nav:
+    get:
+      operationId: getAssetNavChart
+      summary: NAV per token
+      description: "The last NAV before the end of each bucket, carried forward; `filled: true` when the bucket has no print of its own. Buckets before the first print are omitted, so an asset without a NAV has empty `points`. For `data=all` the real series is used when one exists, otherwise the simulated one."
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NavChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/supply:
+    get:
+      operationId: getAssetSupplyChart
+      summary: Circulating supply
+      description: "Supply summed over chains: the last snapshot before the end of each bucket, carried forward, `filled: true` when the bucket has none of its own. Smallest units. Series selection for `data=all` is as for NAV."
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplyChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/charts/volume:
+    get:
+      operationId: getAssetVolumeChart
+      summary: Traded volume
+      tags:
+        - Charts
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/CandleInterval"
+          required: false
+          name: interval
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: from
+          in: query
+        - schema:
+            $ref: "#/components/schemas/Timestamp"
+          required: false
+          description: ISO-8601 UTC timestamp.
+          name: to
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VolumeChart"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/market/overview:
+    get:
+      operationId: getMarketOverview
+      summary: Global market stats
+      description: Counts and totals over every asset. Totals include only assets that have the figure (an asset with no known supply has no market cap and is left out of `totalMarketCap`, not counted as zero). `change24hBps` is the market-cap-weighted mean of the assets' 24h changes. `simulated` is true when any included figure is simulated.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketOverview"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/market/movers:
+    get:
+      operationId: getMarketMovers
+      summary: Gainers, losers, top volume, top TVL, newly listed
+      description: Each list has at most `limit` entries and only includes assets with the relevant figure. Gainers have a positive 24h change and losers a negative one.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketMovers"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/market/categories:
+    get:
+      operationId: getMarketCategories
+      summary: Breakdown by category
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategoryList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/market/chains:
+    get:
+      operationId: getMarketChains
+      summary: Breakdown by chain
+      description: Supply per chain valued at each asset's price. Only the NEAR testnet has real supply today; other chains appear when assets have profile entries or supply snapshots there.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChainList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "429":
           description: "Rate limited. Codes: RATE_LIMITED."
           content:
@@ -1168,6 +5021,491 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/metadata:
+    get:
+      operationId: getAssetMetadata
+      summary: Dossier metadata (overview, legal, custody, risk)
+      description: Off-chain dossier content, labelled with `source` and `simulated`. It never changes a verification status; `profile` is null when no dossier was loaded.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMetadata"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/issuer:
+    get:
+      operationId: getAssetIssuer
+      summary: The asset's issuer with its evidence and its other assets
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetIssuerView"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/chains:
+    get:
+      operationId: getAssetChains
+      summary: Where the asset exists, with supply per chain
+      description: The dossier's chain list plus the NEAR contract from the registry, each with the latest supply snapshot when one exists.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetChainList"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/documents:
+    get:
+      operationId: getAssetDocuments
+      summary: Dossier documents and registry evidence
+      description: Registry evidence keeps its provenance label; the API never upgrades it. Hashes are as recorded, not re-checked here.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetDocumentList"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/activity:
+    get:
+      operationId: getAssetActivity
+      summary: Recent conversions involving the asset
+      description: Newest first. Real rows are settled conversions on the testnet; simulated rows come from the demo simulator and say so. Cursors are opaque.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/lifecycle:
+    get:
+      operationId: getAssetLifecycle
+      summary: Lifecycle kind, stage, flags and stage history
+      description: Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. An asset with no lifecycle record is a `fungible` asset in stage `active`. Anything but `active`, or a conversion flag, closes the asset's routes (`NOT_CONVERTIBLE`, `LIFECYCLE_BLOCKED`). Stage changes are entered by the registrar; delisting needs a second account.
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetLifecycle"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/corporate-actions:
+    get:
+      operationId: getAssetCorporateActions
+      summary: Corporate actions of the asset's claim and each wrapper's multiplier schedule
+      description: "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. Actions belong to the canonical claim and apply to every wrapper of it: `wrappers` says which have applied. Routes of the claim are closed during an approved action's freeze window (`CORPORATE_ACTION_FREEZE`) and until every live wrapper has applied a multiplier change (`CORPORATE_ACTION_PENDING`). The facts are entered by the registrar; evidence keeps its own provenance label and nothing here is verified."
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorporateActionList"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/nav:
+    get:
+      operationId: getAssetNav
+      summary: Current NAV strike and its window
+      description: "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. `strike` is null for an asset that is not a NAV fund and for a fund with no strike yet. A fund converts only while `windowState` is `open`. The demo publishes simulated strikes only: `simulated` and `source` are shown as stored."
+      tags:
+        - Registry
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetNav"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/compare:
+    get:
+      operationId: compareAssets
+      summary: Compare representations side by side
+      description: Two to six asset IDs. Each item carries price, NAV and premium to NAV; `pairs` gives, for assets that share a canonical claim, the parity ratio from the registry's unit definitions, the implied market ratio and the deviation between them. All figures are from the data class selected by `data` and say whether they are simulated.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[a-z0-9-]+(,[a-z0-9-]+){1,5}$
+          required: true
+          name: ids
+          in: query
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompareResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/search:
+    get:
+      operationId: search
+      summary: Search assets, issuers and chains
+      description: All words must match. Assets rank by exact symbol, then symbol prefix, then ID. At most 10 assets, 5 issuers and 5 chains.
+      tags:
+        - Market
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          required: true
+          name: q
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResult"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuers/leaderboard:
+    get:
+      operationId: getIssuerLeaderboard
+      summary: Issuers ranked by market cap of their assets
+      description: "`reliabilityScore` is null until redemption and reserve data exist; no score is invented. Issuers without a known market cap rank after those with one."
+      tags:
+        - Market
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/DataFilter"
+          required: false
+          description: "`real` or `simulated` select one class. `all` uses a real row where one exists and a simulated one otherwise; every row still carries its own `simulated` flag."
+          name: data
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuerLeaderboard"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/status:
+    get:
+      operationId: getStatus
+      summary: "Transparency feed: indexer, price and job freshness, route health"
+      description: "`reserves` and `bridge` are null until those features exist. `stale` marks a price or job older than its threshold (15 minutes for prices, 5 minutes for the market jobs); simulated prices are reported apart from real ones."
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v1/routes/compare:
     post:
       operationId: compareRoutes
@@ -1212,11 +5550,667 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v1/routes/{fromId}/{toId}/guards:
+    get:
+      operationId: getRouteGuards
+      summary: "Why a route is open or closed: every guard and the fee for an amount"
+      description: "Read from the chain, never cached. Checks are independent, so a failure does not hide later ones. With `amount` the amount limits and the effective fee (skew included) are evaluated; a quote copies that fee. `prices` are the contract's stored reference prices with their `simulated` flag: the demo publishes simulated prices only."
+      tags:
+        - Routes
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: fromId
+          in: path
+        - schema:
+            type: string
+          required: true
+          name: toId
+          in: path
+        - schema:
+            $ref: "#/components/schemas/AmountString"
+          required: false
+          description: Non-negative integer in smallest token units, as a decimal string (max u128).
+          name: amount
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteGuardsResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/custodians:
+    get:
+      operationId: listCustodians
+      summary: Registered custodians
+      description: "Read from the chain on every request; like other public reads it may be shared-cached for a few seconds. Oldest first. Every custodian in the demo is a simulator holding a test key: `synthetic` is true and `verificationStatus` is never above what the registrar recorded, which the contract keeps below `independently_verified`. Nothing here is custodied, audited or regulated."
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustodianList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/custodians/{id}:
+    get:
+      operationId: getCustodian
+      summary: One custodian
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Custodian"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/custody:
+    get:
+      operationId: getAssetCustody
+      summary: How an asset's reserves are held and by whom
+      description: Read from the chain. `linked` is false until the registrar links the asset to custodians. This is a record of who is said to hold the reserves, not a proof that anyone does.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustody"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/reserves:
+    get:
+      operationId: getAssetReserves
+      summary: "Reserve status: attested reserves against supply"
+      description: "Computed by the contract on every read from the custodians' signed attestations and the supply it tracks; never a stored verdict; like other public reads the response may be shared-cached for a few seconds. `ratioBps` is attested over circulating in basis points (null while nothing circulates); render `ratioPercent`. `state` is `unmonitored` when the asset has no reserve policy. `simulated` and `sources` say whose figures these are: in the demo, a fictional custodian's. Never present them as backed, custodied or audited."
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetReserves"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/reserves/history:
+    get:
+      operationId: getAssetReserveHistory
+      summary: Reserve attestations, newest first
+      description: The attestations the chain still holds (the last 500 per asset), each with the label its signer put on it.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReserveHistory"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/assets/{id}/redemption-terms:
+    get:
+      operationId: getAssetRedemptionTerms
+      summary: Enforced redemption terms
+      description: "`terms` is null until the registrar sets them; then the asset cannot be redeemed. The terms hash is part of the redeem message: a request made under older terms is refused. Redemption pays no value: fee and net are figures a simulated issuer honours off-chain."
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetRedemptionTerms"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuers/{id}/reliability:
+    get:
+      operationId: getIssuerReliability
+      summary: An issuer's redemption record
+      description: Counters from the contract and a score derived from them here. Every issuer in the demo is a simulator, so `simulated` is true.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuerReliability"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/redemptions:
+    get:
+      operationId: listRedemptions
+      summary: Redemption requests
+      description: Needs `user` or `representationId`. Newest first, read from the chain. `status` filters within a page, so a page may hold fewer than `limit` items while `nextCursor` is set.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/AccountId"
+          required: false
+          description: NEAR account ID.
+          name: user
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: representationId
+          in: query
+        - schema:
+            $ref: "#/components/schemas/RedemptionStatus"
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedemptionList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/redemptions/{id}:
+    get:
+      operationId: getRedemption
+      summary: A redemption and its timeline
+      description: The escrow is released by the issuer's fulfilment (burned) or by the user's reclaim after a rejection or expiry. `timeline` is rebuilt from the chain record; `txHash` stays null until the indexer's event mirror supplies it.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[0-9]{1,20}$
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Redemption"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/redemptions/prepare:
+    post:
+      operationId: prepareRedemption
+      summary: Prepare a redemption request (unsigned)
+      description: "Session required; the signed-in account is the redeemer. Checks `amount` and the window against the stored terms (read from the chain), stores the client-encrypted payout instruction unread, and returns the `redeem:{termsHash}:{payoutInstructionHash}` message with the unsigned `ft_transfer_call` that escrows the whole amount. The API signs and sends nothing: the wallet signs `actions`. A redemption in this demo pays nothing out; it escrows tokens that the simulated issuer then burns or the user reclaims."
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrepareRedemptionRequest"
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrepareRedemptionResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: "Conflict. Codes: REDEMPTION_WINDOW_CLOSED, REDEMPTION_BELOW_MIN, REDEMPTION_ABOVE_MAX, REDEMPTION_TERMS_CHANGED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: "Request understood but refused. Codes: ASSET_PAUSED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/redemptions/{id}/reclaim-intent:
+    post:
+      operationId: reclaimRedemptionIntent
+      summary: Unsigned action to reclaim an escrow
+      description: Session required, and only the redemption's own account. Refused with `STATE_CONFLICT` unless the escrow is reclaimable now (`rejected`, `expired`, or past its deadline) and no token call is in flight. Returns the unsigned `reclaim_redemption`; the wallet signs it.
+      tags:
+        - Custody
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[0-9]{1,20}$
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedemptionIntent"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: "Conflict. Codes: STATE_CONFLICT."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/reserves/attestations:
+    post:
+      operationId: submitReserveAttestation
+      summary: Relay a signed reserve attestation
+      description: "Testnet and sandbox only. A relayer account pays for the transaction; the signature is the authority, so the relayer holds no custodian key and no user key. The contract checks the signature, the custodian's registered key, the link, the time and the sequence, and refuses with `ATTESTATION_REJECTED` otherwise. Unknown asset: `NOT_FOUND`; also `NOT_FOUND` where no relayer is configured."
+      tags:
+        - Custody
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitReserveAttestationRequest"
+      responses:
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitReserveAttestationResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: "Request understood but refused. Codes: ATTESTATION_REJECTED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v1/quotes:
     post:
       operationId: createQuote
       summary: Request a parity-conversion quote
-      description: Refusals are `422` with a structured error whose `code` is the reason. Quotes expire after 60 seconds.
+      description: Refusals are `422` with a structured error whose `code` is the reason. Quotes expire after 60 seconds, or at the start of the next approved corporate-action freeze window of either claim if that comes sooner.
       tags:
         - Quotes
       requestBody:
@@ -1245,7 +6239,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "422":
-          description: "Request understood but refused. Codes: NOT_DIRECT_EQUIVALENT, RELATIONSHIP_SUSPENDED, ASSET_PAUSED, NOT_ELIGIBLE, INSUFFICIENT_INVENTORY."
+          description: "Request understood but refused. Codes: NOT_DIRECT_EQUIVALENT, RELATIONSHIP_SUSPENDED, ASSET_PAUSED, NOT_ELIGIBLE, INSUFFICIENT_INVENTORY, PRICE_DEVIATION, PRICE_STALE, PRICE_UNAVAILABLE, AMOUNT_BELOW_MIN, AMOUNT_ABOVE_MAX, WINDOW_LIMIT_EXCEEDED, CORPORATE_ACTION_FREEZE, CORPORATE_ACTION_PENDING, EPOCH_MISMATCH, NOT_CONVERTIBLE, LIFECYCLE_BLOCKED, NAV_WINDOW_CLOSED, RESERVE_RESTRICTED, RESERVE_STALE."
           content:
             application/json:
               schema:
@@ -1377,7 +6371,7 @@ paths:
     post:
       operationId: markConversionSubmitted
       summary: Report the submitted transaction hash
-      description: Moves the quote to `SUBMITTED`. Repeating with the same hash is a no-op; a different hash is a conflict.
+      description: "Moves the quote to `SUBMITTED`. The hash is checked against the chain: a transaction that exists but is not this conversion's (other signer, receiver, method, amount or quote nonce) is refused with `422` and nothing is stored. A hash the node does not know yet, or an unreachable node, is stored as `reportedTxHash` with `txHashStatus` `REPORTED`; `txHash` stays null until the transaction is verified. Repeating a reported hash re-checks it; a different hash is a conflict."
       tags:
         - Conversions
       parameters:
@@ -1420,6 +6414,12 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "410":
           description: "Gone. Codes: QUOTE_EXPIRED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: "Request understood but refused. Codes: VALIDATION_ERROR."
           content:
             application/json:
               schema:
@@ -1530,16 +6530,16 @@ paths:
     get:
       operationId: getReconciliation
       summary: Latest reconciliation findings
-      description: Admin only. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`.
+      description: "Operators only: a session whose account holds the owner, registrar, compat_approver or pauser role (re-read from the chain on every call), or the break-glass admin key. Findings from the reconciler's last run (vault inventory against token balances, stuck and mismatched conversions) and the quotes currently in `REQUIRES_RECONCILIATION`."
       tags:
         - Admin
       parameters:
         - schema:
             type: string
-            description: "`Bearer <ADMIN_API_KEY>`."
-            example: Bearer 0123456789abcdef0123456789abcdef
+            description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
           required: true
-          description: "`Bearer <ADMIN_API_KEY>`."
+          description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
           name: authorization
           in: header
       responses:
@@ -1550,7 +6550,878 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReconciliationReport"
         "401":
-          description: "Missing or wrong admin key. Codes: UNAUTHORIZED."
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuer/redemptions:
+    get:
+      operationId: listIssuerRedemptions
+      summary: The issuer back-office redemption queue
+      description: "Session required. Lists redemptions of the representations of every issuer whose `controlled_accounts` (read from the chain) hold the signed-in account; an operator role (owner, registrar, compat_approver, pauser) lists every issuer's queue. Never includes payout instructions. `status` filters while scanning the newest 500 requests of each representation, so a page can hold fewer than `limit` items while `nextCursor` is set. The back-office is a labelled mock: the registrar's claim of control is not proof of anything."
+      tags:
+        - Issuer
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/RedemptionStatus"
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: representationId
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuerRedemptionList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuer/redemptions/{id}/accept:
+    post:
+      operationId: acceptRedemption
+      summary: Unsigned action to accept a redemption
+      description: Session required; the account must be one the redemption's issuer controls (read from the chain). `STATE_CONFLICT` unless the request is `requested` and before its accept deadline. Returns the unsigned `accept_redemption`.
+      tags:
+        - Issuer
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[0-9]{1,20}$
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedemptionIntent"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: "Conflict. Codes: STATE_CONFLICT."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuer/redemptions/{id}/reject:
+    post:
+      operationId: rejectRedemption
+      summary: Unsigned action to reject a redemption
+      description: Like accept, for a request that is `requested` or `accepted` and not past its current deadline. Returns the unsigned `reject_redemption`; the user then reclaims the escrow.
+      tags:
+        - Issuer
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[0-9]{1,20}$
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectRedemptionRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedemptionIntent"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: "Conflict. Codes: STATE_CONFLICT."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuer/redemptions/{id}/fulfil:
+    post:
+      operationId: fulfilRedemption
+      summary: Unsigned action to fulfil a redemption
+      description: "Like accept, for a request that is `accepted`, before its fulfil deadline and not mid-settlement. Returns the unsigned `fulfil_redemption`, which burns the escrow. Fulfilment is a simulated record: nothing is paid to anyone."
+      tags:
+        - Issuer
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[0-9]{1,20}$
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FulfilRedemptionRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedemptionIntent"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: "Conflict. Codes: STATE_CONFLICT."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuer/mint-requests:
+    get:
+      operationId: listIssuerMintRequests
+      summary: The issuer's mint requests
+      description: Same access and scanning rules as the redemption queue. Mint requests are read from the chain.
+      tags:
+        - Issuer
+      parameters:
+        - schema:
+            $ref: "#/components/schemas/MintRequestStatus"
+          required: false
+          name: status
+          in: query
+        - schema:
+            type: string
+            maxLength: 64
+          required: false
+          name: representationId
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            maxLength: 200
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MintRequestList"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createIssuerMintRequest
+      summary: Unsigned action to request a gated mint
+      description: "Session required; the account must be one the asset's issuer controls. Returns the unsigned `request_mint`, which only records the intent: nothing is minted until `execute_mint`, and the contract caps that at the attested headroom."
+      tags:
+        - Issuer
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMintRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MintIntent"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/issuer/mint-requests/{id}/execute:
+    post:
+      operationId: executeIssuerMintRequest
+      summary: Unsigned action to execute a mint request
+      description: "Like the request, for a mint request that is still `requested`. `MINT_REFUSED` when the chain would refuse now: above the attested reserve headroom, paused by the reserve action, or no reserve policy. Returns the unsigned `execute_mint`."
+      tags:
+        - Issuer
+      parameters:
+        - schema:
+            type: string
+            pattern: ^[0-9]{1,20}$
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MintIntent"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: "Conflict. Codes: STATE_CONFLICT."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: "Request understood but refused. Codes: MINT_REFUSED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/admin/reserve-monitor:
+    get:
+      operationId: getReserveMonitor
+      summary: The reserve monitor's latest pass
+      description: "Operators only, like the reconciliation read. What the indexer's monitor saw of each monitored representation in its last pass (breaches, stale reserves, failed reads) and whether it could sign the permissionless `refresh_supply` and `evaluate_reserve` calls. Labelled simulated: the reserves are signed claims of fictional custodians."
+      tags:
+        - Admin
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReserveMonitorReport"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/metrics/protocol:
+    get:
+      operationId: getProtocolMetrics
+      summary: Protocol success metrics
+      description: "Public aggregates for the windows `24h`, `7d` and `all`, rolling from `asOf`. No account IDs, quote IDs or per-representation amounts. Metrics that need later-phase data are listed with `available: false` and `availableFrom`. Cached for 30 seconds."
+      tags:
+        - Metrics
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtocolMetrics"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/admin/metrics:
+    get:
+      operationId: getAdminMetrics
+      summary: Protocol success metrics, admin view
+      description: Operators only (any of owner, registrar, compat_approver, pauser; roles cached for 60 seconds), or the break-glass admin key; audited like the reconciliation read, never cached. Everything in the public response plus operational aggregates, per-representation amounts (volume, fees, vault inventory) and the IDs of quotes in `REQUIRES_RECONCILIATION`.
+      tags:
+        - Admin
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMetrics"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /metrics:
+    get:
+      operationId: getPrometheusMetrics
+      summary: Prometheus exposition of the metrics
+      description: Operators only. Carries the same numbers as the admin view, including per-representation amounts, so it takes the same credentials (for a scraper use the break-glass admin bearer key; a session expires; Prometheus `authorization` scrape config) and is audited and never cached. Samples are named `pontis_<key>`; labels are `window`, `representation` and `simulated`. Unavailable metrics have HELP and TYPE lines and no samples.
+      tags:
+        - Admin
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from a wallet sign-in (`POST /v1/auth/verify`), or, as a break-glass fallback while it is configured, `Bearer <ADMIN_API_KEY>`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            text/plain; version=0.0.4:
+              schema:
+                $ref: "#/components/schemas/PrometheusText"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: "Signed in, but the account holds no role this endpoint accepts. Codes: FORBIDDEN."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/auth/challenge:
+    post:
+      operationId: authChallenge
+      summary: Start a wallet sign-in
+      description: Returns a single-use nonce (5 minutes), the `recipient` and the exact `message` for the wallet's NEP-413 `signMessage`. Rate limited per client address. Not available in fixtures mode.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthChallengeRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthChallengeResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/auth/verify:
+    post:
+      operationId: authVerify
+      summary: Finish a wallet sign-in and open a session
+      description: "Checks the NEP-413 signature, that the key is an access key of the account (over RPC), consumes the nonce and returns a session token: 15 minutes, renewed by use up to 8 hours. An account that holds no role may sign in; it holds no admin rights. The signed message authorises a session only, never a chain transaction."
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthVerifyRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthVerifyResponse"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/auth/logout:
+    post:
+      operationId: authLogout
+      summary: End the session
+      description: Revokes the session at once.
+      tags:
+        - Auth
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthLogoutResponse"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/auth/me:
+    get:
+      operationId: authMe
+      summary: The signed-in account and its roles
+      description: Roles are read from the contract and cached for 60 seconds. Using the session renews it.
+      tags:
+        - Auth
+      parameters:
+        - schema:
+            type: string
+            description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+            example: Bearer 3q2-7wJpVx0mTtHn2l1u9QJb7Gm8m2uQhQK0m8h3k1c
+          required: true
+          description: "`Bearer <session token>` from `POST /v1/auth/verify`."
+          name: authorization
+          in: header
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMeResponse"
+        "401":
+          description: "Missing, expired or wrong credential. Codes: UNAUTHORIZED."
           content:
             application/json:
               schema:

@@ -7,7 +7,7 @@
 
 ## Context
 
-The conversion has to be atomic from the user's point of view: either they get the output and the input is taken, or they keep the input. NEP-141 gives a built-in pattern for this: `ft_transfer_call` followed by `ft_on_transfer`, with the receiver returning the unused amount.
+The conversion has to be safe from the user's point of view: either they get the output and the input is taken, or they keep the input. This is not an atomic transaction: it spans several NEAR receipts (the token's transfer, `ft_on_transfer`, the payout, the callback and the token's resolver) and relies on a compensating refund. NEP-141 gives a built-in pattern for this: `ft_transfer_call` followed by `ft_on_transfer`, with the receiver returning the unused amount.
 
 ## Decision
 
@@ -28,16 +28,16 @@ The conversion has to be atomic from the user's point of view: either they get t
    10. recomputed `gross`, `fee`, `net` equal the quote;
    11. inventory of `token_out` is at least `net`;
    12. nonce unused.
-4. On success it records the nonce, moves inventory (`+amount_in` on token_in, `-net` on token_out) **before** creating the payout promise, then calls `ft_transfer(user, net)` on **token_out** with a callback.
+4. On success it records the nonce, reserves the output (`-net` on token_out inventory) and holds the input as pending (`+amount_in` on `pending_inbound[token_in]`, not on inventory) **before** creating the payout promise, then calls `ft_transfer(user, net)` on **token_out** with a callback.
 5. The callback `on_payout_resolved` checks the promise result:
-   - success: emit `conversion_completed` (full breakdown) and return `0` unused, so the token keeps the input as `pontis-core`'s balance;
-   - failure: restore inventory, emit `conversion_failed`, and return `amount_in` unused so the token refunds the user. The nonce stays used.
+   - success: emit `conversion_completed` (full breakdown), move the input into spendable inventory, and return `0` unused, so the token keeps the input as `pontis-core`'s balance;
+   - failure: return the reserved output to inventory, emit `conversion_failed`, and return `amount_in` unused so the token refunds the user. The nonce stays used.
 
 ### Notes
 
 - **Storage on token_out.** If the user has no storage deposit on token_out the payout fails and the input is refunded. The API's unsigned transaction plan includes `storage_deposit` on token_out when needed ([BuildPlan B11](../../BuildPlan.md)).
 - **Gas.** `ft_transfer_call` must attach enough gas for `ft_on_transfer`, the payout `ft_transfer`, the callback and the token's `ft_resolve_transfer`. The value is fixed during B7/B8 by measurement and returned in the unsigned plan.
-- **No reentrancy window.** State changes precede promise creation; the callback only resolves outcomes and reverses the inventory move.
+- **Interleaving.** The payout and the callback are separate receipts, so other calls can run between them. That is why the input is held as pending, not spendable, until the callback (see the amendment on pending input).
 - **Exact amount.** `amount` must equal `quote.amount_in`; over-sending is rejected and refunded rather than partly consumed.
 - The user is always both sender and recipient.
 
@@ -65,7 +65,7 @@ Validation order as implemented (the first failure wins and returns the whole in
 | `COMPATIBILITY_CHANGED`, `POLICY_CHANGED`, `FEE_CHANGED`, `OUTPUT_MISMATCH`, `AMOUNT_TOO_SMALL`, `INVENTORY_OVERFLOW`, `NOT_OWNER`                              | `INTERNAL` (stale or unexpected; the API re-quotes) |
 
 - A conversion whose output rounds to zero is refused (`AMOUNT_TOO_SMALL`) rather than taking the input for nothing.
-- Inventory and the nonce are updated before the payout promise is created. `on_payout_resolved` returns `0` on success and the whole `amount_in` on failure, after restoring inventory.
+- The nonce is marked used, the output is reserved and the input is held as pending before the payout promise is created. `on_payout_resolved` returns `0` on success (the input becomes inventory) and the whole `amount_in` on failure (the reserved output returns to inventory; the input is never counted).
 
 ### Flow as implemented
 
@@ -81,20 +81,36 @@ sequenceDiagram
         C-->>A: unused = amount_in, event conversion_rejected
         A-->>W: ft_resolve_transfer refunds the input
     else all checks pass
-        Note over C: nonce used, inventory moved
+        Note over C: nonce used, output reserved, input held as pending
         C->>B: ft_transfer(user, amount_out)
         B-->>C: result
         alt payout succeeded
             C-->>A: unused = 0, event conversion_completed
         else payout failed
-            Note over C: inventory restored
+            Note over C: reserved output returned to inventory, input never counted
             C-->>A: unused = amount_in, event conversion_failed
             A-->>W: input refunded, nonce stays used
         end
     end
 ```
 
-Both outcomes of the payout leave the user with either the output or the original input, never neither; the sandbox tests in B8 exercise the real token and refund logic.
+Both outcomes of the payout leave the user with either the output or the original input. That is a compensating refund over several receipts, not an atomic transaction: see the amendment below for the window in which the payout is pending.
+
+## Amendment (pending input)
+
+**Defect fixed.** The first implementation added `amount_in` to the source representation's spendable inventory in `ft_on_transfer`, before the payout had resolved. In that window another conversion or an owner `withdraw_inventory` could spend tokens that still belonged to the user. If the payout then failed, `on_payout_resolved` returned `amount_in` as unused, but the token's `ft_resolve_transfer` refunds only `min(unused, balance of pontis-core)`, so the refund came back short (or empty) and the contract carried an inventory deficit.
+
+**Design.**
+
+- `inventory[rep]` is spendable inventory only. A new per-representation counter `pending_inbound[rep]` holds the inputs of conversions whose payout has not resolved. `get_pending_inbound` exposes it. The token balance of `pontis-core` for a representation is `inventory + pending_inbound` (plus any untracked surplus).
+- `execute_conversion` marks the nonce used, takes `net` out of `token_out` inventory (reserving it for the payout), adds `amount_in` to `pending_inbound[token_in]`, and stores a `ConversionRecord` under the nonce in `pending_conversions` (`get_pending_conversion` reads it). It rejects with `INVENTORY_OVERFLOW` if `inventory + pending_inbound + amount_in` would overflow `u128`, so settlement cannot overflow later.
+- `on_payout_resolved(nonce)` removes the pending record, releases `pending_inbound`, and then:
+  - success: `amount_in` moves into spendable inventory; emits `conversion_completed`; returns `0`;
+  - failure: the reserved `net` returns to `token_out` inventory; `amount_in` is **not** added to inventory, it stays in the token balance untouched until `ft_resolve_transfer` refunds it; emits `conversion_failed`; returns `amount_in`.
+- A callback for a nonce with no pending record aborts without changing state. Arithmetic on inventory and pending counters is checked and aborts on overflow or underflow; nothing saturates.
+- Withdrawals, `fund_vault` and other conversions see only spendable inventory, so they cannot consume a held input or an output reserved for an in-flight payout.
+
+**Verification.** `contracts/integration-tests/tests/pending_inventory.rs` holds a destination payout open on a fixture token (`contracts/mock-payout-token`, test-only) and, while it is pending, attempts a withdrawal and a reverse conversion, then fails or succeeds the payout through the real `on_payout_resolved` and the real token's `ft_resolve_transfer`.
 
 ## Amendments (B11, the unsigned wallet plan)
 

@@ -180,7 +180,7 @@ function QuoteTicket({
             </span>
           </Row>
           <Row label="Route">
-            <span className="text-[13px]">Controlled test vault · same chain · atomic</span>
+            <span className="text-[13px]">Controlled test vault · same chain · async</span>
           </Row>
           <Row label="Bound to">
             <span className="num text-[13px] text-muted">

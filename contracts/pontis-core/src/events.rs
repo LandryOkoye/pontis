@@ -2,17 +2,54 @@
 //! The log line is `EVENT_JSON:{"standard":"pontis","version":"1.0.0","event":"<name>","data":{...}}`.
 //! `data` is a single JSON object per event. Amounts are decimal strings, times are ms since epoch.
 
+use crate::breaker::TripReason;
+use crate::guard::RouteGuard;
 use crate::types::{Classification, Ratio, RejectReason, Status, SubjectType};
 use near_sdk::json_types::U128;
 use near_sdk::{near, AccountId};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[near(serializers = [json])]
 #[serde(rename_all = "snake_case")]
 pub enum RoleName {
     Registrar,
     CompatApprover,
     Pauser,
+    Attester,
+    ReserveAttester,
+    BridgeAttester,
+}
+
+impl RoleName {
+    /// Every grantable role, in the order `get_account_roles` lists them.
+    pub const ALL: [RoleName; 6] = [
+        RoleName::Registrar,
+        RoleName::CompatApprover,
+        RoleName::Pauser,
+        RoleName::Attester,
+        RoleName::ReserveAttester,
+        RoleName::BridgeAttester,
+    ];
+
+    /// The snake_case name used in JSON and as the signer registry key.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            RoleName::Registrar => "registrar",
+            RoleName::CompatApprover => "compat_approver",
+            RoleName::Pauser => "pauser",
+            RoleName::Attester => "attester",
+            RoleName::ReserveAttester => "reserve_attester",
+            RoleName::BridgeAttester => "bridge_attester",
+        }
+    }
+
+    /// Roles whose signatures are attestations; they have a signer key registry.
+    pub fn is_attester(self) -> bool {
+        matches!(
+            self,
+            RoleName::Attester | RoleName::ReserveAttester | RoleName::BridgeAttester
+        )
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -226,6 +263,50 @@ pub enum CoreEvent {
         user: AccountId,
         reason: String,
         amount_in: U128,
+        timestamp_ms: u64,
+    },
+    #[event_version("1.0.0")]
+    PricePublisherKeyAdded { public_key: String, by: AccountId },
+    #[event_version("1.0.0")]
+    PricePublisherKeyRemoved { public_key: String, by: AccountId },
+    #[event_version("1.0.0")]
+    PriceSubmitted {
+        representation_id: String,
+        price: U128,
+        currency: String,
+        as_of_ms: u64,
+        simulated: bool,
+        source: String,
+        publisher_key: String,
+        timestamp_ms: u64,
+    },
+    #[event_version("1.0.0")]
+    RouteGuardSet {
+        id: String,
+        version: u64,
+        guard: RouteGuard,
+        by: AccountId,
+        timestamp_ms: u64,
+    },
+    #[event_version("1.0.0")]
+    InventoryReferenceSet {
+        representation_id: String,
+        reference: U128,
+        by: AccountId,
+    },
+    #[event_version("1.0.0")]
+    CircuitBreakerTripped {
+        id: String,
+        version: u64,
+        deviation_bps: u32,
+        reason: TripReason,
+        timestamp_ms: u64,
+    },
+    #[event_version("1.0.0")]
+    CircuitBreakerReset {
+        id: String,
+        version: u64,
+        by: AccountId,
         timestamp_ms: u64,
     },
 }

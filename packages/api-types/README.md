@@ -23,4 +23,6 @@ import { parseDecimalAmount } from "@pontis/domain";
 const amountIn = parseDecimalAmount("1.5", 6).toString(); // "1500000"
 ```
 
+`Transaction.txHash` is the **verified** transaction hash and is null until the chain confirms the transaction is the conversion's; use it for explorer links. `reportedTxHash` is what the wallet reported (unchecked) and `txHashStatus` is `NONE`, `REPORTED`, `VERIFIED` or `REJECTED`. `POST /v1/conversions/{id}/submitted` answers `422 VALIDATION_ERROR` for a transaction that is not the conversion's.
+
 Quote refusals (`NOT_DIRECT_EQUIVALENT`, `NOT_ELIGIBLE`, ...) are `422` responses with an `ApiError` body; `POST /v1/routes/compare` always returns `200` and reports refusal in `reasonCode`.

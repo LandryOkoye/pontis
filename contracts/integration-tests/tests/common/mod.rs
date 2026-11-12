@@ -27,6 +27,7 @@ pub struct Env {
     pub token_b: Contract,
     pub(super) signer: SigningKey,
     pub(super) nonce: std::cell::Cell<u128>,
+    pub fixture_b: bool,
 }
 
 pub fn wasm(name: &str) -> Vec<u8> {
@@ -52,6 +53,16 @@ pub fn yocto(n: u128) -> NearToken {
 
 impl Env {
     pub async fn new() -> anyhow::Result<Env> {
+        Self::build(false).await
+    }
+
+    /// Like `new`, but TGOLD-B is the `mock-payout-token` fixture: its payouts stay pending until
+    /// `release_payout` resolves them. It keeps no balances; assert B-side effects through the vault.
+    pub async fn with_held_payouts() -> anyhow::Result<Env> {
+        Self::build(true).await
+    }
+
+    async fn build(fixture_b: bool) -> anyhow::Result<Env> {
         let worker = near_workspaces::sandbox().await?;
         let root = worker.root_account()?;
         let mut accounts = vec![];
@@ -79,10 +90,12 @@ impl Env {
             .deploy(&wasm("synthetic_token"))
             .await?
             .into_result()?;
-        let token_b = b_acct
-            .deploy(&wasm("synthetic_token"))
-            .await?
-            .into_result()?;
+        let b_wasm = wasm(if fixture_b {
+            "mock_payout_token"
+        } else {
+            "synthetic_token"
+        });
+        let token_b = b_acct.deploy(&b_wasm).await?.into_result()?;
         let seed: [u8; 32] = (1..=32u8).collect::<Vec<_>>().try_into().unwrap();
         let env = Env {
             worker,
@@ -95,6 +108,7 @@ impl Env {
             token_b,
             signer: SigningKey::from_bytes(&seed),
             nonce: std::cell::Cell::new(1),
+            fixture_b,
         };
         env.init_and_register().await?;
         Ok(env)
@@ -118,11 +132,20 @@ impl Env {
     }
 }
 
+mod actions;
 mod checks;
+mod custody;
+mod guards;
 mod ops;
 mod quotes;
+mod redemption;
 mod setup;
 
 #[allow(unused_imports)] // each test binary uses a subset
 pub use checks::{assert_refunded, funded};
+#[allow(unused_imports)]
+pub use custody::reserve_seed;
+#[allow(unused_imports)]
+pub use guards::E8;
 pub use quotes::events;
+mod pending;

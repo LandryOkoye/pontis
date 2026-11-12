@@ -119,6 +119,76 @@ export const REFUSAL: Record<RefusalCode, { title: string; body: string; action:
     body: "The controlled test vault does not hold enough of the destination asset for this amount.",
     action: "Try a smaller amount",
   },
+  PRICE_DEVIATION: {
+    title: "The market price is too far from the ratio",
+    body: "The market price of one asset disagrees with the approved ratio by more than this route allows. The conversion is refused rather than filled at a bad rate.",
+    action: "Try again later",
+  },
+  PRICE_STALE: {
+    title: "The price reference is out of date",
+    body: "The market price used to check this route is older than allowed. Nothing converts on a stale price.",
+    action: "Try again in a moment",
+  },
+  PRICE_UNAVAILABLE: {
+    title: "No price reference is available",
+    body: "A current market price could not be read for this pair, so the route cannot be checked.",
+    action: "Try again later",
+  },
+  AMOUNT_BELOW_MIN: {
+    title: "The amount is below the minimum",
+    body: "This route only accepts amounts from the minimum set in its terms.",
+    action: "Try a larger amount",
+  },
+  AMOUNT_ABOVE_MAX: {
+    title: "The amount is above the maximum",
+    body: "This route only accepts amounts up to the maximum set in its terms.",
+    action: "Try a smaller amount",
+  },
+  WINDOW_LIMIT_EXCEEDED: {
+    title: "The window limit is reached",
+    body: "This route has a volume limit for the current window, and this amount would exceed it.",
+    action: "Try again in the next window",
+  },
+  CORPORATE_ACTION_FREEZE: {
+    title: "A corporate action freeze is in effect",
+    body: "Conversions of this asset are paused for a scheduled corporate action.",
+    action: "Try again after the freeze window",
+  },
+  CORPORATE_ACTION_PENDING: {
+    title: "A corporate action is not applied everywhere yet",
+    body: "An approved corporate action has not taken effect on every wrapper of this asset, so the route is held.",
+    action: "Try again once it is applied",
+  },
+  EPOCH_MISMATCH: {
+    title: "The two assets are at different multiplier epochs",
+    body: "The multipliers of the two assets moved apart, so the ratio no longer applies to both sides.",
+    action: "Check the asset status",
+  },
+  NOT_CONVERTIBLE: {
+    title: "This asset cannot convert now",
+    body: "Its lifecycle stage does not allow conversions.",
+    action: "Check the asset status",
+  },
+  LIFECYCLE_BLOCKED: {
+    title: "The asset lifecycle blocks this route",
+    body: "The asset is matured, redeeming, redeemed or delisted, so it cannot be converted in this direction.",
+    action: "Check the asset status",
+  },
+  NAV_WINDOW_CLOSED: {
+    title: "The NAV strike window is closed",
+    body: "This NAV-based asset converts only inside its strike window.",
+    action: "Try during the next strike window",
+  },
+  RESERVE_RESTRICTED: {
+    title: "Reserves do not cover this supply",
+    body: "The attested reserves for this asset do not cover its outstanding supply, so conversions are restricted. The attestation is a simulated demo record, not an audit.",
+    action: "See the reserve status",
+  },
+  RESERVE_STALE: {
+    title: "Reserve attestations are stale",
+    body: "The reserve attestations for this asset are older than the policy allows, or missing. Conversions are paused until they are refreshed.",
+    action: "See the reserve status",
+  },
 };
 
 export const PROVENANCE: Record<
@@ -164,6 +234,11 @@ export const FINDING: Record<ReconciliationKind, string> = {
   SETTLEMENT_MISMATCH: "Completion event shows other amounts or another user",
   VAULT_INSOLVENT: "Vault inventory exceeds the token balance held",
   VAULT_UNTRACKED_BALANCE: "Core holds tokens its inventory does not record",
+  CORPORATE_ACTION_OVERDUE: "Approved corporate action not applied by a live wrapper",
+  RESERVE_BREACH: "Chain reserve status is breached and not recorded",
+  RESERVE_STALE: "Reserve attestations are older than the policy allows",
+  REDEMPTION_OVERDUE: "Redemption is past its deadline and still open",
+  ESCROW_MISMATCH: "Open escrows, inventory and pending input do not match the token balance",
 };
 
 /** Lifecycle order used by timelines. */

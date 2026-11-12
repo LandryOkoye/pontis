@@ -3,7 +3,7 @@
 // quote is a signed offer bound to versions, not a reservation.
 
 import type { CreateQuoteRequest, Quote, RouteDescriptor } from "@pontis/api-types";
-import { computeAmounts, newNonce, signQuote, type QuoteKey } from "@pontis/quote-engine";
+import { newNonce, signQuote, type QuoteKey } from "@pontis/quote-engine";
 import { inArray } from "drizzle-orm";
 import type { Db } from "@pontis/db";
 import { assetRepresentations, quotes } from "@pontis/db";
@@ -11,7 +11,8 @@ import { AppError, notFound } from "../errors.ts";
 import type { QuoteChain } from "./chain.ts";
 import { assertAssetsExist } from "./compare.ts";
 import { quoteFromRow } from "./quote-mapper.ts";
-import { explain, refusalCode } from "./reasons.ts";
+import { payoutAmounts, vaultCovers } from "./payout.ts";
+import { explain, guardRefusal, refusalCode } from "./reasons.ts";
 
 export const QUOTE_TTL_MS = 60_000;
 
@@ -28,9 +29,9 @@ const ROUTE: RouteDescriptor = {
   type: "PARITY_CONVERSION",
   venue: "CONTROLLED_TEST_VAULT",
   network: "near-testnet",
-  settlement: "ATOMIC",
+  settlement: "ASYNC_CALLBACK_WITH_REFUND",
   description:
-    "Controlled test vault, same chain, atomic. Parity conversion of a synthetic test asset.",
+    "Controlled test vault, same chain. Settled asynchronously across several receipts with a refund if the payout fails; not an atomic transaction.",
 };
 
 const WARNINGS = [
@@ -62,17 +63,14 @@ export async function createQuote(deps: QuoteDeps, req: CreateQuoteRequest): Pro
       throw refuse("NOT_ELIGIBLE", `${req.accountId} is not on the allowlist for ${id}.`);
     }
   }
-  const feeBps = await chain.getFeeBps();
-  const ratio = { num: BigInt(route.terms.ratio.num), den: BigInt(route.terms.ratio.den) };
-  const amounts = computeAmounts(amountIn, ratio, feeBps);
-  if (!amounts) throw new AppError("VALIDATION_ERROR", 400, "amountIn is too large");
-  if (amounts.net === 0n)
-    throw new AppError(
-      "VALIDATION_ERROR",
-      400,
-      "amountIn is too small to convert to a non-zero output",
-    );
-  if (BigInt(await chain.getInventory(req.toId)) < amounts.net) {
+  // The contract's own verdict on this amount: limits, prices and the fee it will charge, skew
+  // included. A quote copies that fee, so execution cannot disagree with it (FEE_CHANGED).
+  const guards = await chain.getRouteGuards(req.fromId, req.toId, amountIn.toString());
+  const refusal = guardRefusal(guards.checks);
+  if (refusal) throw refuse(refusal.code, refusal.message);
+  const feeBps = guards.fee_bps ?? (await chain.getFeeBps());
+  const amounts = payoutAmounts(amountIn, route.terms.ratio, feeBps);
+  if (!(await vaultCovers(chain, req.toId, amounts))) {
     throw refuse(
       "INSUFFICIENT_INVENTORY",
       "The test vault does not hold enough of the destination asset.",
@@ -88,7 +86,13 @@ export async function createQuote(deps: QuoteDeps, req: CreateQuoteRequest): Pro
     if (!account) throw new Error(`asset ${id} vanished from the mirror`);
     return account;
   };
-  const expiresAt = new Date(now.getTime() + QUOTE_TTL_MS);
+  // A quote never outlives the next corporate-action freeze: the contract closes the route then.
+  const freezeMs = route.next_freeze_ms;
+  const expiresAt = new Date(
+    freezeMs !== null && freezeMs > now.getTime()
+      ? Math.min(now.getTime() + QUOTE_TTL_MS, freezeMs)
+      : now.getTime() + QUOTE_TTL_MS,
+  );
   const fields = {
     version: 1,
     contract: deps.coreId,

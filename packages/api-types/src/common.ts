@@ -14,6 +14,7 @@ import {
   REVIEW_ACTIONS,
   ROUTE_TYPES,
   QUOTE_STATES,
+  TX_HASH_STATUSES,
   RECONCILIATION_KINDS,
   VERIFICATION_STATUSES,
   isAmountString,
@@ -86,6 +87,11 @@ export const ReviewActionSchema = z.enum(REVIEW_ACTIONS).meta({ id: "ReviewActio
 export const RouteTypeSchema = z.enum(ROUTE_TYPES).meta({ id: "RouteType" });
 export const RefusalCodeSchema = z.enum(REFUSAL_CODES).meta({ id: "RefusalCode" });
 export const QuoteStateSchema = z.enum(QUOTE_STATES).meta({ id: "QuoteState" });
+export const TxHashStatusSchema = z.enum(TX_HASH_STATUSES).meta({
+  id: "TxHashStatus",
+  description:
+    "NONE: no hash reported. REPORTED: sent by the wallet, not confirmed on chain. VERIFIED: the chain shows it is this conversion's transaction. REJECTED: the chain shows it is not.",
+});
 export const FindingKindSchema = z.enum(RECONCILIATION_KINDS).meta({ id: "ReconciliationKind" });
 export const FindingSeveritySchema = z.enum(FINDING_SEVERITIES).meta({ id: "FindingSeverity" });
 export const ErrorCodeSchema = z.enum(ERROR_CODES).meta({ id: "ErrorCode" });

@@ -16,19 +16,23 @@ export async function startSandbox(
   logDir: string,
 ): Promise<{ info: SandboxInfo; process: Managed }> {
   const infoFile = join(logDir, "sandbox-info.json");
+  // `E2E_SANDBOX_BIN` names an already built `serve_sandbox` test binary, so a run needs no cargo.
+  const prebuilt = process.env.E2E_SANDBOX_BIN;
   const sandbox = start(
     "sandbox",
-    "cargo",
-    [
-      "test",
-      "-p",
-      "pontis-integration-tests",
-      "--test",
-      "serve_sandbox",
-      "--",
-      "--ignored",
-      "--nocapture",
-    ],
+    prebuilt ?? "cargo",
+    prebuilt
+      ? ["--ignored", "--nocapture"]
+      : [
+          "test",
+          "-p",
+          "pontis-integration-tests",
+          "--test",
+          "serve_sandbox",
+          "--",
+          "--ignored",
+          "--nocapture",
+        ],
     { cwd: repoRoot, env: { PONTIS_SANDBOX_INFO: infoFile }, logDir },
   );
   try {
