@@ -70,6 +70,18 @@ const EnvSchema = z.object({
   INDEXER_MAX_LAG_BLOCKS: z.coerce.number().int().min(0).default(DEFAULT_INDEXER_MAX_LAG_BLOCKS),
   /** How often unused quotes past their expiry are marked EXPIRED. */
   QUOTE_SWEEP_INTERVAL_MS: z.coerce.number().int().min(1000).default(10_000),
+  /** Optional: all five values are required together to activate EVM lending routes. */
+  MORPHO_SEPOLIA_RPC_URL: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().url().optional(),
+  ),
+  MORPHO_BLUE_ADDRESS: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  MORPHO_BLUE_MARKETS_JSON: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  PONTIS_COLLATERAL_REGISTRY_JSON: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().optional(),
+  ),
+  PONTIS_ORACLE_PRICES_JSON: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
 });
 
 export type Config = z.infer<typeof EnvSchema>;
