@@ -10,6 +10,8 @@ import {
   CreateQuoteRequestSchema,
   ERROR_CODES_FOR_TEST,
   HealthSchema,
+  IntentQuoteSchema,
+  PrivateRfqSubmissionSchema,
   IssuerSchema,
   ListTransactionsQuerySchema,
   QuoteSchema,
@@ -32,6 +34,8 @@ describe("fixtures round-trip through the schemas", () => {
     ["quote", QuoteSchema, fx.quote],
     ["settled transaction", TransactionSchema, fx.transactionSettled],
     ["health", HealthSchema, fx.health],
+    ["simulated Intents quote", IntentQuoteSchema, fx.simulatedIntentQuote],
+    ["simulated private RFQ", PrivateRfqSubmissionSchema, fx.simulatedPrivateRfqSubmission],
   ] as const)("%s", (_name, schema, value) => {
     const parsed = schema.parse(value);
     expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(value)));

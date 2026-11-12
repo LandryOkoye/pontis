@@ -256,3 +256,32 @@ export const transactionSettled: Transaction = {
   submittedAt: "2026-11-07T18:00:20.000Z",
   settledAt: "2026-11-07T18:00:30.000Z",
 };
+
+export const simulatedIntentQuote = {
+  quoteId: "sim-intent-1",
+  amountIn: "1000",
+  amountOut: "990",
+  minAmountOut: "990",
+  deadline: "2026-11-12T18:00:00.000Z",
+  source: "simulated_intents",
+  simulated: true,
+  confidentiality: "public",
+} as const;
+
+export const simulatedPrivateRfqSubmission = {
+  status: "matched",
+  confidentiality_level: "operator_trusted",
+  simulated: true,
+  settlement: {
+    settlementId: "rfq-1",
+    assetId: "sim:asset-a",
+    size: "50",
+    price: "100",
+    buyOrderId: "buy-1",
+    sellOrderId: "sell-1",
+    commitment: "a".repeat(64),
+    settlementMode: "not_submitted",
+    confidentiality_level: "operator_trusted",
+    simulated: true,
+  },
+} as const;
