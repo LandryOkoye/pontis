@@ -82,6 +82,12 @@ describe("private RFQ API", () => {
     });
     const opened = openDisclosure(disclosure.json().disclosure, seller.secretKey);
     expect(matchCommitment(opened)).toBe(instruction.commitment);
+    const outsider = createRfqKeys();
+    const hidden = await app.inject({
+      method: "GET",
+      url: `/v1/private-rfq/settlements/${instruction.settlementId}/disclosure?publicKey=${encodeURIComponent(Buffer.from(outsider.publicKey).toString("base64"))}`,
+    });
+    expect(hidden.statusCode).toBe(404);
   });
 
   it("refuses an unsupported simulated asset and unknown disclosures", async () => {

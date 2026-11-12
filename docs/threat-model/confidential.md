@@ -10,6 +10,8 @@ disclosure package is separately encrypted to each participant and, when configu
 The API returns the encrypted package and commitment. The recipient decrypts locally with its
 private key and recomputes the commitment; the matcher never receives participant private keys.
 The local test helper also verifies a decrypted package against the stored commitment.
+The disclosure route returns a blob only for the participant/auditor public keys attached to the
+match record; other key selectors receive `NOT_FOUND`.
 
 Every result is `confidentiality_level: "operator_trusted"` and `simulated: true`. The demo does
 not submit settlement to Pontis core, persist a commitment on-chain, batch/net settlements, or
