@@ -70,4 +70,10 @@ describe("openapi.yaml", () => {
       }
     }
   });
+
+  it("keeps Phase 8 paths and operations explicit in the endpoint map", () => {
+    expect(ENDPOINTS.createIntentQuote.path).toBe("/v1/intents/quote");
+    expect(ENDPOINTS.submitPrivateRfqOrder.method).toBe("post");
+    expect(ENDPOINTS.getPrivateRfqDisclosure.query).toBeDefined();
+  });
 });

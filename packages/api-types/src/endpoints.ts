@@ -4,6 +4,16 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from "@asteasolutions/zod-to-ope
 import { z } from "zod";
 import type { ErrorCodeSchema } from "./common.ts";
 import { ApiErrorSchema } from "./common.ts";
+import {
+  IntentQuoteRequestSchema,
+  IntentQuoteSchema,
+  IntentStatusSchema,
+  IntentTokensResponseSchema,
+  MatcherKeySchema,
+  PrivateRfqDisclosureSchema,
+  PrivateRfqEncryptedOrderSchema,
+  PrivateRfqSubmissionSchema,
+} from "./intents-types.ts";
 import { AdminAuthHeaderSchema, ReconciliationReportSchema } from "./admin-types.ts";
 import {
   AssetSchema,
@@ -41,6 +51,19 @@ export const TransactionListSchema = z
 
 const IdParam = z.object({ id: z.string() });
 const UuidParam = z.object({ id: z.uuid() });
+const IntentStatusQuery = z
+  .object({ depositAddress: z.string().min(1), depositMemo: z.string().optional() })
+  .strict();
+const PrivateRfqOrderRequest = z
+  .object({
+    order: PrivateRfqEncryptedOrderSchema,
+    disclosurePublicKey: z.string().regex(/^[A-Za-z0-9+/]+={0,2}$/),
+  })
+  .strict();
+const SettlementParam = z.object({ settlementId: z.string().min(1) });
+const DisclosureQuery = z
+  .object({ publicKey: z.string().regex(/^[A-Za-z0-9+/]+={0,2}$/) })
+  .strict();
 
 type Method = "get" | "post";
 
@@ -49,7 +72,15 @@ interface Endpoint {
   readonly path: string;
   readonly summary: string;
   readonly tag:
-    "Health" | "Registry" | "Routes" | "Quotes" | "Conversions" | "Transactions" | "Admin";
+    | "Health"
+    | "Registry"
+    | "Routes"
+    | "Quotes"
+    | "Conversions"
+    | "Transactions"
+    | "Admin"
+    | "Intents"
+    | "Private RFQ";
   readonly status: number;
   readonly response: z.ZodType;
   /** Error codes this endpoint can return, with their HTTP status. */
@@ -74,6 +105,78 @@ export const ENDPOINTS = {
     status: 200,
     response: HealthSchema,
     errors: { ...COMMON },
+  },
+  getIntentTokens: {
+    method: "get",
+    path: "/v1/intents/tokens",
+    summary: "List assets exposed by the configured Intents adapter",
+    tag: "Intents",
+    status: 200,
+    response: IntentTokensResponseSchema,
+    errors: { ...COMMON },
+    description: "The default adapter is simulated; runtime asset support can change.",
+  },
+  createIntentQuote: {
+    method: "post",
+    path: "/v1/intents/quote",
+    summary: "Request a dry Intents quote",
+    tag: "Intents",
+    status: 200,
+    response: IntentQuoteSchema,
+    body: IntentQuoteRequestSchema,
+    errors: { ...VALIDATION, ...COMMON },
+  },
+  createIntentSwap: {
+    method: "post",
+    path: "/v1/intents/swaps",
+    summary: "Create an Intents deposit route",
+    tag: "Intents",
+    status: 200,
+    response: IntentQuoteSchema,
+    body: IntentQuoteRequestSchema,
+    errors: { ...VALIDATION, ...COMMON },
+    description: "Creates a quote-specific deposit route; Pontis does not submit funds.",
+  },
+  getIntentStatus: {
+    method: "get",
+    path: "/v1/intents/status",
+    summary: "Read Intents deposit route status",
+    tag: "Intents",
+    status: 200,
+    response: IntentStatusSchema,
+    query: IntentStatusQuery,
+    errors: { ...VALIDATION, ...COMMON },
+  },
+  getPrivateRfqMatcherKey: {
+    method: "get",
+    path: "/v1/private-rfq/matcher-key",
+    summary: "Get the local RFQ matcher public key",
+    tag: "Private RFQ",
+    status: 200,
+    response: MatcherKeySchema,
+    errors: { ...COMMON },
+  },
+  submitPrivateRfqOrder: {
+    method: "post",
+    path: "/v1/private-rfq/orders",
+    summary: "Submit an encrypted RFQ order",
+    tag: "Private RFQ",
+    status: 200,
+    response: PrivateRfqSubmissionSchema,
+    body: PrivateRfqOrderRequest,
+    errors: { ...VALIDATION, ...COMMON },
+    description: "The local matcher is operator-trusted and does not submit settlement to core.",
+  },
+  getPrivateRfqDisclosure: {
+    method: "get",
+    path: "/v1/private-rfq/settlements/{settlementId}/disclosure",
+    summary: "Get an encrypted matched-order disclosure",
+    tag: "Private RFQ",
+    status: 200,
+    response: PrivateRfqDisclosureSchema,
+    params: SettlementParam,
+    query: DisclosureQuery,
+    errors: { ...VALIDATION, 404: ["NOT_FOUND"], ...COMMON },
   },
   listIssuers: {
     method: "get",

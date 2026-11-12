@@ -11,6 +11,7 @@
   deposit-route creation, and status.
 - Exposed encrypted RFQ order submission, matcher public key, and participant/auditor-encrypted
   disclosure retrieval through simulator API routes; published the shared schemas and OpenAPI.
+- Registered the Intents and private RFQ operations in the shared typed endpoint map.
 - Added package/API tests and documented the confidentiality trust model.
 
 ## What is simulated or opt-in
