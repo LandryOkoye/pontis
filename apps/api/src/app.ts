@@ -23,6 +23,13 @@ import { registerQuoteRoutes } from "./routes/quotes.ts";
 import { registerIssuerRoutes } from "./routes/issuer.ts";
 import { registerRedemptionRoutes } from "./routes/redemptions.ts";
 import { registerSecurity, type SecurityOptions } from "./security/index.ts";
+import {
+  PrivateRfqMatcher,
+  SimulatedIntentsClient,
+  type IntentsClient,
+} from "@pontis/intents-private";
+import { registerIntentsRoutes } from "./routes/intents.ts";
+import { registerPrivateRfqRoutes } from "./routes/private-rfq.ts";
 
 export interface AppDeps {
   db: Db;
@@ -48,6 +55,10 @@ export interface AppDeps {
   auth: AuthDeps;
   /** Break-glass bearer key for the admin endpoints (labelled `legacy-admin-key`); unset turns it off. */
   adminApiKey?: string;
+  /** Defaults to the offline simulator. Production 1Click use requires explicit client injection. */
+  intents?: IntentsClient;
+  /** Defaults to a local RFQ matcher for synthetic `sim:` asset identifiers only. */
+  privateRfq?: PrivateRfqMatcher;
   /** CORS origins and rate limits; see `registerSecurity`. */
   security?: SecurityOptions;
   logger?: boolean;
@@ -68,6 +79,15 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   app.register(async (scope) => {
     registerHealthRoute(scope, deps.db, deps.chainHeight, deps.health);
     registerPublicCaching(scope);
+    registerIntentsRoutes(scope, deps.intents ?? new SimulatedIntentsClient());
+    registerPrivateRfqRoutes(
+      scope,
+      deps.privateRfq ??
+        new PrivateRfqMatcher({
+          oraclePrice: (assetId) => (assetId.startsWith("sim:") ? 100n : undefined),
+          maxOracleDeviationBps: 1_000n,
+        }),
+    );
     registerCatalogRoutes(scope, deps.db);
     registerMarketRoutes(scope, {
       db: deps.db,

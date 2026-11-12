@@ -1,28 +1,36 @@
-# Research: Confidential Intents and private execution
+# Confidential Intents research
 
-- **Status:** NOT YET VERIFIED. Nothing below is a finding. This file lists what must be read and recorded before any private-execution integration is written (phase 8, [ADR 0014](../decisions/0014-scope-expansion-beyond-mvp.md) section 3).
-- **Used by:** an optional `ConfidentialIntentsClient` behind an adapter. Pontis's own operator-trusted private RFQ is built regardless and does not depend on this research.
-- **Last verified:** never.
+- **Checked:** 2026-11-12
+- **Surface:** Confidential Swaps through the official NEAR Intents 1Click API
 
-## Questions to answer from the current official documentation
+## Verified
 
-Record each answer with the URL and the date it was read. Mark anything that could not be confirmed `UNVERIFIED`.
+- The current 1Click docs support a `confidentiality` quote parameter with `basic` or `advanced`
+  values. A foreign-chain-to-foreign-chain flow otherwise uses the ordinary quote/deposit/status
+  flow; an embedded Confidential Intents balance uses `CONFIDENTIAL_INTENTS` deposit/recipient/
+  refund types and signed-intent execution.
+  [Confidential swaps](https://docs.near-intents.org/integration/distribution-channels/1click-api/quickstart/confidential-swaps),
+  [quote API](https://docs.near-intents.org/api-reference/oneclick/request-a-swap-quote)
+- NEAR announced general availability on 2026-07-07 for developers integrating through 1Click.
+  However, the API terms allow confidential-swap access to be gated by developer approval,
+  whitelisting, eligibility, KYB, volume or other conditions.
+  [GA announcement](https://near.org/blog/announcing-general-availability-of-confidential-intents),
+  [API terms](https://docs.near-intents.org/security-compliance/terms-of-service)
+- Confidential execution runs on a NEAR private shard operated by independent permissioned
+  validators and connected to NEAR mainnet through a TEE-based bridge. The official explainer says
+  the private shard has no public RPC/API/block explorer; it describes private transaction details
+  as hidden from the public chain and the overall model as trust-minimized rather than fully
+  trustless. [Architecture explainer](https://www.near.org/blog/how-confidential-intents-works)
+- Official documentation states user private balances/history require a separate authenticated
+  User-Session token. The public 1Click partner JWT alone does not grant access to confidential
+  user data. [API Keys](https://docs.near-intents.org/integration/distribution-channels/1click-api/authentication)
+- The 1Click docs state there is no testnet version. Pontis therefore implements a local encrypted
+  RFQ simulator and does not claim to integrate with the live Confidential Intents service.
 
-| #   | Question                                                                                                        | Answer | Source URL | Date read |
-| --- | --------------------------------------------------------------------------------------------------------------- | ------ | ---------- | --------- |
-| 1   | What does the product offer today, and what exactly is hidden (amounts, parties, timing, order book)?           |        |            |           |
-| 2   | Is it available on a testnet, or only on mainnet or behind an access programme?                                 |        |            |           |
-| 3   | How is it accessed (API, SDK, contract calls), and with what authentication?                                    |        |            |           |
-| 4   | What is the trust model (for example trusted hardware, permissioned operators), and what can the operators see? |        |            |           |
-| 5   | Does it support selective disclosure to an auditor, and how?                                                    |        |            |           |
-| 6   | Can restricted or permissioned assets be used, and where is eligibility enforced?                               |        |            |           |
+## Unknowns
 
-## Decisions that do not wait for this research
-
-- A NEAR contract cannot hide amounts on a public ledger. Pontis offers tiered privacy and states the trust model of each tier. The private RFQ's matcher can see every order and its API responses carry `confidentiality_level: "operator_trusted"`.
-- Token transfers still show amounts, timing and addresses on chain. The documentation of the feature lists exactly what leaks and which mitigations are implemented (`docs/threat-model/confidential.md`, written with the feature).
-- TEE attestation verification is implemented only if its exact verified claims can be specified. It is not faked.
-
-## What is real and what is simulated
-
-To be filled in when the feature exists. Until then nothing in this repository offers private execution.
+- A staging/testnet confidential environment and partner access credentials.
+- A complete confidential-route allowlist separate from live quote acceptance.
+- An externally available selective-disclosure API. Earlier official material described selective
+  disclosure as planned; current public docs reviewed here do not establish the API shape or access
+  policy.
