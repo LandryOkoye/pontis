@@ -11,6 +11,13 @@ import { registerConversionRoutes } from "./routes/conversions.ts";
 import { registerHealthRoute } from "./routes/health.ts";
 import { registerQuoteRoutes } from "./routes/quotes.ts";
 import { registerSecurity, type SecurityOptions } from "./security/index.ts";
+import {
+  PrivateRfqMatcher,
+  SimulatedIntentsClient,
+  type IntentsClient,
+} from "@pontis/intents-private";
+import { registerIntentsRoutes } from "./routes/intents.ts";
+import { registerPrivateRfqRoutes } from "./routes/private-rfq.ts";
 
 export interface AppDeps {
   db: Db;
@@ -22,6 +29,10 @@ export interface AppDeps {
   conversionChain: ConversionChain;
   /** Bearer key for the admin endpoints; without one they refuse everyone. */
   adminApiKey?: string;
+  /** Defaults to the offline simulator. Production 1Click use requires explicit client injection. */
+  intents?: IntentsClient;
+  /** Defaults to a local RFQ matcher for synthetic `sim:` asset identifiers only. */
+  privateRfq?: PrivateRfqMatcher;
   /** CORS origins and rate limits; see `registerSecurity`. */
   security?: SecurityOptions;
   logger?: boolean;
@@ -41,6 +52,15 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // Queued after the security plugins, so their hooks cover every route below.
   app.register(async (scope) => {
     registerHealthRoute(scope, deps.db, deps.chainHeight);
+    registerIntentsRoutes(scope, deps.intents ?? new SimulatedIntentsClient());
+    registerPrivateRfqRoutes(
+      scope,
+      deps.privateRfq ??
+        new PrivateRfqMatcher({
+          oraclePrice: (assetId) => (assetId.startsWith("sim:") ? 100n : undefined),
+          maxOracleDeviationBps: 1_000n,
+        }),
+    );
     registerCatalogRoutes(scope, deps.db);
     registerQuoteRoutes(scope, { db: deps.db, ...deps.quotes });
     registerConversionRoutes(scope, {
