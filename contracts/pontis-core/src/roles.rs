@@ -6,6 +6,10 @@
 //! | `registrar` | registers records, evidence, status changes |
 //! | `compat_approver` | compatibility lifecycle (B6) |
 //! | `pauser` | pauses globally or per asset; can never unpause |
+//! | `attester`, `reserve_attester`, `bridge_attester` | sign attestations with a registered key (`signers`) |
+//!
+//! Separation (ADR 0019): `registrar` and an attester role are never held together, and the owner
+//! holds no attester role.
 
 use crate::events::{CoreEvent, PauseScope, RoleName};
 use crate::types::check;
@@ -19,6 +23,7 @@ impl Contract {
     #[payable]
     pub fn grant_role(&mut self, role: RoleName, account_id: AccountId) {
         self.assert_owner();
+        self.assert_separation(role, &account_id);
         check(
             self.role_set_mut(role).insert(account_id.clone()),
             "account already holds this role",
@@ -39,6 +44,9 @@ impl Contract {
             self.role_set_mut(role).remove(&account_id),
             "account does not hold this role",
         );
+        if role.is_attester() {
+            self.drop_signer_keys(role, &account_id);
+        }
         CoreEvent::RoleRevoked {
             role,
             account_id,
@@ -53,6 +61,10 @@ impl Contract {
     pub fn transfer_ownership(&mut self, new_owner: AccountId) {
         self.assert_owner();
         check(new_owner != self.owner_id, "already the owner");
+        check(
+            !self.holds_attester_role(&new_owner),
+            "an attester cannot become the owner",
+        );
         self.pending_owner = Some(new_owner.clone());
         CoreEvent::OwnershipTransferProposed {
             current_owner: self.owner_id.clone(),
@@ -134,6 +146,9 @@ impl Contract {
             RoleName::Registrar => &self.registrars,
             RoleName::CompatApprover => &self.compat_approvers,
             RoleName::Pauser => &self.pausers,
+            RoleName::Attester => &self.attesters,
+            RoleName::ReserveAttester => &self.reserve_attesters,
+            RoleName::BridgeAttester => &self.bridge_attesters,
         }
     }
 
@@ -142,6 +157,36 @@ impl Contract {
             RoleName::Registrar => &mut self.registrars,
             RoleName::CompatApprover => &mut self.compat_approvers,
             RoleName::Pauser => &mut self.pausers,
+            RoleName::Attester => &mut self.attesters,
+            RoleName::ReserveAttester => &mut self.reserve_attesters,
+            RoleName::BridgeAttester => &mut self.bridge_attesters,
+        }
+    }
+
+    fn holds_attester_role(&self, account_id: &AccountId) -> bool {
+        RoleName::ALL
+            .into_iter()
+            .any(|r| r.is_attester() && self.role_set(r).contains(account_id))
+    }
+
+    /// The separation rules of ADR 0019: a registrar is never an attester and the owner holds no
+    /// attester role.
+    fn assert_separation(&self, role: RoleName, account_id: &AccountId) {
+        if role.is_attester() {
+            check(
+                !self.registrars.contains(account_id),
+                "a registrar cannot hold an attester role",
+            );
+            check(
+                *account_id != self.owner_id,
+                "the owner cannot hold an attester role",
+            );
+        }
+        if role == RoleName::Registrar {
+            check(
+                !self.holds_attester_role(account_id),
+                "an attester cannot hold the registrar role",
+            );
         }
     }
 

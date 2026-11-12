@@ -50,6 +50,11 @@ export class RpcClient {
     this.timeoutMs = options.timeoutMs ?? 10_000;
   }
 
+  /** The endpoint this client talks to. May carry credentials: redact before logging. */
+  get url(): string {
+    return this.options.url;
+  }
+
   async call(method: string, params: unknown): Promise<unknown> {
     const response = await this.fetchImpl(this.options.url, {
       method: "POST",
@@ -90,6 +95,47 @@ export class RpcClient {
     })) as { result?: number[]; error?: string };
     if (result.error) throw new ContractError(contractId, method, result.error);
     return JSON.parse(Buffer.from(result.result ?? []).toString("utf8"));
+  }
+
+  /**
+   * The access key `publicKey` of `accountId`: its type, or null if the account has no such key
+   * (or no such account). Nodes report a missing key either as a JSON-RPC error with cause
+   * `UNKNOWN_ACCESS_KEY` or as a `result.error` text; both are a null here.
+   */
+  async viewAccessKey(
+    accountId: string,
+    publicKey: string,
+  ): Promise<{ type: "full_access" | "function_call" } | null> {
+    let result: { permission?: unknown; error?: string };
+    try {
+      result = (await this.call("query", {
+        request_type: "view_access_key",
+        finality: "final",
+        account_id: accountId,
+        public_key: publicKey,
+      })) as typeof result;
+    } catch (error) {
+      if (
+        error instanceof RpcError &&
+        (error.causeName === "UNKNOWN_ACCESS_KEY" ||
+          error.causeName === "UNKNOWN_ACCOUNT" ||
+          /does not exist/.test(error.message))
+      )
+        return null;
+      throw error;
+    }
+    if (result.error !== undefined) {
+      if (/does not exist/.test(result.error)) return null;
+      throw new RpcError(`view_access_key: ${result.error}`);
+    }
+    if (result.permission === "FullAccess") return { type: "full_access" };
+    if (
+      typeof result.permission === "object" &&
+      result.permission !== null &&
+      "FunctionCall" in result.permission
+    )
+      return { type: "function_call" };
+    throw new RpcError("view_access_key: unrecognised permission in the response");
   }
 
   async status(): Promise<{

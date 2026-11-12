@@ -10,6 +10,8 @@ import { randomBytes } from "node:crypto";
 export interface User {
   accountId: string;
   wallet: Account;
+  /** `ed25519:<base58>`, for the sign-in scenario. A throwaway key of a throwaway account. */
+  secretKey: string;
 }
 
 const NEAR = 10n ** 24n;
@@ -26,7 +28,8 @@ export async function createUser(
   await chain.account.createSubAccount({
     accountOrPrefix: prefix,
     publicKey: key.getPublicKey(),
-    nearToTransfer: 5n * NEAR,
+    // A sandbox is free; on Testnet this NEAR is gone with the throwaway key, so send little.
+    nearToTransfer: world.mode === "sandbox" ? 5n * NEAR : NEAR / 2n,
   });
   const accountId = `${prefix}.${config.deployerId}`;
   if (options.allowlisted) {
@@ -54,6 +57,7 @@ export async function createUser(
   return {
     accountId,
     wallet: new Account(accountId, provider, key.toString() as `ed25519:${string}`),
+    secretKey: key.toString(),
   };
 }
 

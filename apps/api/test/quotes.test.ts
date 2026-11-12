@@ -10,7 +10,7 @@ import { expireQuotes, getQuote } from "../src/quotes/lifecycle.ts";
 import { QUOTE_TTL_MS, createQuote, type QuoteDeps } from "../src/quotes/service.ts";
 import { syncRegistry } from "../src/sync/registry-sync.ts";
 import { createTestDb, type TestDb } from "@pontis/db/testing";
-import { errorCodeOf } from "./helpers.ts";
+import { errorCodeOf, unguarded } from "./helpers.ts";
 
 let t: TestDb;
 beforeAll(async () => {
@@ -24,14 +24,19 @@ afterAll(async () => {
 const key = keyFromSeed(Uint8Array.from({ length: 32 }, (_, i) => i + 1));
 const NOW = new Date("2026-11-07T18:00:00Z");
 const terms = { ratio: { num: "1000", den: "1" }, compatibility_version: 2, policy_version: 1 };
-const ok: ChainRouteView = { executable: true, refusal: null, terms };
-const chain = (over: Partial<QuoteChain> = {}): QuoteChain => ({
-  getRoute: async () => ok,
-  isAllowed: async () => true,
-  getInventory: async () => "1000000000000",
-  getFeeBps: async () => 10,
-  ...over,
-});
+const ok: ChainRouteView = { executable: true, refusal: null, terms, next_freeze_ms: null };
+type Base = Omit<QuoteChain, "getRouteGuards" | "getPrice">;
+const chain = (over: Partial<QuoteChain> = {}): QuoteChain => {
+  const base: Base = {
+    getRoute: async () => ok,
+    isAllowed: async () => true,
+    getInventory: async () => "1000000000000",
+    getFeeBps: async () => 10,
+    ...over,
+  };
+  // A test that overrides the guard view brings its own; the rest see an unguarded pair.
+  return { ...unguarded(base), ...over };
+};
 const deps = (over: Partial<QuoteChain> = {}): QuoteDeps => ({
   db: t.db,
   chain: chain(over),

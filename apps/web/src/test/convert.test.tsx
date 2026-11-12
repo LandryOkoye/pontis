@@ -24,7 +24,7 @@ describe("quote", () => {
     expect(within(ticket).getAllByTitle("9.99 TGOLD-B").length).toBeGreaterThan(0);
     expect(within(ticket).getByTitle("0.01 TGOLD-B")).toBeInTheDocument();
     expect(
-      within(ticket).getByText("Controlled test vault · same chain · atomic"),
+      within(ticket).getByText("Controlled test vault · same chain · async"),
     ).toBeInTheDocument();
     expect(within(ticket).getByText(/Synthetic, unbacked test assets/)).toBeInTheDocument();
     expect(within(ticket).getByRole("timer")).toHaveAccessibleName(/Quote expires in \d+ seconds/);

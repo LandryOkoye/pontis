@@ -291,9 +291,9 @@ function buildQuote(
       type: "PARITY_CONVERSION",
       venue: "CONTROLLED_TEST_VAULT",
       network: "near-testnet",
-      settlement: "ATOMIC",
+      settlement: "ASYNC_CALLBACK_WITH_REFUND",
       description:
-        "Controlled test vault, same chain, atomic. Parity conversion of a synthetic test asset.",
+        "Controlled test vault, same chain. Settled asynchronously across several receipts with a refund if the payout fails; not an atomic transaction.",
     },
     compatibilityVersion: relation.version,
     policyVersion: 1,
@@ -350,11 +350,14 @@ function seedHistory(): void {
     const created = now - minutesAgo * 60_000;
     const quote = buildQuote(fromId, toId, amountIn, DEMO_ACCOUNT, created, txState);
     const sent = ["SUBMITTED", "SETTLED", "FAILED", "REQUIRES_RECONCILIATION"].includes(txState);
+    const txHash = sent ? fakeHash() : null;
     const tx: Transaction = {
       id: crypto.randomUUID(),
       quote,
       state: txState,
-      txHash: sent ? fakeHash() : null,
+      txHash,
+      reportedTxHash: txHash,
+      txHashStatus: txHash ? "VERIFIED" : "NONE",
       failureReason: null,
       events: [],
       createdAt: iso(created),
@@ -509,7 +512,7 @@ export const db = {
           ...base,
           executable: true,
           explanation:
-            "Approved direct equivalents for a narrow, recorded scope: converted at the approved unit ratio from a controlled test vault, same chain, atomic. Synthetic test assets only.",
+            "Approved direct equivalents for a narrow, recorded scope: converted at the approved unit ratio from a controlled test vault, same chain, asynchronous with refund on failure. Synthetic test assets only.",
         },
       ],
     };
@@ -563,6 +566,8 @@ export const db = {
         quote,
         state: "ACCEPTED",
         txHash: null,
+        reportedTxHash: null,
+        txHashStatus: "NONE",
         failureReason: null,
         events: [],
         createdAt: new Date().toISOString(),

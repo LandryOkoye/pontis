@@ -1,6 +1,7 @@
 // An in-memory chain for the loop tests: a final height and the executions of each block.
 
 import type { ChainSource, CoreExecution } from "../src/chain-source.ts";
+import type { TxVerifier } from "@pontis/near-client";
 import type { Logger } from "../src/indexer.ts";
 
 export class FakeSource implements ChainSource {
@@ -35,3 +36,6 @@ export const silent: Logger & { errors: string[] } = {
     this.errors.push(message);
   },
 };
+
+/** A node that knows no transaction: reported hashes stay unverified. */
+export const noVerifier: TxVerifier = { getTransaction: async () => undefined };

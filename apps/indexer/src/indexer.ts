@@ -2,10 +2,14 @@
 // or a failed RPC call leaves the cursor at the last block whose events are all stored.
 
 import type { Db } from "@pontis/db";
+import type { TxVerifier } from "@pontis/near-client";
 import { applyExecutions } from "./apply.ts";
 import type { ChainSource } from "./chain-source.ts";
-import { readCursor, rewindCursor, writeCursor } from "./cursor.ts";
+import { createCursor, readCursor, rewindCursor, touchCursor, writeCursor } from "./cursor.ts";
+import type { MirrorChain } from "./chain-views.ts";
+import { refreshMirrors } from "./mirror/refresh.ts";
 import { backoffMs, sleep as realSleep } from "./retry.ts";
+import { verifyReportedHashes, type VerifyHashesResult } from "./verify-hashes.ts";
 
 export interface Logger {
   info(message: string, fields?: Record<string, unknown>): void;
@@ -15,6 +19,12 @@ export interface Logger {
 export interface IndexerOptions {
   db: Db;
   source: ChainSource;
+  /** Checks the transaction hashes wallets reported for settled conversions. */
+  verifier: TxVerifier;
+  /** The core contract the conversion transfers must be sent to. */
+  coreId: string;
+  /** Reads the chain views that complete mirror rows (custodians, issuer counters, reserve status); without it the rows stay marked for a refresh. */
+  mirror?: MirrorChain | undefined;
   log: Logger;
   /** First block to read when there is no cursor; default is the newest block that is safe to read. */
   startHeight?: number | undefined;
@@ -31,18 +41,33 @@ export interface Pass {
   to: number;
   stored: number;
   duplicates: number;
+  hashes: VerifyHashesResult;
+  /** Mirror rows completed from chain views after the blocks were applied. */
+  refreshed: number;
 }
 
 export const DEFAULT_CONFIRMATIONS = 3;
 
-/** Reads every block between the cursor and the safe head, then returns. Throws on the first failure. */
+/**
+ * Reads every block between the cursor and the safe head, then returns. Throws on the first failure.
+ * A pass that succeeds with nothing new stamps the cursor's `updated_at` as a heartbeat (the API's
+ * health route reads it); a pass that throws does not, and neither does the rewind on start.
+ * Applying a block refreshes it as a side effect of advancing the cursor, in the same transaction.
+ */
 export async function indexOnce(options: IndexerOptions): Promise<Pass> {
   const { db, source } = options;
   const target = (await source.finalHeight()) - (options.confirmations ?? DEFAULT_CONFIRMATIONS);
   const cursor = await readCursor(db);
   const from = (cursor ?? (options.startHeight ?? target + 1) - 1) + 1;
-  const pass: Pass = { from, to: target, stored: 0, duplicates: 0 };
-  if (cursor === undefined) await writeCursor(db, from - 1);
+  const pass: Pass = {
+    from,
+    to: target,
+    stored: 0,
+    duplicates: 0,
+    hashes: { verified: 0, rejected: 0, inconclusive: 0 },
+    refreshed: 0,
+  };
+  if (cursor === undefined) await createCursor(db, from - 1);
   for (let height = from; height <= target; height++) {
     const executions = await source.executionsAt(height);
     await db.transaction(async (tx) => {
@@ -52,6 +77,18 @@ export async function indexOnce(options: IndexerOptions): Promise<Pass> {
       await writeCursor(tx, height);
     });
   }
+  pass.hashes = await verifyReportedHashes({
+    db,
+    verifier: options.verifier,
+    coreId: options.coreId,
+    log: options.log,
+  });
+  if (options.mirror) {
+    const done = await refreshMirrors({ db, chain: options.mirror, log: options.log });
+    pass.refreshed = done.custodians + done.issuers + done.reserveStatuses + done.mintRequests;
+  }
+  // Only reached when every read above succeeded.
+  if (from > target) await touchCursor(db);
   return pass;
 }
 
@@ -74,7 +111,10 @@ export async function runIndexer(options: RunOptions): Promise<void> {
     try {
       const pass = await indexOnce(options);
       failures = 0;
-      if (pass.stored > 0 || pass.duplicates > 0) log.info("indexed", { ...pass });
+      if (pass.stored > 0 || pass.duplicates > 0 || pass.refreshed > 0)
+        log.info("indexed", { ...pass });
+      else if (pass.hashes.verified + pass.hashes.rejected > 0)
+        log.info("hashes", { ...pass.hashes });
       await wait(pollMs);
     } catch (error) {
       const pause = backoffMs(failures++, pollMs, options.maxBackoffMs ?? 60_000);

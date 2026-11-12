@@ -43,3 +43,11 @@ export function canTransitionQuote(from: QuoteState, to: QuoteState): boolean {
 export function isTerminalQuoteState(state: QuoteState): boolean {
   return TRANSITIONS[state].length === 0;
 }
+
+/**
+ * What is known about the transaction hash of a conversion. `NONE`: nothing reported. `REPORTED`:
+ * the wallet sent a hash that has not been checked against the chain. `VERIFIED`: the chain shows
+ * that transaction is this conversion's. `REJECTED`: the chain shows it is not.
+ */
+export const TX_HASH_STATUSES = ["NONE", "REPORTED", "VERIFIED", "REJECTED"] as const;
+export type TxHashStatus = (typeof TX_HASH_STATUSES)[number];

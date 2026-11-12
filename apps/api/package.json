@@ -18,10 +18,12 @@
     "@pontis/api-types": "workspace:*",
     "@pontis/db": "workspace:*",
     "@pontis/domain": "workspace:*",
+    "@pontis/market-data": "workspace:*",
     "@pontis/near-client": "workspace:*",
     "@pontis/quote-engine": "workspace:*",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.8",
+    "near-api-js": "^7.4.0",
     "pg": "^8.23.1",
     "zod": "^4.6.7"
   },

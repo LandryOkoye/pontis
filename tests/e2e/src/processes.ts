@@ -53,13 +53,16 @@ export function start(
 
 export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+// Testnet finality and a shared, rate-limited public RPC make everything several times slower.
+const PATIENCE = process.env.E2E_MODE === "testnet" ? 4 : 1;
+
 /** Polls `probe` until it returns something other than `undefined` or `false`. */
 export async function waitFor<T>(
   label: string,
   probe: () => Promise<T | undefined | false>,
   { timeoutMs, intervalMs = 1_000 }: { timeoutMs: number; intervalMs?: number },
 ): Promise<T> {
-  const deadline = Date.now() + timeoutMs;
+  const deadline = Date.now() + timeoutMs * PATIENCE;
   let last: unknown;
   for (;;) {
     try {

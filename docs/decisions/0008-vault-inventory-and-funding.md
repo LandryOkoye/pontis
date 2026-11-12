@@ -13,7 +13,7 @@ Brief §7.2 says to use a controlled, pre-funded test vault rather than an AMM f
 
 ### Conversion model
 
-Inventory-based: the vault holds balances of each registered representation inside `pontis-core`. A conversion adds `amount_in` to the input token's inventory and removes `net` from the output token's inventory. There is no AMM, no pricing curve and no imbalance fee. The protocol fee (`gross - net`) stays in the output token's inventory.
+Inventory-based: the vault holds balances of each registered representation inside `pontis-core`. A settled conversion adds `amount_in` to the input token's inventory and removes `net` from the output token's inventory (the input counts only after the payout succeeds; see the pending-input amendment). There is no AMM, no pricing curve and no imbalance fee. The protocol fee (`gross - net`) stays in the output token's inventory.
 
 ### Funding
 
@@ -21,7 +21,7 @@ Inventory-based: the vault holds balances of each registered representation insi
 2. **How:** `ft_transfer_call` on the token with `receiver_id = pontis-core` and `msg = "fund_vault"`. `pontis-core` credits inventory only if `sender_id` is the `owner` and the token is a registered representation. Any other sender's transfer is refunded in full. Emits `vault_funded`.
 3. **Withdrawal:** owner-only `withdraw_inventory(representation_id, amount, receiver_id)`, which debits inventory first, then calls `ft_transfer` with a callback that restores inventory on failure. Emits `vault_withdrawn`.
 4. **Direct token transfers** to `pontis-core` made with plain `ft_transfer` (no `ft_on_transfer`) are not credited to inventory. They show up as a mismatch in reconciliation (BuildPlan B13) and are recovered by an owner action documented in the runbook.
-5. **Accounting invariant:** `inventory[rep] <= ft_balance_of(pontis-core, rep)` at all times; the reconciler compares them and flags drift.
+5. **Accounting invariant:** `inventory[rep] + pending_inbound[rep] <= ft_balance_of(pontis-core, rep)` at all times (see the pending-input amendment); the reconciler compares them and flags drift.
 
 ### Replenishment
 
@@ -44,3 +44,11 @@ Inventory-based: the vault holds balances of each registered representation insi
 
 - Rule 4 said a direct transfer is "recovered by an owner action". The contract has no such action: `withdraw_inventory` only debits recorded inventory, and `fund_vault` needs `ft_on_transfer`. A token sent with a plain `ft_transfer` therefore stays in `pontis-core` as unspendable surplus, and the reconciler reports `VAULT_UNTRACKED_BALANCE` until the contract is redeployed. This is harmless to solvency (inventory never exceeds the balance because of it) and is recorded as a known limitation. A sweep method would need an owner-only, evented, pause-aware addition and its own review.
 - The "vault low" threshold is 20% of the seeded amount; the runbook gives the steps.
+
+## Amendment (pending input)
+
+- `inventory[rep]` counts spendable tokens only. A conversion's input is **not** added to it when the transfer arrives: it is counted in `pending_inbound[rep]` until the payout succeeds, then moved into inventory. On a failed payout it is never counted, because the token's resolver is about to refund it ([ADR 0007](0007-conversion-via-ft-transfer-call.md)). The model sentence above ("a conversion adds `amount_in` to the input token's inventory") holds only once the payout has succeeded.
+- The output of an in-flight conversion is taken out of inventory at execution and returned if the payout fails, so the same tokens cannot back two payouts. An in-flight owner withdrawal is reserved the same way.
+- The accounting invariant is now `inventory[rep] + pending_inbound[rep] <= ft_balance_of(pontis-core, rep)`; with no conversion in flight `pending_inbound` is 0. The reconciler compares the sum.
+- All inventory and pending arithmetic is checked; an overflow or underflow aborts the call instead of saturating.
+- A fresh deployment is required: the contract state gained two collections (`pending_conversions`, `pending_inbound`) and there is no migration (Redeploy policy, [0003](0003-admin-roles-and-pause.md)).

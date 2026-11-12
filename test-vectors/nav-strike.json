@@ -1,0 +1,18 @@
+{
+  "description": "One NAV strike signed by the dev publisher seed 101..132 (bytes 0x65..0x84), built independently in Python (hand-rolled Borsh, cryptography ed25519). The contract's layout is contracts/pontis-core/src/nav.rs NavPayload; TypeScript (@pontis/market-data) must reproduce message_hex and signature_base64. ed25519 signatures are deterministic.",
+  "seed_hex": "65666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f8081828384",
+  "public_key": "ed25519:FgcwodK7aTtn3DgvqwPuSseKgTPcMpGmK6zdf7Ri9KXm",
+  "attestation": {
+    "version": 1,
+    "contract": "core.testnet",
+    "representation_id": "tfund-a",
+    "nav": "102345678",
+    "currency": "USD",
+    "as_of_ms": 1790000000000,
+    "cutoff_ms": 1790086400000,
+    "simulated": true,
+    "source": "simulated_feed"
+  },
+  "message_hex": "706f6e7469732d6e61762d7631010c000000636f72652e746573746e6574070000007466756e642d61ceab190600000000000000000000000003000000555344006c50c4a001000000c876c9a0010000010e00000073696d756c617465645f66656564",
+  "signature_base64": "ar+daLw9FKOuK5ie2nZiAte9V/aUPLLXkw/fv3+XyfbBeUGczh0K/14eUsawkqy9Gpd6DcbXzO+hYpAB+mcnAg=="
+}

@@ -25,6 +25,7 @@ async fn a_signed_quote_converts_a_to_b_with_the_contract_computed_amounts() -> 
     assert_eq!(env.balance(&env.token_b, env.alice.id()).await?, net);
     assert_eq!(env.balance(&env.token_a, env.core.id()).await?, amount_in);
     assert_eq!(env.inventory("tgold-a").await?, amount_in);
+    assert_eq!(env.pending_inbound("tgold-a").await?, 0);
     assert_eq!(env.inventory("tgold-b").await?, before - net);
 
     let completed = events(&result, "conversion_completed");
