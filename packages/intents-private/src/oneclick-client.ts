@@ -50,7 +50,10 @@ export class OneClickIntentsClient implements IntentsClient {
 
   async createSwap(request: IntentQuoteRequest & { dry: false }): Promise<IntentQuote> {
     // 1Click's non-dry quote creates a deposit route. It does not transfer funds.
-    return this.quote(request);
+    const quote = await this.quote(request);
+    if (!quote.depositAddress)
+      throw new Error("Unexpected 1Click response: missing depositAddress");
+    return quote;
   }
 
   async getStatus(depositAddress: string, depositMemo?: string): Promise<IntentStatus> {

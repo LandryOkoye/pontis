@@ -12,6 +12,7 @@ The API exposes `/v1/intents/tokens`, `/v1/intents/quote`, `/v1/intents/swaps`, 
 an operator explicitly injects a production client in the app dependencies. A non-dry `/swaps`
 response creates a deposit route only; users must not treat that response as confirmation of funds
 transfer or settlement.
+The adapter rejects non-2xx responses without exposing upstream response bodies.
 
 The local private RFQ matcher produces encrypted disclosures, a verifiable SHA-256 commitment,
 and settlement instructions. It is an operator-trusted simulator; it does not settle through the

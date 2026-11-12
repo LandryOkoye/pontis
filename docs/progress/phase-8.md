@@ -36,6 +36,6 @@
 
 ## Verification
 
-- Passed API-types tests (38), API route tests (6), and private package tests (6).
+- Passed API-types tests (39), API route tests (6), and private package tests (13).
 - Passed API, API-types, and private package lint and typecheck.
 - OpenAPI was regenerated from the shared endpoint schemas.
