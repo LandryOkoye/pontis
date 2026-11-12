@@ -94,7 +94,7 @@ pontis/
 - A normal commit must include at least **3 files** and at least **60 inserted lines**.
 - Count inserted lines (`+` lines in the staged diff). Deletions don't count toward the 60-line minimum.
 - If 3 files add fewer than 60 lines, include more relevant files until the commit reaches 60 insertions.
-- Three files may exceed 60 insertions. Commits may also exceed 60 insertions when the changes belong together.
+- Three files may exceed 60 insertions. Commits may also exceed 60 insertions when the changes belong together, up to a maximum of **250** inserted lines. A commit above 250 needs an explained exception in its message (`Exception to the 250 line cap: ...`).
 - Keep each commit focused. Do not add unrelated files just to reach the minimum.
 - Use fewer than 3 files only for a genuine exception, such as a narrowly scoped fix or documentation-only change that can't reasonably be grouped with related work. Explain the exception.
 
