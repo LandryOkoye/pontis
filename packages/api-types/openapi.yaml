@@ -222,6 +222,129 @@ components:
         - status
         - source
         - simulated
+    MatcherKey:
+      type: object
+      properties:
+        publicKey:
+          type: string
+        algorithm:
+          type: string
+          enum:
+            - x25519-xsalsa20-poly1305
+        confidentiality_level:
+          type: string
+          enum:
+            - operator_trusted
+        simulated:
+          type: boolean
+          enum:
+            - true
+      required:
+        - publicKey
+        - algorithm
+        - confidentiality_level
+        - simulated
+    PrivateRfqSubmission:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - resting
+            - matched
+        confidentiality_level:
+          type: string
+          enum:
+            - operator_trusted
+        simulated:
+          type: boolean
+          enum:
+            - true
+        settlement:
+          $ref: "#/components/schemas/PrivateRfqSettlement"
+      required:
+        - status
+        - confidentiality_level
+        - simulated
+    PrivateRfqSettlement:
+      type: object
+      properties:
+        settlementId:
+          type: string
+        assetId:
+          type: string
+        size:
+          type: string
+        price:
+          type: string
+        buyOrderId:
+          type: string
+        sellOrderId:
+          type: string
+        commitment:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        settlementMode:
+          type: string
+          enum:
+            - not_submitted
+        confidentiality_level:
+          type: string
+          enum:
+            - operator_trusted
+        simulated:
+          type: boolean
+          enum:
+            - true
+      required:
+        - settlementId
+        - assetId
+        - size
+        - price
+        - buyOrderId
+        - sellOrderId
+        - commitment
+        - settlementMode
+        - confidentiality_level
+        - simulated
+    PrivateRfqEncryptedOrder:
+      type: object
+      properties:
+        ciphertext:
+          type: string
+        ephemeralPublicKey:
+          type: string
+        nonce:
+          type: string
+      required:
+        - ciphertext
+        - ephemeralPublicKey
+        - nonce
+      additionalProperties: false
+    PrivateRfqDisclosure:
+      type: object
+      properties:
+        settlementId:
+          type: string
+        commitment:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        disclosure:
+          $ref: "#/components/schemas/PrivateRfqEncryptedOrder"
+        confidentiality_level:
+          type: string
+          enum:
+            - operator_trusted
+        simulated:
+          type: boolean
+          enum:
+            - true
+      required:
+        - settlementId
+        - commitment
+        - disclosure
+        - confidentiality_level
+        - simulated
     IssuerList:
       type: object
       properties:
