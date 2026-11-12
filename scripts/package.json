@@ -14,6 +14,7 @@
     "catalogue-plan": "tsx catalogue-plan.ts",
     "demo-seed": "tsx --env-file-if-exists=.env demo-seed.ts",
     "chain-signatures:derive": "tsx --env-file-if-exists=../apps/api/.env derive-chain-signatures-address.ts",
+    "sepolia-token:deploy": "tsx --env-file-if-exists=../apps/api/.env sepolia-token.ts deploy",
     "gen-dossiers": "tsx gen-dossiers.ts",
     "allowlist": "tsx --env-file-if-exists=.env allowlist.ts",
     "ops": "tsx --env-file-if-exists=.env ops.ts",
