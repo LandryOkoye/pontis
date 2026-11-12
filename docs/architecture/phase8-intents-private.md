@@ -20,3 +20,6 @@ plus commitment; the participant/auditor decrypts locally and verifies the hash.
 matcher only accepts `sim:` assets at a fixed simulated oracle price. Confidential Intents can be
 enabled by NEAR through 1Click but has no documented testnet and access may be gated; Pontis does
 not make live confidential requests in this phase.
+
+The matcher secret key stays process-local and is never returned by the API. Its in-memory state
+is lost on restart, and the public API exposes only ciphertexts plus settlement commitments.
