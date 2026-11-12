@@ -13,6 +13,7 @@ import { NearReserveRelayer } from "./custody/near-relayer.ts";
 import { syncRegistry } from "./sync/registry-sync.ts";
 import { expireQuotes } from "./quotes/lifecycle.ts";
 import { startScheduler } from "./sync/scheduler.ts";
+import { lendingFromEnvironment } from "./lending/config.ts";
 
 if (process.env.API_MODE === "fixtures") {
   const { buildFixturesApp } = await import("./fixtures-app.ts");
@@ -43,6 +44,7 @@ await runMigrations(db);
 
 const core = new CoreClient(rpc, config.PONTIS_CORE_ACCOUNT_ID);
 const key = parseSecretKey(config.QUOTE_SIGNER_SECRET_KEY);
+const lending = lendingFromEnvironment(config);
 const app = buildApp({
   db,
   chainHeight: () => core.blockHeight(),
@@ -85,6 +87,7 @@ const app = buildApp({
     },
   },
   logger: true,
+  ...(lending ? { lending } : {}),
 });
 const sync =
   config.REGISTRY_SYNC_INTERVAL_MS > 0
