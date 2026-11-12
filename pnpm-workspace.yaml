@@ -4,5 +4,7 @@ packages:
   - "scripts"
   - "tests/e2e"
 allowBuilds:
+  bufferutil: false
   esbuild: true
   secp256k1: true
+  utf-8-validate: false
