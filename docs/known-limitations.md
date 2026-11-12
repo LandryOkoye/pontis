@@ -4,11 +4,15 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 
 ## Scope
 
+- **NEAR Intents is opt-in production only.** There is no documented testnet endpoint. The offline simulator is deterministic and labelled; the optional 1Click adapter needs a partner key and explicit mainnet opt-in. Pontis does not submit deposits, persist Intents prices for its pricing engine, or assume its synthetic assets are routable.
+- **Private execution is a local API simulation.** Encrypted RFQ orders can be matched for `sim:` assets and participants/auditors can retrieve encrypted disclosures, but the matcher does not settle through core or record commitments on-chain. The matcher operator sees every order. See [the confidentiality threat model](threat-model/confidential.md).
+
 - **Synthetic assets on NEAR Testnet only.** Nothing is backed, verified or redeemable. The claim `SYN-GOLD-OZ` is fictional and both issuers are run by the project.
 - **One pair, one direction of review.** TGOLD-A and TGOLD-B, one relationship, one fixed ratio, one flat fee (10 bps). No market pricing, no slippage, no other chains.
 - **Controlled vault.** Liquidity is whatever the owner funds. A busy direction drains one side and quotes are refused with `INSUFFICIENT_INVENTORY`; refilling is manual ([runbook](runbooks/vault-low.md)).
 - **No user accounts.** The wallet signature is the authority. Transaction history is public by account ID.
-- **Web app.** There is no frontend in `main` and no frontend pull request on the remote (checked 2026-11-10). This repository's demo and end-to-end run drive the API.
+- **Bridge work is a local foundation only.** The Phase 6 EVM token and shared transfer lifecycle are synthetic test components. There is no deployed EVM route, NEAR bridge state machine, relayer, proof verifier, supply monitor, or tested bridge refund yet. The EVM token is not connected to `pontis-core`.
+- **Web app.** `apps/web` is in `main` and reads mock data, not the API. This repository's demo and end-to-end run drive the API.
 
 ## Operations
 

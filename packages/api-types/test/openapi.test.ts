@@ -17,7 +17,7 @@ describe("openapi.yaml", () => {
     await expect(SwaggerParser.validate(specPath)).resolves.toBeTruthy();
   });
 
-  it("documents exactly the BuildPlan §8 endpoints plus the admin reconciliation and metrics endpoints", () => {
+  it("documents exactly the BuildPlan §8 endpoints plus the admin reconciliation, metrics and registered Phase 8 adapter endpoints", () => {
     const doc = buildOpenApiDocument();
     const actual = Object.entries(doc.paths ?? {})
       .flatMap(([path, item]) =>
@@ -34,6 +34,10 @@ describe("openapi.yaml", () => {
         "GET /v1/assets",
         "GET /v1/assets/{id}",
         "GET /v1/assets/{id}/compatibility",
+        "GET /v1/intents/tokens",
+        "GET /v1/intents/status",
+        "GET /v1/private-rfq/matcher-key",
+        "GET /v1/private-rfq/settlements/{settlementId}/disclosure",
         "GET /v1/assets/{id}/charts/price",
         "GET /v1/assets/{id}/charts/nav",
         "GET /v1/assets/{id}/charts/supply",
@@ -77,6 +81,9 @@ describe("openapi.yaml", () => {
         "POST /v1/routes/compare",
         "GET /v1/routes/{fromId}/{toId}/guards",
         "POST /v1/quotes",
+        "POST /v1/intents/quote",
+        "POST /v1/intents/swaps",
+        "POST /v1/private-rfq/orders",
         "GET /v1/quotes/{id}",
         "POST /v1/conversions",
         "POST /v1/conversions/{id}/submitted",
@@ -137,5 +144,11 @@ describe("openapi.yaml", () => {
         }
       }
     }
+  });
+
+  it("keeps Phase 8 paths and operations explicit in the endpoint map", () => {
+    expect(ENDPOINTS.createIntentQuote.path).toBe("/v1/intents/quote");
+    expect(ENDPOINTS.submitPrivateRfqOrder.method).toBe("post");
+    expect(ENDPOINTS.getPrivateRfqDisclosure.query).toBeDefined();
   });
 });

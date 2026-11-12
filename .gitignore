@@ -12,6 +12,8 @@ pnpm-debug.log*
 # Rust
 target/
 **/*.rs.bk
+contracts-evm/cache/
+contracts-evm/out/
 
 # Secrets and credentials (quote-signer key, NEAR CLI credentials)
 .env

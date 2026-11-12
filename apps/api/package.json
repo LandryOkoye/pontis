@@ -18,6 +18,7 @@
     "@pontis/api-types": "workspace:*",
     "@pontis/db": "workspace:*",
     "@pontis/domain": "workspace:*",
+    "@pontis/intents-private": "workspace:*",
     "@pontis/market-data": "workspace:*",
     "@pontis/near-client": "workspace:*",
     "@pontis/quote-engine": "workspace:*",

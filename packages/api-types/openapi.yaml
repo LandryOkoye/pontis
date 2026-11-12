@@ -151,6 +151,279 @@ components:
             - ok
       required:
         - status
+    IntentTokensResponse:
+      type: object
+      properties:
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/IntentAsset"
+        source:
+          type: string
+          enum:
+            - near_intents_1click
+            - simulated_intents
+        simulated:
+          type: boolean
+      required:
+        - assets
+        - source
+        - simulated
+    IntentAsset:
+      type: object
+      properties:
+        assetId:
+          type: string
+        symbol:
+          type: string
+        decimals:
+          type: integer
+          minimum: 0
+        blockchain:
+          type: string
+        simulated:
+          type: boolean
+      required:
+        - assetId
+        - symbol
+        - decimals
+        - blockchain
+        - simulated
+    IntentQuote:
+      type: object
+      properties:
+        quoteId:
+          type: string
+        amountIn:
+          type: string
+        amountOut:
+          type: string
+        minAmountOut:
+          type: string
+        depositAddress:
+          type: string
+        deadline:
+          type: string
+        source:
+          type: string
+          enum:
+            - near_intents_1click
+            - simulated_intents
+        simulated:
+          type: boolean
+        confidentiality:
+          type: string
+          enum:
+            - public
+            - basic
+            - advanced
+      required:
+        - quoteId
+        - amountIn
+        - amountOut
+        - minAmountOut
+        - deadline
+        - source
+        - simulated
+        - confidentiality
+    IntentQuoteRequest:
+      type: object
+      properties:
+        swapType:
+          type: string
+          enum:
+            - EXACT_INPUT
+            - EXACT_OUTPUT
+        slippageTolerance:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        originAsset:
+          type: string
+          minLength: 1
+        destinationAsset:
+          type: string
+          minLength: 1
+        amount:
+          type: string
+          pattern: ^\d+$
+        depositType:
+          type: string
+          minLength: 1
+        recipient:
+          type: string
+          minLength: 1
+        recipientType:
+          type: string
+          minLength: 1
+        refundTo:
+          type: string
+          minLength: 1
+        refundType:
+          type: string
+          minLength: 1
+        deadline:
+          type: string
+          format: date-time
+        confidentiality:
+          type: string
+          enum:
+            - basic
+            - advanced
+      required:
+        - swapType
+        - slippageTolerance
+        - originAsset
+        - destinationAsset
+        - amount
+        - depositType
+        - recipient
+        - recipientType
+        - refundTo
+        - refundType
+        - deadline
+      additionalProperties: false
+    IntentStatus:
+      type: object
+      properties:
+        status:
+          type: string
+        updatedAt:
+          type: string
+        source:
+          type: string
+          enum:
+            - near_intents_1click
+            - simulated_intents
+        simulated:
+          type: boolean
+      required:
+        - status
+        - source
+        - simulated
+    MatcherKey:
+      type: object
+      properties:
+        publicKey:
+          type: string
+        algorithm:
+          type: string
+          enum:
+            - x25519-xsalsa20-poly1305
+        confidentiality_level:
+          type: string
+          enum:
+            - operator_trusted
+        simulated:
+          type: boolean
+          enum:
+            - true
+      required:
+        - publicKey
+        - algorithm
+        - confidentiality_level
+        - simulated
+    PrivateRfqSubmission:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - resting
+            - matched
+        confidentiality_level:
+          type: string
+          enum:
+            - operator_trusted
+        simulated:
+          type: boolean
+          enum:
+            - true
+        settlement:
+          $ref: "#/components/schemas/PrivateRfqSettlement"
+      required:
+        - status
+        - confidentiality_level
+        - simulated
+    PrivateRfqSettlement:
+      type: object
+      properties:
+        settlementId:
+          type: string
+        assetId:
+          type: string
+        size:
+          type: string
+        price:
+          type: string
+        buyOrderId:
+          type: string
+        sellOrderId:
+          type: string
+        commitment:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        settlementMode:
+          type: string
+          enum:
+            - not_submitted
+        confidentiality_level:
+          type: string
+          enum:
+            - operator_trusted
+        simulated:
+          type: boolean
+          enum:
+            - true
+      required:
+        - settlementId
+        - assetId
+        - size
+        - price
+        - buyOrderId
+        - sellOrderId
+        - commitment
+        - settlementMode
+        - confidentiality_level
+        - simulated
+    PrivateRfqEncryptedOrder:
+      type: object
+      properties:
+        ciphertext:
+          type: string
+        ephemeralPublicKey:
+          type: string
+        nonce:
+          type: string
+      required:
+        - ciphertext
+        - ephemeralPublicKey
+        - nonce
+      additionalProperties: false
+    PrivateRfqDisclosure:
+      type: object
+      properties:
+        settlementId:
+          type: string
+        commitment:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        disclosure:
+          $ref: "#/components/schemas/PrivateRfqEncryptedOrder"
+        confidentiality_level:
+          type: string
+          enum:
+            - operator_trusted
+        simulated:
+          type: boolean
+          enum:
+            - true
+      required:
+        - settlementId
+        - commitment
+        - disclosure
+        - confidentiality_level
+        - simulated
     IssuerList:
       type: object
       properties:
@@ -4321,6 +4594,273 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Health"
+  /v1/intents/tokens:
+    get:
+      operationId: getIntentTokens
+      summary: List assets exposed by the configured Intents adapter
+      description: The default adapter is simulated; runtime asset support can change.
+      tags:
+        - Intents
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntentTokensResponse"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/intents/quote:
+    post:
+      operationId: createIntentQuote
+      summary: Request a dry Intents quote
+      tags:
+        - Intents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntentQuoteRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntentQuote"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/intents/swaps:
+    post:
+      operationId: createIntentSwap
+      summary: Create an Intents deposit route
+      description: Creates a quote-specific deposit route; Pontis does not submit funds.
+      tags:
+        - Intents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntentQuoteRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntentQuote"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/intents/status:
+    get:
+      operationId: getIntentStatus
+      summary: Read Intents deposit route status
+      tags:
+        - Intents
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: depositAddress
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: depositMemo
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntentStatus"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/private-rfq/matcher-key:
+    get:
+      operationId: getPrivateRfqMatcherKey
+      summary: Get the local RFQ matcher public key
+      tags:
+        - Private RFQ
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatcherKey"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/private-rfq/orders:
+    post:
+      operationId: submitPrivateRfqOrder
+      summary: Submit an encrypted RFQ order
+      description: The local matcher is operator-trusted and does not submit settlement to core.
+      tags:
+        - Private RFQ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order:
+                  $ref: "#/components/schemas/PrivateRfqEncryptedOrder"
+                disclosurePublicKey:
+                  type: string
+                  pattern: ^[A-Za-z0-9+/]+={0,2}$
+              required:
+                - order
+                - disclosurePublicKey
+              additionalProperties: false
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateRfqSubmission"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /v1/private-rfq/settlements/{settlementId}/disclosure:
+    get:
+      operationId: getPrivateRfqDisclosure
+      summary: Get an encrypted matched-order disclosure
+      tags:
+        - Private RFQ
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: settlementId
+          in: path
+        - schema:
+            type: string
+            pattern: ^[A-Za-z0-9+/]+={0,2}$
+          required: true
+          name: publicKey
+          in: query
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateRfqDisclosure"
+        "400":
+          description: "Invalid request. Codes: VALIDATION_ERROR."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: "Not found. Codes: NOT_FOUND."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: "Rate limited. Codes: RATE_LIMITED."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: "Internal error. Codes: INTERNAL."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /v1/issuers:
     get:
       operationId: listIssuers
