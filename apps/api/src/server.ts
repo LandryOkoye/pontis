@@ -14,6 +14,7 @@ import { syncRegistry } from "./sync/registry-sync.ts";
 import { expireQuotes } from "./quotes/lifecycle.ts";
 import { startScheduler } from "./sync/scheduler.ts";
 import { lendingFromEnvironment } from "./lending/config.ts";
+import { OneClickIntentsClient } from "@pontis/intents-private";
 
 if (process.env.API_MODE === "fixtures") {
   const { buildFixturesApp } = await import("./fixtures-app.ts");
@@ -76,6 +77,14 @@ const app = buildApp({
     networkId: config.NEAR_NETWORK_ID,
   },
   ...(config.ADMIN_API_KEY ? { adminApiKey: config.ADMIN_API_KEY } : {}),
+  ...(config.INTENTS_MODE === "live"
+    ? {
+        intents: new OneClickIntentsClient({
+          allowMainnetCalls: true,
+          ...(config.INTENTS_API_KEY ? { apiKey: config.INTENTS_API_KEY } : {}),
+        }),
+      }
+    : {}),
   security: {
     corsOrigins: config.CORS_ORIGIN,
     trustProxy: config.TRUST_PROXY,

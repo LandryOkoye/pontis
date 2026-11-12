@@ -26,9 +26,9 @@ describe("Intents clients", () => {
     });
   });
 
-  it("refuses live construction without explicit opt-in and credentials", () => {
-    expect(() => new OneClickIntentsClient({ apiKey: "", allowMainnetCalls: true })).toThrow(
-      /API key/,
+  it("refuses live construction without explicit opt-in", () => {
+    expect(() => new OneClickIntentsClient({ allowMainnetCalls: false } as never)).toThrow(
+      /explicit opt-in/,
     );
   });
 
@@ -57,6 +57,48 @@ describe("Intents clients", () => {
     expect(fetcher.mock.calls[0]?.[0]).toBe("https://1click.chaindefuser.com/v0/quote");
     const headers = new Headers(fetcher.mock.calls[0]?.[1]?.headers);
     expect(headers.get("X-API-Key")).toBe("test-key");
+  });
+
+  it("sends no authentication header when no partner JWT is configured", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          quoteId: "q-unauthenticated",
+          amountIn: "1000",
+          amountOut: "990",
+          minAmountOut: "980",
+          deadline: request.deadline,
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new OneClickIntentsClient({ allowMainnetCalls: true, fetcher });
+    await client.getQuote(request);
+    const headers = new Headers(fetcher.mock.calls[0]?.[1]?.headers);
+    expect(headers.has("X-API-Key")).toBe(false);
+  });
+
+  it("maps a real-shaped dry response using its correlation ID and request deadline", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          quote: { amountIn: "10000000", amountOut: "9992680", minAmountOut: "9892753" },
+          quoteRequest: { deadline: request.deadline },
+          correlationId: "fa9fa9f9-a410-4076-a4e6-d307177cae28",
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new OneClickIntentsClient({ allowMainnetCalls: true, fetcher });
+    await expect(client.getQuote(request)).resolves.toMatchObject({
+      quoteId: "fa9fa9f9-a410-4076-a4e6-d307177cae28",
+      amountIn: "10000000",
+      amountOut: "9992680",
+      minAmountOut: "9892753",
+      deadline: request.deadline,
+      source: "near_intents_1click",
+      simulated: false,
+    });
   });
 
   it("requires a deposit address from a non-dry quote without submitting funds", async () => {

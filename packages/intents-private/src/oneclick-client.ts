@@ -7,7 +7,8 @@ import type {
 } from "./intents-types.ts";
 
 type OneClickOptions = {
-  apiKey: string;
+  /** Optional partner JWT. Unauthenticated quotes carry 1Click's additional fee. */
+  apiKey?: string;
   /** Explicit acknowledgement that requests go to production; no testnet exists. */
   allowMainnetCalls: true;
   fetcher?: typeof fetch;
@@ -21,7 +22,6 @@ export class OneClickIntentsClient implements IntentsClient {
   private readonly fetcher: typeof fetch;
 
   constructor(private readonly options: OneClickOptions) {
-    if (!options.apiKey.trim()) throw new Error("A 1Click partner API key is required");
     if (options.allowMainnetCalls !== true)
       throw new Error("Production calls require explicit opt-in");
     this.fetcher = options.fetcher ?? fetch;
@@ -77,12 +77,18 @@ export class OneClickIntentsClient implements IntentsClient {
     );
     const quote = response.quote === undefined ? response : this.object(response.quote);
     return {
-      quoteId: this.requiredString(quote.quoteId ?? quote.id, "quoteId"),
+      // Dry 1Click responses identify themselves with `correlationId`, not a quote ID.
+      quoteId: this.requiredString(quote.quoteId ?? quote.id ?? response.correlationId, "quoteId"),
       amountIn: this.requiredString(quote.amountIn ?? quote.amount, "amountIn"),
       amountOut: this.requiredString(quote.amountOut, "amountOut"),
       minAmountOut: this.requiredString(quote.minAmountOut, "minAmountOut"),
       ...(typeof quote.depositAddress === "string" ? { depositAddress: quote.depositAddress } : {}),
-      deadline: this.requiredString(quote.deadline, "deadline"),
+      deadline: this.requiredString(
+        quote.deadline ??
+          (response.quoteRequest ? this.object(response.quoteRequest).deadline : undefined) ??
+          request.deadline,
+        "deadline",
+      ),
       source: "near_intents_1click",
       simulated: false,
       confidentiality: request.confidentiality ?? "public",
@@ -93,7 +99,7 @@ export class OneClickIntentsClient implements IntentsClient {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     headers.set("Content-Type", "application/json");
-    headers.set("X-API-Key", this.options.apiKey);
+    if (this.options.apiKey?.trim()) headers.set("X-API-Key", this.options.apiKey);
     const response = await this.fetcher(`https://1click.chaindefuser.com/v0${path}`, {
       ...init,
       headers,
