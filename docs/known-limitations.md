@@ -4,6 +4,9 @@ What the MVP does not do, or does in a simplified way. The wider list of mocked 
 
 ## Scope
 
+- **NEAR Intents is opt-in production only.** There is no documented testnet endpoint. The offline simulator is deterministic and labelled; the optional 1Click adapter needs a partner key and explicit mainnet opt-in. Pontis does not submit deposits, persist Intents prices for its pricing engine, or assume its synthetic assets are routable.
+- **Private execution is a local API simulation.** Encrypted RFQ orders can be matched for `sim:` assets and participants/auditors can retrieve encrypted disclosures, but the matcher does not settle through core or record commitments on-chain. The matcher operator sees every order. See [the confidentiality threat model](threat-model/confidential.md).
+
 - **Synthetic assets on NEAR Testnet only.** Nothing is backed, verified or redeemable. The claim `SYN-GOLD-OZ` is fictional and both issuers are run by the project.
 - **One pair, one direction of review.** TGOLD-A and TGOLD-B, one relationship, one fixed ratio, one flat fee (10 bps). No market pricing, no slippage, no other chains.
 - **Controlled vault.** Liquidity is whatever the owner funds. A busy direction drains one side and quotes are refused with `INSUFFICIENT_INVENTORY`; refilling is manual ([runbook](runbooks/vault-low.md)).
