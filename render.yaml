@@ -56,10 +56,12 @@ services:
           property: connectionString
       - key: NEAR_NETWORK_ID
         value: testnet
+      # Set in the dashboard to a keyed testnet endpoint (the URL carries the API key, so it stays
+      # out of git). The keyless https://test.rpc.fastnear.com answers 429 from Render's shared IPs.
       - key: NEAR_RPC_URL
-        value: https://test.rpc.fastnear.com
+        sync: false
       - key: PONTIS_CORE_ACCOUNT_ID
-        value: pontis-core.pontis.testnet
+        value: pontis-core-v2.pontis.testnet
       # Render terminates TLS in front of the service, so rate limits need X-Forwarded-For.
       - key: TRUST_PROXY
         value: "true"
@@ -103,7 +105,7 @@ services:
   #     - key: NEAR_RPC_URL
   #       value: https://test.rpc.fastnear.com
   #     - key: PONTIS_CORE_ACCOUNT_ID
-  #       value: pontis-core.pontis.testnet
+  #       value: pontis-core-v2.pontis.testnet
 
   # Optional: keeps the simulated market (prices, NAV, supply, trades) moving. Uncomment to add
   # a second paid worker. History is written once with `start backfill` (see apps/simulator).
@@ -122,4 +124,4 @@ services:
   #         name: pontis-db
   #         property: connectionString
   #     - key: PONTIS_CORE_ACCOUNT_ID
-  #       value: pontis-core.pontis.testnet
+  #       value: pontis-core-v2.pontis.testnet
