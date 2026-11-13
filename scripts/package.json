@@ -13,6 +13,9 @@
     "seed-profiles": "tsx --env-file-if-exists=.env seed-profiles.ts",
     "catalogue-plan": "tsx catalogue-plan.ts",
     "demo-seed": "tsx --env-file-if-exists=.env demo-seed.ts",
+    "chain-signatures:derive": "tsx --env-file-if-exists=../apps/api/.env derive-chain-signatures-address.ts",
+    "sepolia-token:deploy": "tsx --env-file-if-exists=../apps/api/.env sepolia-token.ts deploy",
+    "sepolia-token:mint": "tsx --env-file-if-exists=../apps/api/.env sepolia-token.ts mint",
     "gen-dossiers": "tsx gen-dossiers.ts",
     "allowlist": "tsx --env-file-if-exists=.env allowlist.ts",
     "ops": "tsx --env-file-if-exists=.env ops.ts",
@@ -26,17 +29,23 @@
     "auth-login": "tsx --env-file-if-exists=.env auth-login.ts"
   },
   "dependencies": {
+    "@near-js/utils": "^2.5.1",
     "@pontis/db": "workspace:*",
     "@pontis/dev-keys": "workspace:*",
     "@pontis/domain": "workspace:*",
     "@pontis/market-data": "workspace:*",
     "@pontis/near-client": "workspace:*",
     "@pontis/quote-engine": "workspace:*",
+    "bs58": "^6.0.0",
     "drizzle-orm": "^0.45.4",
-    "near-api-js": "^7.4.0"
+    "elliptic": "^6.6.1",
+    "js-sha3": "^0.14.0",
+    "near-api-js": "^7.4.0",
+    "viem": "^2.57.18"
   },
   "devDependencies": {
     "@pontis/market-data": "workspace:*",
+    "@types/elliptic": "^6.4.18",
     "@types/node": "^22.20.5",
     "tsx": "^4.23.15",
     "vitest": "^5.1.0"

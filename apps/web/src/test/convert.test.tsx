@@ -15,6 +15,44 @@ async function quote(amount: string, account = DEMO_ACCOUNT) {
 }
 
 describe("quote", () => {
+  it("shows a live dry Intents quote from asset IDs returned by the live token list", async () => {
+    let requestedPair = "";
+    server.use(
+      http.get(`${config.apiUrl}/v1/intents/tokens`, () =>
+        HttpResponse.json({
+          assets: [
+            { assetId: "near:live-usdc", symbol: "USDC", decimals: 6, blockchain: "near", simulated: false },
+            { assetId: "arb:live-usdc", symbol: "USDC", decimals: 6, blockchain: "arb", simulated: false },
+          ],
+          source: "near_intents_1click",
+          simulated: false,
+        }),
+      ),
+      http.post(`${config.apiUrl}/v1/intents/quote`, async ({ request }) => {
+        const body = (await request.json()) as { originAsset: string; destinationAsset: string };
+        requestedPair = `${body.originAsset}->${body.destinationAsset}`;
+        return HttpResponse.json({
+          quoteId: "live-dry-quote",
+          amountIn: "10000000",
+          amountOut: "9992680",
+          minAmountOut: "9892753",
+          deadline: "2026-11-12T15:10:00.000Z",
+          source: "near_intents_1click",
+          simulated: false,
+          confidentiality: "public",
+        });
+      }),
+    );
+
+    renderApp("/app/convert?from=tgold-a&to=tgold-b", { account: DEMO_ACCOUNT });
+    const panel = await screen.findByRole("region", { name: "Live NEAR Intents quote" });
+    expect(await within(panel).findByText("9.99268 USDC")).toBeInTheDocument();
+    expect(within(panel).getByText("near_intents_1click")).toBeInTheDocument();
+    expect(within(panel).getByText("false")).toBeInTheDocument();
+    expect(requestedPair).toBe("near:live-usdc->arb:live-usdc");
+    expect(within(panel).getByText(/No deposit is submitted/)).toBeInTheDocument();
+  });
+
   it("previews input, output, ratio, fee, route, warnings and a live expiry", async () => {
     await quote("1");
     const ticket = await screen.findByRole("region", { name: "Signed quote" });

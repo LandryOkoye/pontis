@@ -1,6 +1,7 @@
 import { ENDPOINTS } from "@pontis/api-types";
 import type { IntentsClient, IntentQuoteRequest } from "@pontis/intents-private";
 import type { FastifyInstance } from "fastify";
+import { AppError } from "../errors.ts";
 
 export function registerIntentsRoutes(app: FastifyInstance, client: IntentsClient): void {
   app.get(ENDPOINTS.getIntentTokens.path, async () =>
@@ -23,6 +24,9 @@ export function registerIntentsRoutes(app: FastifyInstance, client: IntentsClien
   });
 
   app.post(ENDPOINTS.createIntentSwap.path, async (request) => {
+    if (!client.simulated) {
+      throw new AppError("VALIDATION_ERROR", 400, "Live Intents mode supports dry quotes only");
+    }
     const body = ENDPOINTS.createIntentSwap.body!.parse(request.body);
     const { confidentiality, ...fields } = body;
     const quote = await client.createSwap({
