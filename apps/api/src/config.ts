@@ -13,6 +13,10 @@ const EnvSchema = z.object({
   PONTIS_CORE_ACCOUNT_ID: z.string().min(2),
   /** `ed25519:<base58>` quote-signer secret key. Testnet only; never commit it. */
   QUOTE_SIGNER_SECRET_KEY: z.string().startsWith("ed25519:"),
+  /** Explicit opt-in to live, read-only 1Click Intents requests. */
+  INTENTS_MODE: z.enum(["simulator", "live"]).default("simulator"),
+  /** Optional 1Click partner JWT; unset requests use the unauthenticated fee schedule. */
+  INTENTS_API_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(1).optional()),
   /**
    * The relayer account that pays for relayed reserve attestations (ADR 0020). Testnet and sandbox
    * only; set both or neither. Without them `POST /v1/reserves/attestations` answers 404.
