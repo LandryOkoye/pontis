@@ -40,3 +40,8 @@ skills-lock.json
 
 # Simulated custodian cover ratios written by `scripts/reserves.ts drift`
 scripts/.reserves-state.json
+
+BuildPlan.md
+GITHUB_WORKFLOW.md
+ProjectBrief.md
+PONTIS_MVP_TO_DEMOABLE-BACKEND.md

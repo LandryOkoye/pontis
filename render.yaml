@@ -1,0 +1,125 @@
+# Render Blueprint for the Pontis backend (testnet, synthetic assets only).
+# New > Blueprint in the Render dashboard, pick this repository; Render reads this file.
+# The frontend is deployed separately on Vercel (apps/web/vercel.json).
+#
+# Every service runs from the repository root because the apps import the workspace packages as
+# TypeScript source (no build step; `tsx` runs them). `--prod=false` keeps `tsx`, a devDependency,
+# installed even though Render sets NODE_ENV=production.
+#
+# All services and the database must share one region; it cannot be changed after creation.
+
+databases:
+  - name: pontis-db
+    plan: free # 1 GB, deleted 30 days after creation unless upgraded
+    region: oregon
+    postgresMajorVersion: "16"
+    databaseName: pontis
+    user: pontis
+
+services:
+  # Fastify REST API with the indexer and reconciler running beside it in the same instance, so
+  # no paid worker is needed. Migrations run first so the two processes do not race on a fresh
+  # database; if either process exits the instance exits and Render restarts both.
+  # To run the indexer on its own instead: set startCommand to `pnpm --filter @pontis/api start`
+  # and uncomment the pontis-indexer worker below.
+  - type: web
+    name: pontis-api
+    runtime: node
+    plan: free # sleeps after 15 idle minutes (the indexer too); use 0.5c-512mb to keep it awake
+    region: oregon
+    buildCommand: pnpm install --frozen-lockfile --prod=false
+    startCommand: >-
+      bash -c 'pnpm --filter @pontis/db db:migrate &&
+      { trap "kill 0" TERM INT;
+      pnpm --filter @pontis/indexer start &
+      pnpm --filter @pontis/api start &
+      wait -n; kill 0; exit 1; }'
+    healthCheckPath: /v1/health/live
+    autoDeployTrigger: commit
+    buildFilter:
+      paths:
+        - apps/api/**
+        - apps/indexer/**
+        - packages/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pontis-db
+          property: connectionString
+      - key: NEAR_NETWORK_ID
+        value: testnet
+      - key: NEAR_RPC_URL
+        value: https://test.rpc.fastnear.com
+      - key: PONTIS_CORE_ACCOUNT_ID
+        value: pontis-core.pontis.testnet
+      # Render terminates TLS in front of the service, so rate limits need X-Forwarded-For.
+      - key: TRUST_PROXY
+        value: "true"
+      # Prompted for once, when the Blueprint is first applied.
+      - key: QUOTE_SIGNER_SECRET_KEY # ed25519:<base58>, the key registered on pontis-core
+        sync: false
+      - key: CORS_ORIGIN # the Vercel origin, e.g. https://pontis.vercel.app (no trailing slash)
+        sync: false
+      - key: ADMIN_API_KEY # optional break-glass key, at least 16 characters
+        sync: false
+
+  # Alternative: the indexer as its own background worker (no free plan for workers). Uncomment
+  # this and change the API startCommand as described above; never run both copies at once.
+  # - type: worker
+  #   name: pontis-indexer
+  #   runtime: node
+  #   plan: 0.5c-512mb
+  #   region: oregon
+  #   buildCommand: pnpm install --frozen-lockfile --prod=false
+  #   startCommand: pnpm --filter @pontis/indexer start
+  #   autoDeployTrigger: commit
+  #   buildFilter:
+  #     paths:
+  #       - apps/indexer/**
+  #       - packages/**
+  #       - package.json
+  #       - pnpm-lock.yaml
+  #       - pnpm-workspace.yaml
+  #       - render.yaml
+  #   envVars:
+  #     - key: NODE_VERSION
+  #       value: "24"
+  #     - key: NODE_ENV
+  #       value: production
+  #     - key: DATABASE_URL
+  #       fromDatabase:
+  #         name: pontis-db
+  #         property: connectionString
+  #     - key: NEAR_NETWORK_ID
+  #       value: testnet
+  #     - key: NEAR_RPC_URL
+  #       value: https://test.rpc.fastnear.com
+  #     - key: PONTIS_CORE_ACCOUNT_ID
+  #       value: pontis-core.pontis.testnet
+
+  # Optional: keeps the simulated market (prices, NAV, supply, trades) moving. Uncomment to add
+  # a second paid worker. History is written once with `start backfill` (see apps/simulator).
+  # - type: worker
+  #   name: pontis-simulator
+  #   runtime: node
+  #   plan: 0.5c-512mb
+  #   region: oregon
+  #   buildCommand: pnpm install --frozen-lockfile --prod=false
+  #   startCommand: pnpm --filter @pontis/simulator start run
+  #   envVars:
+  #     - key: NODE_VERSION
+  #       value: "24"
+  #     - key: DATABASE_URL
+  #       fromDatabase:
+  #         name: pontis-db
+  #         property: connectionString
+  #     - key: PONTIS_CORE_ACCOUNT_ID
+  #       value: pontis-core.pontis.testnet
