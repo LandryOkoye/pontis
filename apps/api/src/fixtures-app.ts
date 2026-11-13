@@ -90,7 +90,7 @@ const HANDLERS: Partial<Record<OperationId, Handler>> = {
   listTransactions: () => ({ items: [fx.transactionSettled] }),
 };
 
-/** Operations fixtures mode does not serve: they need a live chain, a signer, a database, or a Phase 8 intents/private RFQ adapter. */
+/** Operations fixtures mode does not serve: they need a live chain, a signer, a database, or a Phase 8 intents/private RFQ or lending adapter. */
 export const UNAVAILABLE_IN_FIXTURES: readonly OperationId[] = [
   "compareRoutes",
   "submitReserveAttestation",
@@ -120,6 +120,15 @@ export const UNAVAILABLE_IN_FIXTURES: readonly OperationId[] = [
   "getPrivateRfqMatcherKey",
   "submitPrivateRfqOrder",
   "getPrivateRfqDisclosure",
+  "listCollateralAssets",
+  "listEligibleWalletAssets",
+  "checkCollateralEligibility",
+  "listLendingMarkets",
+  "getBorrowingCapacity",
+  "planCollateralDeposit",
+  "planBorrow",
+  "planRepay",
+  "planCollateralWithdrawal",
 ];
 
 export function buildFixturesApp(security: SecurityOptions = { corsOrigins: [] }): FastifyInstance {
