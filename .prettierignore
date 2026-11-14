@@ -18,4 +18,4 @@ test-vectors
 packages/db/drizzle
 
 
-apps/web/BACKEND-REQUESTS.md
+docs/architecture/deployment-record.md
