@@ -7,6 +7,7 @@ import {
   ArrowLeftRight,
   Building2,
   GitCompareArrows,
+  HandCoins,
   Landmark,
   LineChart,
   Scale,
@@ -33,6 +34,7 @@ interface Item {
 const MARKETS: Item = { to: "/app", label: "Markets", icon: LineChart, end: true };
 const ASSETS: Item = { to: "/app/assets", label: "Assets", icon: Landmark };
 const CONVERT: Item = { to: "/app/convert", label: "Convert", icon: ArrowLeftRight };
+const BORROW: Item = { to: "/app/borrow", label: "Borrow", icon: HandCoins };
 const ACTIVITY: Item = { to: "/app/activity", label: "Activity", icon: Activity };
 const WALLET: Item = { to: "/app/wallet", label: "Wallet", icon: Wallet };
 
@@ -47,12 +49,13 @@ const GROUPS: { label: string; items: Item[] }[] = [
     ],
   },
   { label: "Conversion", items: [CONVERT, ACTIVITY, WALLET] },
+  { label: "Collateral", items: [BORROW] },
   {
     label: "Operations",
     items: [{ to: "/app/reconciliation", label: "Reconciliation", icon: Scale }],
   },
 ];
-const MOBILE: Item[] = [MARKETS, ASSETS, CONVERT, ACTIVITY, WALLET];
+const MOBILE: Item[] = [MARKETS, ASSETS, CONVERT, BORROW, ACTIVITY, WALLET];
 
 function Figure({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -213,7 +216,7 @@ export function Shell() {
 
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-line bg-ink pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-line bg-ink pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
         {MOBILE.map((item) => (
           <NavLink

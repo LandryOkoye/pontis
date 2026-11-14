@@ -16,6 +16,8 @@ const Issuers = page(() => import("./pages/issuers.tsx"), "Issuers");
 const IssuerDetail = page(() => import("./pages/issuers.tsx"), "IssuerDetail");
 const Compare = page(() => import("./pages/compare.tsx"), "Compare");
 const Convert = page(() => import("./pages/convert.tsx"), "Convert");
+const Borrow = page(() => import("./pages/borrow.tsx"), "Borrow");
+const BorrowMarket = page(() => import("./pages/borrow-market.tsx"), "BorrowMarket");
 const ActivityPage = page(() => import("./pages/activity.tsx"), "Activity");
 const TransactionPage = page(() => import("./pages/transaction.tsx"), "TransactionPage");
 const WalletPage = page(() => import("./pages/wallet.tsx"), "WalletPage");
@@ -55,6 +57,8 @@ export const routes = [
           { path: "issuers/:id", element: <IssuerDetail /> },
           { path: "compare", element: <Compare /> },
           { path: "convert", element: <Convert /> },
+          { path: "borrow", element: <Borrow /> },
+          { path: "borrow/:id", element: <BorrowMarket /> },
           { path: "activity", element: <ActivityPage /> },
           { path: "activity/:id", element: <TransactionPage /> },
           { path: "wallet", element: <WalletPage /> },
