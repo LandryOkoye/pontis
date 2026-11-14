@@ -3,6 +3,7 @@ import { HttpResponse, delay, http } from "msw";
 import { config } from "../lib/config.ts";
 import type { ChartRange } from "../lib/market-types.ts";
 import { MockRefusal, db } from "./db.ts";
+import { lendingHandlers } from "./lending-handlers.ts";
 import * as market from "./market.ts";
 
 const url = (path: string) => `${config.apiUrl}${path}`;
@@ -35,6 +36,7 @@ interface QuoteBody {
 }
 
 export const handlers = [
+  ...lendingHandlers,
   http.get(url("/v1/health"), () => answer(() => db.health())),
   http.get(url("/v1/intents/tokens"), () =>
     answer(() => ({
