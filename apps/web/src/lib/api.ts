@@ -17,6 +17,17 @@ import type {
   Transaction,
 } from "@pontis/api-types";
 import { config } from "./config.ts";
+import type {
+  BorrowingCapacity,
+  CollateralAsset,
+  Eligibility,
+  EligibilityRequest,
+  LendingMarket,
+  LendingOperation,
+  LendingPlan,
+  PlanRequest,
+  WalletCollateral,
+} from "./lending-types.ts";
 import type { ChartRange, MarketChart, MarketDetail, MarketRow } from "./market-types.ts";
 
 export interface IntentAsset {
@@ -112,6 +123,13 @@ interface List<T> {
   items: T[];
 }
 
+const LENDING_PLAN_PATH: Record<LendingOperation, string> = {
+  deposit: "/v1/lending/deposits",
+  borrow: "/v1/lending/borrows",
+  repay: "/v1/lending/repayments",
+  withdraw: "/v1/lending/withdrawals",
+};
+
 export const api = {
   health: (signal?: AbortSignal) => request<Health>("/v1/health", signal ? { signal } : {}),
   intentTokens: () => request<IntentTokensResponse>("/v1/intents/tokens"),
@@ -150,6 +168,22 @@ export const api = {
     request<List<Transaction>>(
       `/v1/transactions?account=${encodeURIComponent(account)}&limit=100`,
     ).then((r) => r.items),
+  collateralAssets: () =>
+    request<List<CollateralAsset>>("/v1/lending/collateral-assets").then((r) => r.items),
+  walletCollateral: (owner: string) =>
+    request<List<WalletCollateral>>(
+      `/v1/lending/wallet-assets?owner=${encodeURIComponent(owner)}`,
+    ).then((r) => r.items),
+  lendingMarkets: () => request<List<LendingMarket>>("/v1/lending/markets").then((r) => r.items),
+  collateralEligibility: (body: EligibilityRequest) =>
+    request<Eligibility>("/v1/lending/eligibility", { method: "POST", body }),
+  borrowingCapacity: (marketId: string, owner: string) =>
+    request<BorrowingCapacity>(
+      `/v1/lending/markets/${encodeURIComponent(marketId)}/capacity?owner=${encodeURIComponent(owner)}`,
+    ),
+  /** Unsigned calls for the wallet to sign. The API never broadcasts them. */
+  lendingPlan: (operation: LendingOperation, body: PlanRequest) =>
+    request<LendingPlan>(LENDING_PLAN_PATH[operation], { method: "POST", body }),
   reconciliation: (adminKey: string) =>
     request<ReconciliationReport>("/v1/admin/reconciliation", {
       headers: { authorization: `Bearer ${adminKey}` },

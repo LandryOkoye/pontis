@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { cn } from "../lib/cn.ts";
 
 /** The Pontis mark: the supplied logo file, never redrawn. */
@@ -29,11 +28,11 @@ export function Wordmark({ className }: { className?: string }) {
 }
 
 const METALS = {
-  gold: { from: "#b6f5c6", mid: "#3daf67", to: "#0f5233", ink: "#031109" },
-  silver: { from: "#f3f5f7", mid: "#b9c1cb", to: "#6c7682", ink: "#14181d" },
+  gold: { fill: "#c8a24a", ink: "#1c1503" },
+  silver: { fill: "#a9afb8", ink: "#14171b" },
 } as const;
 
-/** A struck coin for a token, drawn in code. Silver for silver claims, gold otherwise. */
+/** A flat disc for a token, lettered by its series. Silver for silver claims, gold otherwise. */
 export function TokenMark({
   symbol,
   size = 36,
@@ -44,7 +43,6 @@ export function TokenMark({
   className?: string;
 }) {
   const metal = METALS[/SILV/i.test(symbol) ? "silver" : "gold"];
-  const id = useId();
   const suffix = symbol.split("-")[1] ?? symbol.slice(-1);
   return (
     <svg
@@ -54,31 +52,14 @@ export function TokenMark({
       className={cn("shrink-0", className)}
       aria-hidden
     >
-      <defs>
-        <linearGradient id={id} x1="0.1" y1="0" x2="0.9" y2="1">
-          <stop offset="0" stopColor={metal.from} />
-          <stop offset="0.5" stopColor={metal.mid} />
-          <stop offset="1" stopColor={metal.to} />
-        </linearGradient>
-      </defs>
-      <circle cx="20" cy="20" r="19" fill={`url(#${id})`} />
-      <circle
-        cx="20"
-        cy="20"
-        r="15.5"
-        fill="none"
-        stroke={metal.ink}
-        strokeOpacity="0.35"
-        strokeWidth="0.8"
-        strokeDasharray="1.2 1.6"
-      />
-      <circle cx="20" cy="20" r="12.5" fill={metal.ink} fillOpacity="0.12" />
+      <circle cx="20" cy="20" r="20" fill={metal.fill} />
       <text
         x="20"
-        y="25.2"
+        y="25.6"
         textAnchor="middle"
         fontFamily="Geist Variable, sans-serif"
         fontSize="16"
+        fontWeight="600"
         fill={metal.ink}
       >
         {suffix}

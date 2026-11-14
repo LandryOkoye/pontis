@@ -12,7 +12,7 @@ import { CopyButton, TONE_TEXT } from "./ui/primitives.tsx";
 export function EvidenceTiers({ evidence }: { evidence: readonly Evidence[] }) {
   const byTier = (tier: EvidenceProvenance) => evidence.filter((e) => e.provenance === tier);
   return (
-    <div className="grid gap-px overflow-hidden rounded-[14px] border border-line bg-line md:grid-cols-3">
+    <div className="grid gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-3">
       {EVIDENCE_PROVENANCES.map((tier) => {
         const meta = PROVENANCE[tier];
         const items = byTier(tier);
@@ -24,13 +24,13 @@ export function EvidenceTiers({ evidence }: { evidence: readonly Evidence[] }) {
             </div>
             <p className="mt-1 text-xs text-faint">{meta.meaning}</p>
             {items.length === 0 ? (
-              <p className="mt-4 rounded-[10px] border border-dashed border-line-strong px-3 py-4 text-center text-xs text-faint">
+              <p className="mt-4 rounded-md border border-dashed border-line-strong px-3 py-4 text-center text-xs text-faint">
                 None on record
               </p>
             ) : (
               <ul className="mt-4 space-y-2">
                 {items.map((item) => (
-                  <li key={item.id} className="rounded-[10px] border border-line bg-ink-2 p-3">
+                  <li key={item.id} className="rounded-md border border-line bg-ink-2 p-3">
                     <p className="flex items-start gap-2 text-[13px]">
                       <FileText className="mt-0.5 size-3.5 shrink-0 text-faint" aria-hidden />
                       <span className="min-w-0 break-words">{item.description}</span>

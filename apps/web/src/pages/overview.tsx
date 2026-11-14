@@ -12,7 +12,6 @@ import { StateBadge } from "../components/labels.tsx";
 import { Span } from "../components/span.tsx";
 import { Button, ButtonLink } from "../components/ui/button.tsx";
 import {
-  Chip,
   EmptyState,
   ErrorState,
   PageHeader,
@@ -41,7 +40,7 @@ function Change({ value }: { value: number }) {
   );
 }
 
-function StatCard({
+function Stat({
   label,
   value,
   change,
@@ -55,27 +54,27 @@ function StatCard({
   note?: string;
 }) {
   return (
-    <div className="panel flex items-end justify-between gap-4 p-5">
+    <div className="flex items-end justify-between gap-4 bg-panel p-5">
       <div className="min-w-0">
         <p className="eyebrow">{label}</p>
-        <p className="num mt-2 text-[28px] leading-none">{value}</p>
-        <p className="mt-2 flex items-center gap-2 text-xs text-faint">
+        <p className="num mt-1.5 text-[24px] font-semibold leading-none tracking-tight">{value}</p>
+        <p className="mt-2 flex items-center gap-2 text-[12.5px] text-faint">
           {change !== undefined && <Change value={change} />}
           {note}
         </p>
       </div>
       {series && (
-        <Sparkline values={series} width={110} height={44} label={`${label}, last 7 days`} />
+        <Sparkline values={series} width={96} height={36} label={`${label}, last 7 days`} />
       )}
     </div>
   );
 }
 
 const CELL: Record<Tone, string> = {
-  parity: "bg-parity/20 text-parity border-parity/40",
-  similar: "bg-similar/15 text-similar border-similar/30",
-  danger: "bg-danger/10 text-danger border-danger/25",
-  warn: "bg-warn/15 text-warn border-warn/30",
+  parity: "bg-parity/[0.12] text-parity border-parity/30",
+  similar: "bg-similar/[0.08] text-similar border-similar/20",
+  danger: "bg-danger/[0.06] text-danger border-danger/20",
+  warn: "bg-warn/[0.08] text-warn border-warn/20",
   gold: "",
   ion: "",
   neutral: "",
@@ -95,31 +94,25 @@ function Matrix({
   relations: Map<string, Compatibility>;
 }) {
   return (
-    <div className="overflow-x-auto px-5 pb-5 pt-4 sm:px-6">
+    <div className="overflow-x-auto px-5 pb-5 pt-4">
       <div
-        className="grid w-max gap-1.5"
-        style={{ gridTemplateColumns: `auto repeat(${assets.length}, 56px)` }}
+        className="grid w-max gap-1"
+        style={{ gridTemplateColumns: `auto repeat(${assets.length}, 48px)` }}
         role="table"
         aria-label="Compatibility between every pair of representations"
       >
         <span />
         {assets.map((a) => (
-          <span key={a.id} className="num pb-1 text-center text-[10.5px] text-faint">
+          <span key={a.id} className="pb-1 text-center text-[11px] text-faint">
             {a.symbol.replace("T", "")}
           </span>
         ))}
         {assets.map((row) => (
           <Fragment key={row.id}>
-            <span className="num flex items-center pr-3 text-xs text-muted">{row.symbol}</span>
+            <span className="flex items-center pr-4 text-[12.5px] text-muted">{row.symbol}</span>
             {assets.map((col) => {
               if (row.id === col.id)
-                return (
-                  <span
-                    key={col.id}
-                    className="size-14 rounded-[10px] bg-[repeating-linear-gradient(135deg,transparent_0_5px,rgb(220_255_232/0.04)_5px_6px)]"
-                    aria-hidden
-                  />
-                );
+                return <span key={col.id} className="size-12 rounded-md bg-ink-2" aria-hidden />;
               const relation = relations.get(`${row.id}>${col.id}`);
               if (!relation) {
                 return (
@@ -127,7 +120,7 @@ function Matrix({
                     key={col.id}
                     to={`/app/compare?from=${row.id}&to=${col.id}`}
                     title={`${row.symbol} and ${col.symbol}: no relationship recorded`}
-                    className="grid size-14 place-items-center rounded-[10px] border border-dashed border-line-strong text-faint transition hover:border-gold/50"
+                    className="grid size-12 place-items-center rounded-md border border-dashed border-line-strong text-faint transition-colors hover:border-faint"
                   >
                     <span aria-hidden>·</span>
                     <span className="sr-only">
@@ -143,7 +136,7 @@ function Matrix({
                   to={`/app/compare?from=${row.id}&to=${col.id}`}
                   title={`${row.symbol} and ${col.symbol}: ${meta.label}`}
                   className={cn(
-                    "grid size-14 place-items-center rounded-[10px] border text-lg transition hover:scale-105",
+                    "grid size-12 place-items-center rounded-md border text-base transition-opacity hover:opacity-80",
                     CELL[meta.tone],
                   )}
                 >
@@ -162,7 +155,7 @@ function Matrix({
           <li key={key} className="flex items-center gap-2">
             <span
               className={cn(
-                "grid size-5 place-items-center rounded-[5px] border text-[11px]",
+                "grid size-5 place-items-center rounded-xs border text-[11px]",
                 CELL[CLASSIFICATION[key].tone],
               )}
               aria-hidden
@@ -260,13 +253,8 @@ export function Overview() {
   return (
     <>
       <PageHeader
-        eyebrow="Markets"
-        title={
-          <>
-            Tokenized real-world assets,{" "}
-            <em className="text-gold-grad">and who converts with whom</em>
-          </>
-        }
+        eyebrow="Registry"
+        title="Markets"
         lede="Every representation on NEAR Testnet with its synthetic market data, and the pairs an approver has recorded as convertible."
         actions={
           <ButtonLink to="/app/convert">
@@ -275,25 +263,25 @@ export function Overview() {
         }
       />
 
-      <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
+      <div className="mb-4 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 xl:grid-cols-4">
+        <Stat
           label="Synthetic market cap"
           value={market.isLoading ? "…" : usdCompact(totalCap)}
           change={capChange}
           series={capSeries}
           note="24h"
         />
-        <StatCard
+        <Stat
           label="24h volume"
           value={market.isLoading ? "…" : usdCompact(totalVol)}
           note="across all representations"
         />
-        <StatCard
+        <Stat
           label="Representations"
           value={assets.isLoading ? "…" : list.length}
           note={`${claims} canonical claims`}
         />
-        <StatCard
+        <Stat
           label="Parity routes"
           value={compat.some((c) => c.isLoading) ? "…" : parityPairs.length}
           note="approved direct-equivalent pairs"
@@ -301,15 +289,11 @@ export function Overview() {
       </div>
 
       <Panel className="overflow-hidden">
-        <div className="flex flex-col gap-4 border-b border-line p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex flex-col gap-3 border-b border-line px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-[18px] font-medium tracking-tight">Tokenized assets</h2>
-            <p className="mt-1 text-[13px] text-muted">
-              Prices and volumes are{" "}
-              <Chip tone="warn" className="!h-5 align-middle !text-[10.5px]">
-                synthetic
-              </Chip>{" "}
-              and generated for the demo.
+            <h2 className="text-[15px] font-medium">Tokenized assets</h2>
+            <p className="eyebrow mt-0.5">
+              Prices and volumes are synthetic, generated for the demo.
             </p>
           </div>
           <Segmented<Filter>
@@ -342,16 +326,16 @@ export function Overview() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-sm">
               <thead>
-                <tr className="border-b border-line text-left text-[12px] text-faint">
-                  <th className="w-12 px-5 py-3 font-medium">#</th>
-                  <th className="px-3 py-3 font-medium">Name</th>
-                  <th className="px-3 py-3 text-right font-medium">Price</th>
-                  <th className="px-3 py-3 text-right font-medium">24h %</th>
-                  <th className="px-3 py-3 text-right font-medium">7d %</th>
-                  <th className="px-3 py-3 text-right font-medium">Market cap</th>
-                  <th className="px-3 py-3 text-right font-medium">Volume (24h)</th>
-                  <th className="px-3 py-3 text-right font-medium">Last 7 days</th>
-                  <th className="px-5 py-3 text-right font-medium">Route</th>
+                <tr className="border-b border-line text-left text-[12.5px] text-faint">
+                  <th className="w-12 px-5 py-3 font-normal">#</th>
+                  <th className="px-3 py-3 font-normal">Name</th>
+                  <th className="px-3 py-3 text-right font-normal">Price</th>
+                  <th className="px-3 py-3 text-right font-normal">24h %</th>
+                  <th className="px-3 py-3 text-right font-normal">7d %</th>
+                  <th className="px-3 py-3 text-right font-normal">Market cap</th>
+                  <th className="px-3 py-3 text-right font-normal">Volume (24h)</th>
+                  <th className="px-3 py-3 text-right font-normal">Last 7 days</th>
+                  <th className="px-5 py-3 text-right font-normal">Route</th>
                 </tr>
               </thead>
               <tbody>
@@ -360,42 +344,42 @@ export function Overview() {
                   return (
                     <tr
                       key={row.id}
-                      className="group border-b border-line/70 transition last:border-0 hover:bg-white/[0.025]"
+                      className="group border-b border-line transition-colors last:border-0 hover:bg-panel-2"
                     >
-                      <td className="num px-5 py-4 text-faint">{i + 1}</td>
-                      <td className="px-3 py-4">
+                      <td className="num px-5 py-3 text-faint">{i + 1}</td>
+                      <td className="px-3 py-3">
                         <Link to={`/app/assets/${row.id}`} className="flex items-center gap-3">
-                          <TokenMark symbol={row.symbol} size={34} />
+                          <TokenMark symbol={row.symbol} size={30} />
                           <span className="min-w-0">
                             <span className="flex items-center gap-2">
-                              <span className="font-medium group-hover:text-gold">{row.name}</span>
+                              <span className="font-medium">{row.name}</span>
                               <span className="num text-xs text-faint">{row.symbol}</span>
                             </span>
-                            <span className="block text-xs text-muted">
+                            <span className="block text-[12.5px] text-faint">
                               {asset?.canonicalAssetName} · {asset?.issuer.name}
                             </span>
                           </span>
                         </Link>
                       </td>
-                      <td className="num px-3 py-4 text-right">{usd(row.priceUsd)}</td>
-                      <td className="px-3 py-4 text-right">
+                      <td className="num px-3 py-3 text-right">{usd(row.priceUsd)}</td>
+                      <td className="px-3 py-3 text-right">
                         <Change value={row.change24h} />
                       </td>
-                      <td className="px-3 py-4 text-right">
+                      <td className="px-3 py-3 text-right">
                         <Change value={row.change7d} />
                       </td>
-                      <td className="num px-3 py-4 text-right">{usdCompact(row.marketCapUsd)}</td>
-                      <td className="num px-3 py-4 text-right">{usdCompact(row.volume24hUsd)}</td>
-                      <td className="px-3 py-4">
+                      <td className="num px-3 py-3 text-right">{usdCompact(row.marketCapUsd)}</td>
+                      <td className="num px-3 py-3 text-right">{usdCompact(row.volume24hUsd)}</td>
+                      <td className="px-3 py-3">
                         <div className="flex justify-end">
                           <Sparkline values={row.sparkline} label={`${row.symbol}, last 7 days`} />
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-right">
+                      <td className="px-5 py-3 text-right">
                         {parityIds.has(row.id) ? (
                           <Link
                             to={`/app/convert?from=${row.id}`}
-                            className="inline-flex h-8 items-center rounded-full border border-gold/40 px-4 text-[13px] text-gold transition hover:bg-gold/10"
+                            className="inline-flex h-7 items-center rounded-md border border-line-strong px-3 text-[13px] font-medium transition-colors hover:bg-panel-3"
                           >
                             Convert
                           </Link>
@@ -412,23 +396,23 @@ export function Overview() {
         )}
       </Panel>
 
-      <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <Panel variant="gold" className="p-5 sm:p-6">
+      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <Panel className="p-5">
           <p className="eyebrow mb-1">Open route</p>
           {featured && featuredFrom && featuredTo ? (
             <>
-              <h2 className="text-[17px] font-medium">
+              <h2 className="text-[15px] font-medium">
                 {featuredFrom.symbol} and {featuredTo.symbol} are direct equivalents
               </h2>
               <Span
-                className="mt-4"
+                className="mt-5"
                 from={featuredFrom.symbol}
                 to={featuredTo.symbol}
                 state="DIRECT_EQUIVALENT"
                 keystone={`1 : ${wholeTokenRate(featured[1].ratio, featuredFrom.decimals, featuredTo.decimals)}`}
               />
               <p className="mt-4 text-[13px] text-muted">{featured[1].rationale}</p>
-              <div className="mt-5 flex gap-3">
+              <div className="mt-5 flex gap-2">
                 <ButtonLink
                   to={`/app/convert?from=${featuredFrom.id}&to=${featuredTo.id}`}
                   className="flex-1"
@@ -462,16 +446,16 @@ export function Overview() {
           ) : movers.length === 0 ? (
             <EmptyState title="No market data" />
           ) : (
-            <ul className="divide-y divide-line px-5 pb-2 pt-3 sm:px-6">
+            <ul className="divide-y divide-line px-5 pb-2 pt-2">
               {movers.map((row) => (
                 <li key={row.id}>
                   <Link
                     to={`/app/assets/${row.id}`}
-                    className="flex items-center justify-between gap-3 py-3 hover:text-gold"
+                    className="flex items-center justify-between gap-3 py-2.5 hover:text-white"
                   >
                     <span className="flex items-center gap-3">
-                      <TokenMark symbol={row.symbol} size={28} />
-                      <span className="num text-sm">{row.symbol}</span>
+                      <TokenMark symbol={row.symbol} size={24} />
+                      <span className="text-sm font-medium">{row.symbol}</span>
                     </span>
                     <span className="flex items-center gap-4">
                       <span className="num text-sm text-muted">{usd(row.priceUsd)}</span>
@@ -485,7 +469,7 @@ export function Overview() {
         </Panel>
       </div>
 
-      <div className="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <Panel>
           <PanelHeader eyebrow="Compatibility" title="Who converts with whom" />
           {assets.isLoading ? (
@@ -514,7 +498,7 @@ export function Overview() {
           />
           {!wallet.accountId ? (
             <EmptyState
-              icon={<Wallet className="size-5" aria-hidden />}
+              icon={<Wallet className="size-4" aria-hidden />}
               title="Connect a wallet to see your conversions"
               body="Activity is listed per account. There is no protocol-wide feed."
               action={
@@ -541,7 +525,7 @@ export function Overview() {
               }
             />
           ) : (
-            <div className="px-5 pb-5 pt-5 sm:px-6">
+            <div className="px-5 pb-3 pt-5">
               <div className="grid gap-6 md:grid-cols-2">
                 <Donut slices={slices} centerLabel="total" centerValue={String(txs.length)} />
                 <div>

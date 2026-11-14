@@ -87,7 +87,7 @@ export function buildTimeline(tx: Transaction): Step[] {
 
 const DOT: Record<StepStatus, string> = {
   done: "border-parity/60 bg-parity/15 text-parity",
-  current: "border-gold bg-gold/15 text-gold",
+  current: "border-gold/50 bg-gold/[0.08] text-gold",
   pending: "border-line-strong text-faint",
   muted: "border-line-strong text-faint",
   error: "border-danger/60 bg-danger/15 text-danger",
@@ -344,7 +344,7 @@ export function TransactionPage() {
                       receipt {shortId(event.receiptId, 10, 6)} ·{" "}
                       {formatDateTime(event.blockTimestamp)}
                     </p>
-                    <pre className="mt-3 overflow-x-auto rounded-[10px] border border-line bg-ink-2 p-3 font-mono text-xs leading-relaxed text-muted">
+                    <pre className="mt-3 overflow-x-auto rounded-md border border-line bg-ink-2 p-3 font-mono text-xs leading-relaxed text-muted">
                       {JSON.stringify(event.data, null, 2)}
                     </pre>
                   </li>

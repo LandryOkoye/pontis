@@ -1,12 +1,18 @@
-// Live wallet: NEAR wallet selector with MyNearWallet and Meteor, Testnet only.
+// Live wallet: NEAR wallet selector, Testnet only. Browser-extension wallets come first; the
+// selector marks each one as installed or not, and drops any that do not support Testnet.
 // Loaded lazily so none of the wallet libraries are in the first paint bundle.
 import type { WalletSelector } from "@near-wallet-selector/core";
 import { internalActionToNaj, setupWalletSelector } from "@near-wallet-selector/core";
+import { setupBitgetWallet } from "@near-wallet-selector/bitget-wallet";
+import { setupHotWallet } from "@near-wallet-selector/hot-wallet";
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 import type { WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import { setupModal } from "@near-wallet-selector/modal-ui";
 import "@near-wallet-selector/modal-ui/styles.css";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
+import { setupNightly } from "@near-wallet-selector/nightly";
+import { setupOKXWallet } from "@near-wallet-selector/okx-wallet";
+import { setupSender } from "@near-wallet-selector/sender";
 import { config } from "../lib/config.ts";
 import { viewCall } from "./rpc.ts";
 import type { PendingContext, SendResult, WalletAction, WalletAdapter } from "./types.ts";
@@ -52,10 +58,39 @@ function failureMessage(status: unknown): string | null {
   return panic?.[1] ?? "The transaction failed on chain.";
 }
 
+interface InjectedWallets {
+  nightly?: { near?: unknown };
+  okxwallet?: { near?: unknown };
+  near?: { isSender?: boolean };
+  bitkeep?: { near?: unknown };
+}
+
+/**
+ * The wallets offered, with any browser extension the visitor already has listed first.
+ * Extensions announce themselves by injecting an object into the page; web wallets (Meteor,
+ * HOT, MyNearWallet) need nothing installed and keep their fixed order after those.
+ */
+function walletModules() {
+  const page = window as unknown as InjectedWallets;
+  const extensions = [
+    { installed: Boolean(page.nightly?.near), module: setupNightly() },
+    { installed: Boolean(page.okxwallet?.near), module: setupOKXWallet() },
+    { installed: Boolean(page.near?.isSender), module: setupSender() },
+    { installed: Boolean(page.bitkeep?.near), module: setupBitgetWallet() },
+  ];
+  return [
+    ...extensions.filter((e) => e.installed).map((e) => e.module),
+    setupMeteorWallet(),
+    setupHotWallet(),
+    setupMyNearWallet(),
+    ...extensions.filter((e) => !e.installed).map((e) => e.module),
+  ];
+}
+
 export async function createNearWallet(): Promise<WalletAdapter> {
   const selector = await setupWalletSelector({
     network: config.networkId,
-    modules: [setupMyNearWallet(), setupMeteorWallet()],
+    modules: walletModules(),
   });
   const modal: WalletSelectorModal = setupModal(selector, {
     theme: "dark",

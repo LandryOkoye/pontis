@@ -215,10 +215,10 @@ export function Reconciliation() {
         <Report report={load.data} refreshing={load.isPending} onRefresh={() => load.mutate(key)} />
       ) : (
         <Panel className="mx-auto max-w-lg p-6 sm:p-8">
-          <span className="mb-5 grid size-12 place-items-center rounded-full border border-line-strong bg-panel-2 text-gold">
+          <span className="mb-4 grid size-9 place-items-center rounded-lg border border-line bg-panel-2 text-muted">
             <Lock className="size-5" aria-hidden />
           </span>
-          <h2 className="display text-3xl">Operator access</h2>
+          <h2 className="text-[17px] font-semibold">Operator access</h2>
           <p className="mt-2 text-sm text-muted">
             This view calls an admin endpoint. Enter the API's admin key; it stays in this page's
             memory and is cleared when you leave.
@@ -246,7 +246,7 @@ export function Reconciliation() {
                 onChange={(event) => setKey(event.target.value)}
                 aria-invalid={unauthorized}
                 aria-describedby="admin-key-help"
-                className="num h-12 w-full rounded-[12px] border border-line-strong bg-ink-2 pl-10 pr-4 text-sm outline-none focus:border-gold/60"
+                className="num h-10 w-full rounded-md border border-line-strong bg-ink-2 pl-10 pr-4 text-sm outline-none focus:border-faint"
               />
             </div>
             <p

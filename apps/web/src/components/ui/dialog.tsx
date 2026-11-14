@@ -49,22 +49,18 @@ export function Dialog({ open, title, description, onClose, children }: Props) {
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-[80] grid place-items-end sm:place-items-center">
-      <div
-        className="absolute inset-0 animate-fade bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden
-      />
+      <div className="absolute inset-0 animate-fade bg-black/70" onClick={onClose} aria-hidden />
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="panel panel-raised relative m-0 w-full max-w-md animate-rise rounded-b-none p-6 outline-none sm:m-4 sm:rounded-b-[20px]"
+        className="panel panel-raised relative m-0 w-full max-w-md animate-rise rounded-b-none p-5 outline-none sm:m-4 sm:rounded-b-xl"
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 id={titleId} className="display text-2xl">
+            <h2 id={titleId} className="text-[17px] font-semibold">
               {title}
             </h2>
             {description && <p className="mt-1 text-sm text-muted">{description}</p>}
@@ -73,7 +69,7 @@ export function Dialog({ open, title, description, onClose, children }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="grid size-8 shrink-0 place-items-center rounded-full text-muted hover:bg-white/5 hover:text-text"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-muted hover:bg-panel-3 hover:text-text"
           >
             <X className="size-4" aria-hidden />
           </button>

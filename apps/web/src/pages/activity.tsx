@@ -137,7 +137,7 @@ export function Activity() {
                       return (
                         <tr
                           key={tx.id}
-                          className="group transition hover:bg-white/[0.025] [&>td]:px-5 [&>td]:py-3.5"
+                          className="group transition hover:bg-panel-2 [&>td]:px-5 [&>td]:py-3.5"
                         >
                           <td>
                             <Link to={`/app/activity/${tx.id}`} className="flex items-center gap-3">
@@ -187,7 +187,7 @@ export function Activity() {
                             <Link
                               to={`/app/activity/${tx.id}`}
                               aria-label={`Open conversion ${shortId(tx.id, 8, 4)}`}
-                              className="inline-grid size-8 place-items-center rounded-full text-faint transition group-hover:bg-white/5 group-hover:text-gold"
+                              className="inline-grid size-8 place-items-center rounded-md text-faint transition group-hover:bg-panel-3 group-hover:text-text"
                             >
                               <ArrowRight className="size-4" aria-hidden />
                             </Link>

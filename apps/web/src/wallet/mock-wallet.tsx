@@ -122,13 +122,13 @@ export function MockWalletPrompts() {
               <button
                 type="button"
                 onClick={() => active.resolve(a.id)}
-                className="group flex w-full items-center gap-3 rounded-[14px] border border-line bg-panel-2 px-4 py-3 text-left transition hover:border-gold/50"
+                className="group flex w-full items-center gap-3 rounded-lg border border-line bg-panel-2 px-4 py-3 text-left transition hover:border-faint"
               >
-                <span className="grid size-9 place-items-center rounded-full bg-gold/10 font-mono text-xs text-gold">
+                <span className="grid size-9 place-items-center rounded-full bg-panel-3 text-xs font-semibold text-text">
                   {a.id.slice(0, 2).toUpperCase()}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-mono text-sm text-text">{a.id}</span>
+                  <span className="block text-sm font-medium text-text">{a.id}</span>
                   <span className="block text-xs text-muted">{a.note}</span>
                 </span>
               </button>
@@ -148,9 +148,9 @@ export function MockWalletPrompts() {
     >
       <ol className="space-y-2">
         {active.actions.map((action, i) => (
-          <li key={i} className="rounded-[14px] border border-line bg-panel-2 p-3">
+          <li key={i} className="rounded-lg border border-line bg-panel-2 p-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="font-mono text-sm text-gold">{action.methodName}</span>
+              <span className="font-mono text-[13px] text-text">{action.methodName}</span>
               <span className="eyebrow">Tx {i + 1}</span>
             </div>
             <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-xs text-muted">

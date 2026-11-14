@@ -81,7 +81,7 @@ export function Assets() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Symbol, issuer, account…"
-            className="h-10 w-full rounded-full border border-line bg-ink-2 pl-9 pr-4 text-sm outline-none placeholder:text-faint focus:border-gold/60"
+            className="h-9 w-full rounded-md border border-line bg-ink-2 pl-9 pr-4 text-sm outline-none placeholder:text-faint focus:border-faint"
           />
         </label>
       </div>
@@ -133,7 +133,7 @@ export function Assets() {
                   return (
                     <tr
                       key={asset.id}
-                      className="group transition hover:bg-white/[0.025] [&>td]:px-5 [&>td]:py-4"
+                      className="group transition hover:bg-panel-2 [&>td]:px-5 [&>td]:py-4"
                     >
                       <td className="num text-faint">{list.indexOf(asset) + 1}</td>
                       <td>
@@ -141,7 +141,7 @@ export function Assets() {
                           <TokenMark symbol={asset.symbol} size={38} />
                           <span>
                             <span className="flex items-center gap-2">
-                              <span className="font-medium group-hover:text-gold">
+                              <span className="font-medium group-hover:text-text">
                                 {asset.symbol}
                               </span>
                               <Hallmark
@@ -160,7 +160,7 @@ export function Assets() {
                         </span>
                       </td>
                       <td>
-                        <Link to={`/app/issuers/${asset.issuer.id}`} className="hover:text-gold">
+                        <Link to={`/app/issuers/${asset.issuer.id}`} className="hover:text-text">
                           {asset.issuer.name}
                         </Link>
                       </td>
@@ -182,7 +182,7 @@ export function Assets() {
                         <Link
                           to={`/app/assets/${asset.id}`}
                           aria-label={`Open ${asset.symbol}`}
-                          className="inline-grid size-8 place-items-center rounded-full text-faint transition group-hover:bg-white/5 group-hover:text-gold"
+                          className="inline-grid size-8 place-items-center rounded-md text-faint transition group-hover:bg-panel-3 group-hover:text-text"
                         >
                           <ArrowRight className="size-4" aria-hidden />
                         </Link>

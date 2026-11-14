@@ -56,9 +56,9 @@ export function WalletButton({ size = "md" }: { size?: "sm" | "md" }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-10 items-center gap-2.5 rounded-[12px] border border-line-strong bg-panel-2 pl-2 pr-3 transition hover:border-gold/50"
+        className="flex h-9 items-center gap-2 rounded-md border border-line-strong bg-panel-2 pl-1.5 pr-2.5 transition-colors hover:bg-panel-3"
       >
-        <span className="grid size-6 place-items-center rounded-full bg-[linear-gradient(135deg,#5ed472,#3ddc97)] font-mono text-[10px] font-semibold text-ink">
+        <span className="grid size-6 place-items-center rounded-full bg-panel-3 text-[11px] font-semibold text-text ring-1 ring-line-strong">
           {wallet.accountId.slice(0, 1).toUpperCase()}
         </span>
         <span className="num hidden text-[13px] sm:inline">
@@ -69,7 +69,7 @@ export function WalletButton({ size = "md" }: { size?: "sm" | "md" }) {
       {open && (
         <div
           role="menu"
-          className="panel panel-raised absolute right-0 top-12 z-50 w-72 animate-rise p-2"
+          className="panel panel-raised absolute right-0 top-11 z-50 w-72 animate-rise p-1.5"
         >
           <div className="px-3 pb-2 pt-2">
             <p className="eyebrow">
@@ -106,7 +106,7 @@ export function WalletButton({ size = "md" }: { size?: "sm" | "md" }) {
             role="menuitem"
             to="/app/wallet"
             onClick={() => setOpen(false)}
-            className="mt-2 flex items-center gap-2 rounded-[10px] px-3 py-2 text-sm text-muted hover:bg-white/5 hover:text-text"
+            className="mt-1.5 flex items-center gap-2 rounded-md px-3 py-2 text-[13.5px] text-muted hover:bg-panel-3 hover:text-text"
           >
             <Wallet className="size-4" aria-hidden /> Wallet and test tokens
           </Link>
@@ -117,7 +117,7 @@ export function WalletButton({ size = "md" }: { size?: "sm" | "md" }) {
               setOpen(false);
               void wallet.disconnect();
             }}
-            className="flex w-full items-center gap-2 rounded-[10px] px-3 py-2 text-sm text-muted hover:bg-white/5 hover:text-text"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-[13.5px] text-muted hover:bg-panel-3 hover:text-text"
           >
             <LogOut className="size-4" aria-hidden /> Disconnect
           </button>
