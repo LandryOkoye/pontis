@@ -11,7 +11,7 @@ import { cn } from "../lib/cn.ts";
 import { CLASSIFICATION, PROVENANCE, RECORD, STATE, VERIFICATION } from "../lib/copy.ts";
 import { Chip } from "./ui/primitives.tsx";
 
-/** An assay-style stamp: dashed double border, mono caps. */
+/** The trust label: outlined so it never reads as a status or a call to action. */
 export function Hallmark({
   synthetic,
   verification,
@@ -33,12 +33,9 @@ export function Hallmark({
           : VERIFICATION[verification].label
       }
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-[6px] border border-dashed font-mono uppercase",
-        unverified ? "border-warn/50 text-warn" : "border-parity/50 text-parity",
-        size === "lg"
-          ? "h-8 gap-2.5 px-3 text-[11.5px] tracking-[0.18em]"
-          : "h-[22px] gap-1.5 px-2 text-[10px] tracking-[0.14em]",
-        "bg-[repeating-linear-gradient(135deg,transparent_0_6px,rgb(242_174_82/0.06)_6px_7px)]",
+        "inline-flex items-center whitespace-nowrap rounded-sm border font-medium",
+        unverified ? "border-warn/30 text-warn" : "border-parity/30 text-parity",
+        size === "lg" ? "h-7 gap-2 px-2.5 text-[12.5px]" : "h-[22px] gap-1.5 px-2 text-[11.5px]",
         className,
       )}
     >

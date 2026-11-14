@@ -6,12 +6,12 @@ import { TONE_DOT } from "./ui/primitives.tsx";
 
 const TONE_HEX: Record<Tone, string> = {
   gold: "#5ed472",
-  parity: "#3ddc97",
-  similar: "#b7a4ff",
-  ion: "#8fb9ff",
-  warn: "#f2ae52",
-  danger: "#f27a63",
-  neutral: "#6b8274",
+  parity: "#4fc98d",
+  similar: "#a99cf2",
+  ion: "#7fa8ea",
+  warn: "#dfa64e",
+  danger: "#e8705f",
+  neutral: "#70707a",
 };
 
 export interface Slice {
@@ -43,7 +43,7 @@ export function Donut({
           role="img"
           aria-label={`${centerLabel}: ${slices.map((s) => `${s.label} ${s.value}`).join(", ")}`}
         >
-          <circle cx="50" cy="50" r={r} fill="none" stroke="#1b2b21" strokeWidth="9" />
+          <circle cx="50" cy="50" r={r} fill="none" stroke="#1f1f23" strokeWidth="9" />
           {total > 0 &&
             slices
               .filter((s) => s.value > 0)
@@ -69,7 +69,7 @@ export function Donut({
         </svg>
         <div className="absolute inset-0 grid place-content-center text-center">
           <span className="num text-2xl leading-none">{centerValue}</span>
-          <span className="eyebrow mt-1 !text-[9px]">{centerLabel}</span>
+          <span className="mt-1 text-[11px] text-faint">{centerLabel}</span>
         </div>
       </div>
       <ul className="min-w-[140px] flex-1 space-y-2">
@@ -124,7 +124,7 @@ export function StepArea({
     >
       <defs>
         <linearGradient id="step-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#5ed472" stopOpacity="0.28" />
+          <stop offset="0" stopColor="#5ed472" stopOpacity="0.14" />
           <stop offset="1" stopColor="#5ed472" stopOpacity="0" />
         </linearGradient>
       </defs>
@@ -132,7 +132,7 @@ export function StepArea({
         <path
           key={f}
           d={`M0 ${height * f}H${width}`}
-          stroke="#1b2b21"
+          stroke="#1f1f23"
           strokeDasharray="2 6"
           vectorEffect="non-scaling-stroke"
         />
@@ -180,8 +180,8 @@ export function Meter({
 // ---------------------------------------------------------------------------------------------
 // Market charts (synthetic data in mock mode; see BACKEND-REQUESTS.md §6).
 
-const UP = "#3ddc97";
-const DOWN = "#f27a63";
+const UP = "#4fc98d";
+const DOWN = "#e8705f";
 
 /** Tiny trend line for table rows. Colour follows the direction of the series. */
 export function Sparkline({
@@ -341,14 +341,14 @@ export function PriceChart({
       >
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={color} stopOpacity="0.32" />
+            <stop offset="0" stopColor={color} stopOpacity="0.12" />
             <stop offset="1" stopColor={color} stopOpacity="0" />
           </linearGradient>
         </defs>
         {yTicks.map((v) => (
           <g key={v}>
-            <path d={`M0 ${y(v)}H${plotW}`} stroke="#1b2b21" strokeDasharray="2 6" />
-            <text x={plotW + 10} y={y(v) + 4} fontSize="11" fill="#6b8274" className="font-mono">
+            <path d={`M0 ${y(v)}H${plotW}`} stroke="#1f1f23" strokeDasharray="2 6" />
+            <text x={plotW + 10} y={y(v) + 4} fontSize="11" fill="#70707a">
               {prefix}
               {priceText(v)}
             </text>
@@ -369,7 +369,7 @@ export function PriceChart({
             />
           );
         })}
-        <path d={`M0 ${y(first)}H${plotW}`} stroke="#6b8274" strokeDasharray="1 4" opacity="0.7" />
+        <path d={`M0 ${y(first)}H${plotW}`} stroke="#70707a" strokeDasharray="1 4" opacity="0.7" />
         <path d={area} fill={`url(#${gid})`} />
         <path d={line} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" />
         {xTicks.map((i) => (
@@ -379,7 +379,7 @@ export function PriceChart({
             y={height - 8}
             fontSize="11"
             textAnchor="middle"
-            fill="#6b8274"
+            fill="#70707a"
           >
             {axisLabel((data[i] as { t: number }).t, range)}
           </text>
@@ -398,8 +398,7 @@ export function PriceChart({
             y={y(last.price) + 4}
             fontSize="11"
             textAnchor="middle"
-            fill="#04140a"
-            className="font-mono"
+            fill="#06150b"
           >
             {priceText(last.price)}
           </text>
@@ -408,7 +407,7 @@ export function PriceChart({
           <g pointerEvents="none">
             <path
               d={`M${x(hover)} ${padT}V${padT + plotH}`}
-              stroke="#9db2a4"
+              stroke="#a1a1aa"
               strokeDasharray="3 4"
               opacity="0.7"
             />
@@ -416,7 +415,7 @@ export function PriceChart({
               cx={x(hover)}
               cy={y(h.price)}
               r="4.5"
-              fill="#050a07"
+              fill="#09090a"
               stroke={color}
               strokeWidth="2"
             />
@@ -431,7 +430,7 @@ export function PriceChart({
       />
       {h && hover !== null && (
         <div
-          className="pointer-events-none absolute top-6 z-10 w-[190px] rounded-xl border border-line-strong bg-panel-2/95 p-3 text-[12px] shadow-xl backdrop-blur"
+          className="pointer-events-none absolute top-6 z-10 w-[190px] rounded-lg border border-line-strong bg-panel-2 p-3 text-[12px]"
           style={{ left: Math.min(Math.max(8, x(hover) + 14), plotW - 196) }}
         >
           <p className="text-muted">{fmtFull.format(new Date(h.t))}</p>

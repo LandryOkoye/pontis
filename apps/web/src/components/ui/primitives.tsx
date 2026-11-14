@@ -18,13 +18,13 @@ export const TONE_TEXT: Record<Tone, string> = {
   neutral: "text-muted",
 };
 const TONE_CHIP: Record<Tone, string> = {
-  gold: "border-gold/30 bg-gold/10 text-gold",
-  parity: "border-parity/30 bg-parity/10 text-parity",
-  similar: "border-similar/30 bg-similar/10 text-similar",
-  ion: "border-ion/30 bg-ion/10 text-ion",
-  warn: "border-warn/30 bg-warn/10 text-warn",
-  danger: "border-danger/30 bg-danger/10 text-danger",
-  neutral: "border-line-strong bg-white/[0.03] text-muted",
+  gold: "border-gold/20 bg-gold/[0.07] text-gold",
+  parity: "border-parity/20 bg-parity/[0.07] text-parity",
+  similar: "border-similar/20 bg-similar/[0.07] text-similar",
+  ion: "border-ion/20 bg-ion/[0.07] text-ion",
+  warn: "border-warn/20 bg-warn/[0.07] text-warn",
+  danger: "border-danger/20 bg-danger/[0.07] text-danger",
+  neutral: "border-line-strong bg-panel-2 text-muted",
 };
 export const TONE_DOT: Record<Tone, string> = {
   gold: "bg-gold",
@@ -55,7 +55,7 @@ export function Chip({
     <span
       title={title}
       className={cn(
-        "inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[11.5px] font-medium tracking-wide",
+        "inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-sm border px-2 text-[12px] font-medium",
         TONE_CHIP[tone],
         className,
       )}
@@ -111,10 +111,10 @@ export function PanelHeader({
   className?: string;
 }) {
   return (
-    <header className={cn("flex items-end justify-between gap-4 px-5 pt-5 sm:px-6", className)}>
+    <header className={cn("flex items-start justify-between gap-4 px-5 pt-5", className)}>
       <div className="min-w-0">
-        {eyebrow && <p className="eyebrow mb-1.5">{eyebrow}</p>}
-        <h2 className="text-[17px] font-medium tracking-tight">{title}</h2>
+        <h2 className="text-[15px] font-medium">{title}</h2>
+        {eyebrow && <p className="eyebrow mt-0.5">{eyebrow}</p>}
       </div>
       {action}
     </header>
@@ -133,16 +133,13 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="mb-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-      <div className="max-w-2xl animate-rise">
-        <p className="eyebrow mb-3 flex items-center gap-2">
-          <span className="h-px w-6 bg-gold/60" aria-hidden />
-          {eyebrow}
-        </p>
-        <h1 className="display text-[40px] sm:text-[52px]">{title}</h1>
-        {lede && <p className="mt-3 text-[15px] text-muted">{lede}</p>}
+    <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="max-w-2xl">
+        <p className="eyebrow mb-1">{eyebrow}</p>
+        <h1 className="display text-[24px] sm:text-[26px]">{title}</h1>
+        {lede && <p className="mt-1.5 text-[14px] text-muted">{lede}</p>}
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap gap-3">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
     </header>
   );
 }
@@ -163,12 +160,12 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center px-6 py-14 text-center">
-      <div className="mb-4 grid size-12 place-items-center rounded-full border border-line-strong bg-panel-2 text-faint">
-        {icon ?? <Inbox className="size-5" aria-hidden />}
+    <div className="flex flex-col items-center px-6 py-12 text-center">
+      <div className="mb-3 grid size-9 place-items-center rounded-lg border border-line bg-panel-2 text-faint">
+        {icon ?? <Inbox className="size-4" aria-hidden />}
       </div>
-      <p className="text-[15px] font-medium">{title}</p>
-      {body && <p className="mt-1 max-w-sm text-sm text-muted">{body}</p>}
+      <p className="text-sm font-medium">{title}</p>
+      {body && <p className="mt-1 max-w-sm text-[13px] text-muted">{body}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
   );
@@ -187,8 +184,8 @@ export function ErrorState({
   const message = error instanceof Error ? error.message : "Something went wrong.";
   return (
     <div role="alert" className="flex flex-col items-center px-6 py-14 text-center">
-      <div className="mb-4 grid size-12 place-items-center rounded-full border border-danger/30 bg-danger/10 text-danger">
-        <AlertTriangle className="size-5" aria-hidden />
+      <div className="mb-3 grid size-9 place-items-center rounded-lg border border-danger/20 bg-danger/[0.07] text-danger">
+        <AlertTriangle className="size-4" aria-hidden />
       </div>
       <p className="text-[15px] font-medium">{title}</p>
       <p className="mt-1 max-w-sm text-sm text-muted">{message}</p>
@@ -248,7 +245,7 @@ export function Account({
           target="_blank"
           rel="noreferrer"
           aria-label={`Open ${id} in the explorer`}
-          className="text-faint hover:text-gold"
+          className="text-faint hover:text-text"
         >
           <ExternalLink className="size-3.5" aria-hidden />
         </a>
@@ -264,7 +261,7 @@ export function TxHash({ hash }: { hash: string }) {
         href={explorer.tx(hash)}
         target="_blank"
         rel="noreferrer"
-        className="num text-[13px] text-gold hover:underline"
+        className="num link text-[13px]"
         title={hash}
       >
         {shortId(hash, 8, 6)}
@@ -315,7 +312,7 @@ export function Segmented<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-line bg-ink-2 p-1"
+      className="inline-flex max-w-full gap-0.5 overflow-x-auto rounded-lg border border-line bg-ink-2 p-0.5"
     >
       {options.map((option) => {
         const active = option.value === value;
@@ -327,10 +324,8 @@ export function Segmented<T extends string>({
             aria-selected={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex h-8 items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[13px] transition",
-              active
-                ? "bg-panel-3 text-text shadow-[0_1px_0_rgb(220_255_232/0.08)_inset]"
-                : "text-muted hover:text-text",
+              "flex h-7 items-center gap-2 whitespace-nowrap rounded-md px-3 text-[13px] transition-colors",
+              active ? "bg-panel-3 text-text" : "text-muted hover:text-text",
             )}
           >
             {option.label}
@@ -354,7 +349,7 @@ export function Notice({
   children?: ReactNode;
 }) {
   return (
-    <div className={cn("flex gap-3 rounded-[14px] border px-4 py-3", TONE_CHIP[tone])}>
+    <div className={cn("flex gap-3 rounded-lg border px-4 py-3", TONE_CHIP[tone])}>
       <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
       <div className="min-w-0 text-sm">
         <p className="font-medium">{title}</p>

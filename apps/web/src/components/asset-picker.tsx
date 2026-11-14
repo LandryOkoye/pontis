@@ -27,16 +27,16 @@ export function AssetPicker({ label, assets, value, onChange, disabledId, classN
         aria-label={`${label}: ${selected?.symbol ?? "choose an asset"}`}
         onClick={() => setOpen(true)}
         className={cn(
-          "flex h-12 shrink-0 items-center gap-2.5 rounded-full border border-line-strong bg-panel-3 pl-1.5 pr-3 transition hover:border-gold/60",
+          "flex h-10 shrink-0 items-center gap-2 rounded-lg border border-line-strong bg-panel-2 pl-1.5 pr-2.5 transition-colors hover:bg-panel-3",
           className,
         )}
       >
         {selected ? (
-          <TokenMark symbol={selected.symbol} size={36} />
+          <TokenMark symbol={selected.symbol} size={26} />
         ) : (
-          <span className="size-9 rounded-full border border-dashed border-line-strong" />
+          <span className="size-[26px] rounded-full border border-dashed border-line-strong" />
         )}
-        <span className="text-[15px] font-medium">{selected?.symbol ?? "Select"}</span>
+        <span className="text-sm font-medium">{selected?.symbol ?? "Select"}</span>
         <ChevronDown className="size-4 text-faint" aria-hidden />
       </button>
       <Dialog
@@ -57,9 +57,9 @@ export function AssetPicker({ label, assets, value, onChange, disabledId, classN
                     onChange(asset.id);
                     setOpen(false);
                   }}
-                  className="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left transition hover:bg-white/5 disabled:opacity-40"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-panel-3 disabled:opacity-40"
                 >
-                  <TokenMark symbol={asset.symbol} size={38} />
+                  <TokenMark symbol={asset.symbol} size={32} />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className="font-medium">{asset.symbol}</span>
