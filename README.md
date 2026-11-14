@@ -1,4 +1,4 @@
-  # Pontis
+# Pontis
 
 **The equivalence layer for tokenized real-world assets, built on NEAR.**
 
