@@ -1,7 +1,9 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, configure } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vitest";
+import { resetEvmWallet } from "./src/evm/wallet.tsx";
 import { db } from "./src/mocks/db.ts";
+import { lendingDb } from "./src/mocks/lending.ts";
 import { server } from "./src/test/server.ts";
 
 // Lazy routes and role queries are slow in jsdom; give async queries room.
@@ -13,5 +15,7 @@ afterEach(() => {
   server.resetHandlers();
   localStorage.clear();
   db.reset();
+  lendingDb.reset();
+  resetEvmWallet();
 });
 afterAll(() => server.close());
