@@ -72,7 +72,7 @@ function FaucetCard({ row }: { row: TokenBalance }) {
         <div className="flex items-center gap-3">
           <TokenMark symbol={asset.symbol} size={44} />
           <div>
-            <Link to={`/app/assets/${asset.id}`} className="font-medium hover:text-gold">
+            <Link to={`/app/assets/${asset.id}`} className="font-medium hover:text-text">
               {asset.symbol}
             </Link>
             <p className="text-[13px] text-muted">{asset.issuer.name}</p>

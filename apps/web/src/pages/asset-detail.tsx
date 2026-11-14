@@ -49,7 +49,7 @@ function SectionTitle({
 }) {
   return (
     <div className="flex items-start gap-4 px-5 pt-5 sm:px-6">
-      <span className="grid size-10 shrink-0 place-items-center rounded-[12px] border border-line-strong bg-panel-2 text-gold">
+      <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-line bg-panel-2 text-muted">
         <Icon className="size-[18px]" aria-hidden />
       </span>
       <div>
@@ -145,9 +145,9 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
 
 function Pill({ children, to }: { children: React.ReactNode; to?: string }) {
   const cls =
-    "inline-flex max-w-full items-center truncate rounded-full bg-panel-3 px-3 py-1 text-[12.5px] text-text";
+    "inline-flex max-w-full items-center truncate rounded-md bg-panel-2 px-2 py-0.5 text-[13px] text-text";
   return to ? (
-    <Link to={to} className={cn(cls, "hover:text-gold")}>
+    <Link to={to} className={cn(cls, "hover:text-text")}>
       {children}
     </Link>
   ) : (
@@ -165,7 +165,7 @@ function RangeBar({ low, high, price }: { low: number; high: number; price: numb
         <span className="num">{usd(high)}</span>
       </div>
       <div
-        className="relative h-1.5 rounded-full bg-[linear-gradient(90deg,#f27a63,#f2ae52,#3ddc97)]"
+        className="relative h-1.5 rounded-full bg-panel-3"
         role="meter"
         aria-label="Price within its 52 week range"
         aria-valuemin={0}
@@ -359,7 +359,7 @@ function MarketsTable({ a }: { a: Asset }) {
       <h2 className="mb-3 flex flex-wrap items-baseline gap-3 text-[22px] font-medium tracking-tight">
         {a.symbol} Markets
         <span className="flex items-center gap-1.5 text-[13px] font-normal text-muted">
-          <Coins className="size-3.5 text-gold" aria-hidden /> Pontis Test Vault
+          <Coins className="size-3.5 text-faint" aria-hidden /> Pontis Test Vault
         </span>
       </h2>
       <Panel className="overflow-hidden">
@@ -452,7 +452,7 @@ function TokensTable({ a }: { a: Asset }) {
                     <td className="px-3 py-4">
                       <Link
                         to={`/app/assets/${asset.id}`}
-                        className="flex items-center gap-3 hover:text-gold"
+                        className="flex items-center gap-3 hover:text-text"
                       >
                         <TokenMark symbol={asset.symbol} size={28} />
                         <span className="num">{asset.symbol}</span>
@@ -517,7 +517,7 @@ function AboutTab({ a }: { a: Asset }) {
           ]}
         />
         {claim.riskDisclosures.length > 0 && (
-          <div className="mx-5 mb-5 rounded-[14px] border border-warn/30 bg-warn/[0.06] p-4 sm:mx-6">
+          <div className="mx-5 mb-5 rounded-lg border border-warn/30 bg-warn/[0.06] p-4 sm:mx-6">
             <p className="eyebrow mb-2 !text-warn">Risk disclosures</p>
             <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
               {claim.riskDisclosures.map((risk) => (

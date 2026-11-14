@@ -21,7 +21,7 @@ import { useAssets, useIssuer, useIssuers } from "../lib/queries.ts";
 function Monogram({ name }: { name: string }) {
   const letter = name.trim().split(" ").pop()?.[0] ?? "?";
   return (
-    <span className="display grid size-14 shrink-0 place-items-center rounded-[16px] border border-line-strong bg-[radial-gradient(circle_at_30%_20%,rgb(94_212_114/0.18),transparent_70%)] text-3xl text-gold">
+    <span className="grid size-11 shrink-0 place-items-center rounded-lg border border-line-strong bg-panel-2 text-lg font-semibold text-text">
       {letter}
     </span>
   );
@@ -59,13 +59,13 @@ export function Issuers() {
               <li key={issuer.id}>
                 <Link
                   to={`/app/issuers/${issuer.id}`}
-                  className="panel group flex h-full flex-col p-5 transition hover:border-gold/40 sm:p-6"
+                  className="panel group flex h-full flex-col p-5 transition hover:border-faint sm:p-6"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <Monogram name={issuer.name} />
                     <RecordBadge status={issuer.status} />
                   </div>
-                  <h2 className="mt-5 text-lg font-medium group-hover:text-gold">{issuer.name}</h2>
+                  <h2 className="mt-5 text-lg font-medium group-hover:text-text">{issuer.name}</h2>
                   <p className="num text-xs text-faint">{issuer.id}</p>
                   <div className="mt-3">
                     <Hallmark
@@ -85,7 +85,7 @@ export function Issuers() {
                       </span>
                     </span>
                     <ArrowRight
-                      className="size-4 text-faint transition group-hover:translate-x-1 group-hover:text-gold"
+                      className="size-4 text-faint transition group-hover:translate-x-1 group-hover:text-text"
                       aria-hidden
                     />
                   </div>
@@ -134,14 +134,14 @@ export function IssuerDetail() {
       >
         <ArrowLeft className="size-3.5" aria-hidden /> Issuers
       </Link>
-      <header className="mb-8 flex animate-rise items-center gap-5">
+      <header className="mb-6 flex items-center gap-4">
         <Monogram name={i.name} />
         <div>
           <div className="mb-2 flex flex-wrap gap-2">
             <Hallmark synthetic={i.synthetic} verification={i.verificationStatus} size="lg" />
             <RecordBadge status={i.status} />
           </div>
-          <h1 className="display text-[40px] sm:text-[52px]">{i.name}</h1>
+          <h1 className="display text-[24px] sm:text-[26px]">{i.name}</h1>
         </div>
       </header>
 
@@ -193,12 +193,12 @@ export function IssuerDetail() {
                   <Link to={`/app/assets/${a.id}`} className="group flex items-center gap-3 py-3.5">
                     <TokenMark symbol={a.symbol} size={36} />
                     <span className="min-w-0 flex-1">
-                      <span className="block font-medium group-hover:text-gold">{a.symbol}</span>
+                      <span className="block font-medium group-hover:text-text">{a.symbol}</span>
                       <span className="block truncate text-[13px] text-muted">
                         {a.canonicalAssetName}
                       </span>
                     </span>
-                    <ArrowRight className="size-4 text-faint group-hover:text-gold" aria-hidden />
+                    <ArrowRight className="size-4 text-faint group-hover:text-text" aria-hidden />
                   </Link>
                 </li>
               ))}
