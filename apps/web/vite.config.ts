@@ -6,7 +6,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // The wallet libraries require Node's `buffer`. Vite would otherwise stub it out, and the
+      // NEAR wallet selector then crashes on load in live mode.
+      buffer: fileURLToPath(new URL("./node_modules/buffer/index.js", import.meta.url)),
+    },
   },
   // Wallet libraries still reach for Node's `global`.
   define: { global: "globalThis" },

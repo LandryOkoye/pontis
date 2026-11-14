@@ -32,6 +32,7 @@ async function loadAdapter(): Promise<{ adapter: WalletAdapter; Prompts: Compone
     const mock = await import("./mock-wallet.tsx");
     return { adapter: mock.createMockWallet(), Prompts: mock.MockWalletPrompts };
   }
+  await import("./node-globals.ts");
   const near = await import("./near-wallet.ts");
   return { adapter: await near.createNearWallet(), Prompts: null };
 }
