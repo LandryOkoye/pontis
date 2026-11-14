@@ -3,7 +3,7 @@
 import type {
   ApiError,
   Asset,
-  AssetSummary,
+  AssetDirectoryItem,
   Compatibility,
   CompareRoutesRequest,
   CompareRoutesResponse,
@@ -12,6 +12,7 @@ import type {
   Health,
   Issuer,
   IssuerSummary,
+  PriceChart,
   Quote,
   ReconciliationReport,
   Transaction,
@@ -28,7 +29,8 @@ import type {
   PlanRequest,
   WalletCollateral,
 } from "./lending-types.ts";
-import type { ChartRange, MarketChart, MarketDetail, MarketRow } from "./market-types.ts";
+import { chartQuery, toMarketChart } from "./market-adapter.ts";
+import type { ChartRange } from "./market-types.ts";
 
 export interface IntentAsset {
   assetId: string;
@@ -123,6 +125,23 @@ interface List<T> {
   items: T[];
 }
 
+interface Page<T> extends List<T> {
+  nextCursor: string | null;
+}
+
+/** Every row of the asset directory. The API pages it, 100 rows at most per request. */
+async function assetDirectory(): Promise<AssetDirectoryItem[]> {
+  const items: AssetDirectoryItem[] = [];
+  let cursor: string | null = null;
+  do {
+    const query: string = cursor ? `&cursor=${encodeURIComponent(cursor)}` : "";
+    const page: Page<AssetDirectoryItem> = await request(`/v1/assets?limit=100${query}`);
+    items.push(...page.items);
+    cursor = page.nextCursor ?? null;
+  } while (cursor);
+  return items;
+}
+
 const LENDING_PLAN_PATH: Record<LendingOperation, string> = {
   deposit: "/v1/lending/deposits",
   borrow: "/v1/lending/borrows",
@@ -137,13 +156,13 @@ export const api = {
     request<IntentQuote>("/v1/intents/quote", { method: "POST", body }),
   issuers: () => request<List<IssuerSummary>>("/v1/issuers").then((r) => r.items),
   issuer: (id: string) => request<Issuer>(`/v1/issuers/${encodeURIComponent(id)}`),
-  assets: () => request<List<AssetSummary>>("/v1/assets").then((r) => r.items),
+  /** Registry rows with their market figures and sparkline (null without a price). */
+  assets: assetDirectory,
   asset: (id: string) => request<Asset>(`/v1/assets/${encodeURIComponent(id)}`),
-  // Market data: mock-only until the backend ships these endpoints (BACKEND-REQUESTS.md §6).
-  marketAssets: () => request<List<MarketRow>>("/v1/market/assets").then((r) => r.items),
-  marketAsset: (id: string) => request<MarketDetail>(`/v1/market/assets/${encodeURIComponent(id)}`),
   marketChart: (id: string, range: ChartRange) =>
-    request<MarketChart>(`/v1/market/assets/${encodeURIComponent(id)}/chart?range=${range}`),
+    request<PriceChart>(
+      `/v1/assets/${encodeURIComponent(id)}/charts/price?${chartQuery(range)}`,
+    ).then((chart) => toMarketChart(range, chart)),
   compatibility: (id: string) =>
     request<List<Compatibility>>(`/v1/assets/${encodeURIComponent(id)}/compatibility`).then(
       (r) => r.items,

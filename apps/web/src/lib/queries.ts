@@ -1,7 +1,9 @@
 // TanStack Query hooks, one per API read. Mutations live next to the flow that uses them.
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { isTerminalQuoteState } from "@pontis/domain";
 import { ApiFailure, api } from "./api.ts";
+import { toMarketDetail, toMarketRows } from "./market-adapter.ts";
 import type { ChartRange } from "./market-types.ts";
 
 export const keys = {
@@ -91,16 +93,26 @@ export const useTransactions = (account: string | null) =>
     refetchInterval: 8_000,
   });
 
+/** Market figures of every asset, derived from the same directory request as `useAssets`. */
 export const useMarketAssets = () =>
-  useQuery({ queryKey: ["market", "assets"], queryFn: api.marketAssets, refetchInterval: 60_000 });
-
-export const useMarketAsset = (id: string | undefined) =>
   useQuery({
-    queryKey: ["market", "asset", id ?? ""],
-    queryFn: () => api.marketAsset(id as string),
-    enabled: !!id,
+    queryKey: keys.assets,
+    queryFn: api.assets,
+    select: toMarketRows,
     refetchInterval: 60_000,
   });
+
+/** One asset's market figures and its recorded counterparts. */
+export function useMarketAsset(id: string | undefined) {
+  const assets = useQuery({ queryKey: keys.assets, queryFn: api.assets, refetchInterval: 60_000 });
+  const compatibility = useCompatibility(id);
+  const data = useMemo(
+    () =>
+      assets.data && id ? toMarketDetail(assets.data, id, compatibility.data ?? []) : undefined,
+    [assets.data, compatibility.data, id],
+  );
+  return { data, isError: assets.isError, error: assets.error };
+}
 
 export const useMarketChart = (id: string | undefined, range: ChartRange) =>
   useQuery({
