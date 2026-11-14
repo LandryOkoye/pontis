@@ -1,7 +1,6 @@
 // MSW handlers for every endpoint in BuildPlan §8, backed by the in-memory mock database.
 import { HttpResponse, delay, http } from "msw";
 import { config } from "../lib/config.ts";
-import type { ChartRange } from "../lib/market-types.ts";
 import { MockRefusal, db } from "./db.ts";
 import { lendingHandlers } from "./lending-handlers.ts";
 import * as market from "./market.ts";
@@ -59,26 +58,25 @@ export const handlers = [
   ),
   http.get(url("/v1/issuers"), () => answer(() => ({ items: db.issuers() }))),
   http.get(url("/v1/issuers/:id"), ({ params }) => answer(() => db.issuer(String(params.id)))),
-  http.get(url("/v1/assets"), () => answer(() => ({ items: db.assets() }))),
-  http.get(url("/v1/assets/:id"), ({ params }) => answer(() => db.asset(String(params.id)))),
-  http.get(url("/v1/market/assets"), () =>
-    answer(() => ({ items: db.assets().map((a) => market.row(db.asset(a.id))) })),
-  ),
-  http.get(url("/v1/market/assets/:id"), ({ params }) =>
+  http.get(url("/v1/assets"), () =>
     answer(() => {
-      const asset = db.asset(String(params.id));
-      const relations = db.compatibility(asset.id);
-      const parity = new Set(relations.filter((r) => r.parityEnabled).map((r) => r.counterpartId));
-      const others = db
-        .assets()
-        .filter((a) => a.id !== asset.id)
-        .map((a) => db.asset(a.id));
-      return market.detail(asset, others, parity);
+      const items = db.assets().map((summary) => {
+        const convertible = db.compatibility(summary.id).some((r) => r.parityEnabled);
+        return market.directoryItem(summary, db.asset(summary.id), convertible);
+      });
+      return { items, nextCursor: null, total: items.length };
     }),
   ),
-  http.get(url("/v1/market/assets/:id/chart"), ({ params, request }) => {
-    const range = (new URL(request.url).searchParams.get("range") ?? "24h") as ChartRange;
-    return answer(() => market.chart(db.asset(String(params.id)), range));
+  http.get(url("/v1/assets/:id"), ({ params }) => answer(() => db.asset(String(params.id)))),
+  http.get(url("/v1/assets/:id/charts/price"), ({ params, request }) => {
+    const query = new URL(request.url).searchParams;
+    return answer(() =>
+      market.priceChart(
+        db.asset(String(params.id)),
+        query.get("interval") ?? "1h",
+        query.get("from"),
+      ),
+    );
   }),
   http.get(url("/v1/assets/:id/compatibility"), ({ params }) =>
     answer(() => ({ items: db.compatibility(String(params.id)) })),

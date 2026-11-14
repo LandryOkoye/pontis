@@ -19,6 +19,7 @@ import { cn } from "../lib/cn.ts";
 import { isMock } from "../lib/config.ts";
 import { groupDigits } from "../lib/format.ts";
 import { usdCompact } from "../lib/market-format.ts";
+import type { MarketRow } from "../lib/market-types.ts";
 import { useAssets, useHealth, useMarketAssets } from "../lib/queries.ts";
 import { Wordmark } from "./brand.tsx";
 import { Skeleton } from "./ui/primitives.tsx";
@@ -163,8 +164,13 @@ function Sidebar() {
 function TopBar() {
   const assets = useAssets();
   const market = useMarketAssets();
-  const cap = market.data?.reduce((sum, r) => sum + r.marketCapUsd, 0);
-  const vol = market.data?.reduce((sum, r) => sum + r.volume24hUsd, 0);
+  // Totals cover only the assets that have the figure; none at all shows nothing.
+  const total = (pick: (row: MarketRow) => number | null) => {
+    const values = (market.data ?? []).map(pick).filter((v): v is number => v !== null);
+    return values.length ? values.reduce((sum, v) => sum + v, 0) : undefined;
+  };
+  const cap = total((r) => r.marketCapUsd);
+  const vol = total((r) => r.volume24hUsd);
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-ink">
       <div className="flex h-14 items-center gap-6 px-4 sm:px-8">

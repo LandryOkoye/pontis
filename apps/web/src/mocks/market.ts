@@ -1,16 +1,9 @@
-// Deterministic synthetic market data for mock mode. Seeded per asset so reloads and tests see the
-// same chart. None of this exists in the protocol: it stands in for a future market-data service.
-import type { Asset } from "@pontis/api-types";
+// Deterministic simulated market data for mock mode, served in the API's own shapes (the asset
+// directory's `market` and `sparkline`, and price candles). Seeded per asset so reloads and tests
+// see the same chart.
+import type { Asset, AssetDirectoryItem, AssetSummary, PriceChart } from "@pontis/api-types";
+import type { CandleInterval } from "@pontis/domain";
 import { rationalFromWire } from "@pontis/domain";
-import type {
-  ChartPoint,
-  ChartRange,
-  MarketAsset,
-  MarketChart,
-  MarketDetail,
-  MarketPair,
-  MarketRow,
-} from "../lib/market-types.ts";
 
 const STEP_MS = 15 * 60_000;
 const STEPS_PER_DAY = 96;
@@ -85,91 +78,93 @@ export function circulating(asset: Asset): number {
   return Math.round(120_000 + r() * 800_000);
 }
 
-const RANGE_STEPS: Record<ChartRange, { steps: number; stride: number }> = {
-  "24h": { steps: STEPS_PER_DAY, stride: 1 },
-  "1W": { steps: STEPS_PER_DAY * 7, stride: 3 },
-  "1M": { steps: STEPS_PER_DAY * 30, stride: 10 },
-  "1Y": { steps: STEPS_PER_DAY * 365, stride: 120 },
-  All: { steps: MASTER_LEN, stride: 240 },
-};
+/** Mock candles exist on these grids; each maps a candle interval to a look-back and a stride. */
+const WINDOWS: { interval: CandleInterval; days: number; stride: number }[] = [
+  { interval: "15m", days: 1, stride: 1 },
+  { interval: "1h", days: 7, stride: 4 },
+  { interval: "4h", days: 30, stride: 16 },
+  { interval: "1d", days: 365, stride: 96 },
+];
 
-export function chart(asset: Asset, range: ChartRange): MarketChart {
+/** `GET /v1/assets/{id}/charts/price`. Without `from`, daily candles cover the whole history. */
+export function priceChart(asset: Asset, interval: string, from: string | null): PriceChart {
   const m = master(asset);
-  const { steps, stride } = RANGE_STEPS[range];
-  const first = MASTER_LEN - steps;
-  const points: ChartPoint[] = [];
-  for (let i = first + stride - 1; i < MASTER_LEN; i += stride) {
+  const window =
+    WINDOWS.find((w) => w.interval === interval) ?? (WINDOWS[3] as (typeof WINDOWS)[0]);
+  const steps =
+    window.interval === "1d" && !from
+      ? MASTER_LEN
+      : Math.min(MASTER_LEN, STEPS_PER_DAY * window.days);
+  const { stride } = window;
+  const points: PriceChart["points"] = [];
+  for (let i = MASTER_LEN - steps + stride - 1; i < MASTER_LEN; i += stride) {
     let volume = 0;
     for (let k = i - stride + 1; k <= i; k++) volume += m.volume[k] as number;
-    points.push({ t: m.end - (MASTER_LEN - 1 - i) * STEP_MS, price: m.price[i] as number, volume });
+    const close = (m.price[i] as number).toFixed(8);
+    points.push({
+      t: new Date(m.end - (MASTER_LEN - 1 - i) * STEP_MS).toISOString(),
+      simulated: true,
+      open: close,
+      high: close,
+      low: close,
+      close,
+      volumeBase: "0",
+      volumeQuote: volume.toFixed(2),
+      trades: 0,
+      filled: false,
+    });
   }
-  return { range, points };
+  return {
+    representationId: asset.id,
+    interval: window.interval,
+    from: points[0]?.t ?? new Date(m.end).toISOString(),
+    to: new Date(m.end + STEP_MS).toISOString(),
+    points,
+    source: ["simulated_feed"],
+    simulated: true,
+    filledPoints: 0,
+  };
 }
 
-export function row(asset: Asset): MarketRow {
+/** One row of `GET /v1/assets`: the registry summary plus simulated market figures. */
+export function directoryItem(
+  summary: AssetSummary,
+  asset: Asset,
+  convertible: boolean,
+): AssetDirectoryItem {
   const m = master(asset);
   const last = m.price[MASTER_LEN - 1] as number;
   const at = (back: number) => m.price[MASTER_LEN - 1 - back] as number;
-  let vol = 0;
-  for (let k = MASTER_LEN - STEPS_PER_DAY; k < MASTER_LEN; k++) vol += m.volume[k] as number;
-  const sparkline: number[] = [];
-  for (let d = 6; d >= 0; d--) sparkline.push(at(d * STEPS_PER_DAY));
-  return {
-    id: asset.id,
-    symbol: asset.symbol,
-    name: asset.name,
-    priceUsd: last,
-    change24h: last / at(STEPS_PER_DAY) - 1,
-    change7d: last / at(STEPS_PER_DAY * 7) - 1,
-    marketCapUsd: last * circulating(asset),
-    volume24hUsd: vol,
-    sparkline,
-  };
-}
-
-export function detail(asset: Asset, counterparts: Asset[], parityIds: Set<string>): MarketDetail {
-  const m = master(asset);
-  const base = row(asset);
+  let volume = 0;
+  for (let k = MASTER_LEN - STEPS_PER_DAY; k < MASTER_LEN; k++) volume += m.volume[k] as number;
+  const sparkline: string[] = [];
+  for (let d = 6; d >= 0; d--) sparkline.push(at(d * STEPS_PER_DAY).toFixed(8));
   const supply = circulating(asset);
-  let hi = -Infinity;
-  let lo = Infinity;
-  for (let k = MASTER_LEN - STEPS_PER_DAY * 365; k < MASTER_LEN; k += 8) {
-    const p = m.price[k] as number;
-    if (p > hi) hi = p;
-    if (p < lo) lo = p;
-  }
-  const r = rng(hash(`${asset.id}:meta`));
   const vault =
     Number(BigInt(asset.vaultInventory) / 10n ** BigInt(Math.max(0, asset.decimals - 2))) / 100;
-  const full: MarketAsset = {
-    ...base,
-    fdvUsd: base.priceUsd * supply * 1.12,
-    tvlUsd: vault * base.priceUsd,
-    volumeToMarketCap: base.volume24hUsd / base.marketCapUsd,
-    circulatingSupply: supply,
-    totalSupply: Math.round(supply * 1.06),
-    maxSupply: null,
-    holders: Math.round(180 + r() * 4200),
-    high52w: hi,
-    low52w: lo,
-    underlyingUsd: underlyingPrice(asset),
-    canonicalUnitsPerToken: canonicalPerToken(asset),
-    listedAt: "2026-11-07T18:00:00.000Z",
+  const bps = (back: number) => Math.round((last / at(back) - 1) * 10_000);
+  return {
+    ...summary,
+    category: asset.canonicalAsset.category,
+    tags: [],
+    chains: [asset.network],
+    convertible,
+    bridgeable: false,
+    market: {
+      price: last.toFixed(8),
+      currency: "USD",
+      priceAsOf: new Date(m.end).toISOString(),
+      change24hBps: bps(STEPS_PER_DAY),
+      change7dBps: bps(STEPS_PER_DAY * 7),
+      change30dBps: bps(STEPS_PER_DAY * 30),
+      supply: (BigInt(supply) * 10n ** BigInt(asset.decimals)).toString(),
+      marketCap: (last * supply).toFixed(2),
+      volume24h: volume.toFixed(2),
+      tvl: (vault * last).toFixed(2),
+      rank: null,
+      sources: ["simulated_feed"],
+      simulated: true,
+    },
+    sparkline: { interval: "1d", points: sparkline, simulated: true },
   };
-  const split = rng(hash(`${asset.id}:pairs`));
-  const shares = counterparts.map(() => 0.3 + split());
-  const sum = shares.reduce((a, b) => a + b, 0) || 1;
-  const pairs: MarketPair[] = counterparts.map((other, i) => {
-    const share = (shares[i] as number) / sum;
-    return {
-      venue: "Pontis Test Vault",
-      pair: `${asset.symbol} / ${other.symbol}`,
-      kind: parityIds.has(other.id) ? "Parity route" : "Registry only",
-      priceUsd: base.priceUsd,
-      volume24hUsd: parityIds.has(other.id) ? base.volume24hUsd * share : 0,
-      volumeShare: parityIds.has(other.id) ? share : 0,
-      depthUsd: parityIds.has(other.id) ? full.tvlUsd : 0,
-    };
-  });
-  return { asset: full, pairs };
 }
