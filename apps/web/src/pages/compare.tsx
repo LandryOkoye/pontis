@@ -77,7 +77,7 @@ function SideBySide({ a, b }: { a: Asset; b: Asset }) {
                   {line.label}
                 </th>
                 <td className="align-top">{left}</td>
-                <td className={cn("align-top", !same && "text-gold-pale")}>{right}</td>
+                <td className={cn("align-top", !same && "text-text")}>{right}</td>
                 <td className="text-right align-top">
                   {same ? (
                     <span className="inline-flex items-center gap-1 text-xs text-parity">
@@ -129,11 +129,7 @@ export function Compare() {
   let verdict: { title: ReactNode; body: string };
   if (executable) {
     verdict = {
-      title: (
-        <>
-          These convert <em className="text-gold-grad">at parity</em>
-        </>
-      ),
+      title: <>These convert at parity</>,
       body: option.explanation,
     };
   } else if (option?.reasonCode) {
@@ -163,7 +159,7 @@ export function Compare() {
             type="button"
             aria-label="Swap the two assets"
             onClick={() => setPair(toId, fromId)}
-            className="grid size-10 place-items-center rounded-full border border-line-strong text-muted transition hover:border-gold hover:text-gold"
+            className="grid size-9 place-items-center rounded-md border border-line-strong text-muted transition hover:border-faint hover:text-text"
           >
             <ArrowLeftRight className="size-4" aria-hidden />
           </button>
@@ -216,7 +212,7 @@ export function Compare() {
                 )}
                 {relation && <Chip>v{relation.version}</Chip>}
               </div>
-              <h2 className="display text-[34px] sm:text-[42px]">{verdict.title}</h2>
+              <h2 className="display text-[22px]">{verdict.title}</h2>
               <p className="mt-3 text-[15px] text-muted">{verdict.body}</p>
               {meta && (
                 <p className={cn("mt-3 text-[13px]", TONE_TEXT[meta.tone])}>{meta.meaning}</p>

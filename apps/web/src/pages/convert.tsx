@@ -81,7 +81,7 @@ function Steps({ current }: { current: number }) {
         >
           <span
             className={cn(
-              "grid size-6 place-items-center rounded-full border font-mono text-[11px]",
+              "num grid size-5 place-items-center rounded-full border text-[11px] font-medium",
               i < current && "border-parity/50 bg-parity/10 text-parity",
               i === current && "border-gold bg-gold text-gold-ink",
               i > current && "border-line-strong text-faint",
@@ -122,15 +122,20 @@ const EVM_QUOTE_RECIPIENT = "0xcd578f02bb4d8b12ebb0874bbfa08783d087f609";
 
 function LiveIntentsQuote() {
   const tokens = useQuery({ queryKey: ["intents", "tokens"], queryFn: api.intentTokens });
-  const origin = tokens.data?.simulated ? undefined : tokens.data?.assets.find(
-    (asset) => asset.symbol.toUpperCase() === "USDC" && asset.blockchain.toLowerCase() === "near",
-  );
-  const destination = tokens.data?.simulated ? undefined : tokens.data?.assets.find(
-    (asset) =>
-      asset.symbol.toUpperCase() === "USDC" &&
-      (asset.blockchain.toLowerCase() === "arb" ||
-        asset.blockchain.toLowerCase().includes("arbitrum")),
-  );
+  const origin = tokens.data?.simulated
+    ? undefined
+    : tokens.data?.assets.find(
+        (asset) =>
+          asset.symbol.toUpperCase() === "USDC" && asset.blockchain.toLowerCase() === "near",
+      );
+  const destination = tokens.data?.simulated
+    ? undefined
+    : tokens.data?.assets.find(
+        (asset) =>
+          asset.symbol.toUpperCase() === "USDC" &&
+          (asset.blockchain.toLowerCase() === "arb" ||
+            asset.blockchain.toLowerCase().includes("arbitrum")),
+      );
   const quote = useQuery({
     queryKey: ["intents", "quote", origin?.assetId, destination?.assetId],
     enabled: !!origin && !!destination,
@@ -163,20 +168,31 @@ function LiveIntentsQuote() {
         <dl className="mt-4 divide-y divide-line text-sm">
           <Row label="Route">
             <span className="text-[13px]">
-              {origin.symbol} on {origin.blockchain} → {destination.symbol} on {destination.blockchain}
+              {origin.symbol} on {origin.blockchain} → {destination.symbol} on{" "}
+              {destination.blockchain}
             </span>
           </Row>
           <Row label="Amount in">
-            <span className="num">{formatUnits(quote.data.amountIn, origin.decimals)} {origin.symbol}</span>
+            <span className="num">
+              {formatUnits(quote.data.amountIn, origin.decimals)} {origin.symbol}
+            </span>
           </Row>
           <Row label="Estimated out">
-            <span className="num">{formatUnits(quote.data.amountOut, destination.decimals)} {destination.symbol}</span>
+            <span className="num">
+              {formatUnits(quote.data.amountOut, destination.decimals)} {destination.symbol}
+            </span>
           </Row>
           <Row label="Minimum out">
-            <span className="num">{formatUnits(quote.data.minAmountOut, destination.decimals)} {destination.symbol}</span>
+            <span className="num">
+              {formatUnits(quote.data.minAmountOut, destination.decimals)} {destination.symbol}
+            </span>
           </Row>
-          <Row label="Source"><span className="num text-[13px]">{quote.data.source}</span></Row>
-          <Row label="Simulated"><span className="num">{String(quote.data.simulated)}</span></Row>
+          <Row label="Source">
+            <span className="num text-[13px]">{quote.data.source}</span>
+          </Row>
+          <Row label="Simulated">
+            <span className="num">{String(quote.data.simulated)}</span>
+          </Row>
         </dl>
       ) : (
         <p role="status" className="mt-4 text-[13px] text-muted">
@@ -184,7 +200,7 @@ function LiveIntentsQuote() {
             ? "The live quote is unavailable from this API configuration."
             : tokens.data?.simulated
               ? "Connect this panel to the live API to request a mainnet quote."
-            : "The live token list has no USDC route from NEAR to Arbitrum at this time."}
+              : "The live token list has no USDC route from NEAR to Arbitrum at this time."}
         </p>
       )}
     </Panel>
@@ -214,7 +230,7 @@ function QuoteTicket({
   const expired = msLeft === 0;
   const busy = stage === "signing" || stage === "reporting";
   return (
-    <Panel variant="gold" aria-label="Signed quote" className="overflow-hidden">
+    <Panel aria-label="Signed quote" className="overflow-hidden">
       <div className="flex items-center justify-between gap-4 p-5 sm:p-6">
         <div>
           <p className="eyebrow mb-1.5 flex items-center gap-2">
@@ -324,7 +340,7 @@ function RefusalPanel({
   return (
     <Panel aria-label="Quote refused" className="border-danger/30 p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full border border-danger/30 bg-danger/10 text-danger">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-danger/20 bg-danger/[0.07] text-danger">
           <Ban className="size-5" aria-hidden />
         </span>
         <div>
@@ -498,11 +514,7 @@ export function Convert() {
     <>
       <PageHeader
         eyebrow="Parity conversion"
-        title={
-          <>
-            Convert at the <em className="text-gold-grad">approved ratio</em>
-          </>
-        }
+        title={<>Convert at the approved ratio</>}
         lede="Move between two representations of the same claim. The ratio is fixed by an approved compatibility relationship, not by a market."
       />
       <Steps current={step} />
@@ -516,7 +528,7 @@ export function Convert() {
             </div>
           ) : (
             <>
-              <div className="rounded-[16px] bg-ink-2 p-5">
+              <div className="rounded-xl bg-ink-2 p-5">
                 <div className="mb-3 flex items-center justify-between">
                   <label htmlFor="amount-in" className="eyebrow">
                     You send
@@ -524,7 +536,7 @@ export function Convert() {
                   {wallet.accountId && (
                     <button
                       type="button"
-                      className="text-xs text-muted hover:text-gold disabled:hover:text-muted"
+                      className="text-xs text-muted hover:text-text disabled:hover:text-muted"
                       disabled={balance === null || balance === "0"}
                       onClick={() => {
                         if (balance !== null)
@@ -533,7 +545,7 @@ export function Convert() {
                       }}
                     >
                       Balance {balance === null ? "…" : formatUnits(balance, from.decimals)} ·{" "}
-                      <span className="text-gold">Max</span>
+                      <span className="font-medium text-text">Max</span>
                     </button>
                   )}
                 </div>
@@ -582,13 +594,13 @@ export function Convert() {
                   type="button"
                   aria-label="Reverse direction"
                   onClick={() => setPair(to.id, from.id)}
-                  className="grid size-10 place-items-center rounded-full border border-line-strong bg-panel-2 text-muted transition hover:rotate-180 hover:border-gold hover:text-gold"
+                  className="grid size-8 place-items-center rounded-md border border-line-strong bg-panel-2 text-muted transition hover:border-faint hover:text-text"
                 >
                   <ArrowDownUp className="size-4" aria-hidden />
                 </button>
               </div>
 
-              <div className="rounded-[16px] bg-ink-2 p-5">
+              <div className="rounded-xl bg-ink-2 p-5">
                 <p className="eyebrow mb-3">You receive {quote ? "" : "· before fee"}</p>
                 <div className="flex items-center gap-3">
                   <p
@@ -626,7 +638,7 @@ export function Convert() {
                 {route.isLoading ? (
                   <Skeleton className="h-11" />
                 ) : option ? (
-                  <div className="flex items-start gap-3 rounded-[14px] border border-line px-4 py-3">
+                  <div className="flex items-start gap-3 rounded-lg border border-line px-4 py-3">
                     <Chip tone={option.executable ? "parity" : "danger"} dot>
                       {option.executable ? "Route open" : "No route"}
                     </Chip>
@@ -722,7 +734,7 @@ export function Convert() {
                   },
                 ].map((item) => (
                   <li key={item.title} className="flex gap-3">
-                    <item.icon className="mt-0.5 size-4 shrink-0 text-gold" aria-hidden />
+                    <item.icon className="mt-0.5 size-4 shrink-0 text-faint" aria-hidden />
                     <div>
                       <p className="text-sm font-medium">{item.title}</p>
                       <p className="text-[13px] text-muted">{item.body}</p>
