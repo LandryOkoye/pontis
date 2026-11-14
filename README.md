@@ -1,4 +1,4 @@
-# Pontis
+  # Pontis
 
 **The equivalence layer for tokenized real-world assets, built on NEAR.**
 
@@ -13,7 +13,6 @@ Pontis lets a holder convert one issuer's token into another issuer's token for 
 | Demo post (X)  | `<FILL_IN: https://x.com/.../status/...>`            |
 | Demo video     | `<FILL_IN: video URL>`                               |
 | Hosted web app | `<FILL_IN: URL, or "none: run locally, see Try it">` |
-| Hosted API     | `<FILL_IN: URL, or "none: run locally, see Try it">` |
 | Network        | NEAR Testnet                                         |
 | Core contract  | `pontis-core.pontis.testnet`                         |
 | License        | MIT                                                  |

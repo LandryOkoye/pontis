@@ -16,3 +16,6 @@ apps/web
 test-vectors
 # drizzle-kit output (SQL, snapshots, journal)
 packages/db/drizzle
+
+
+apps/web/BACKEND-REQUESTS.md
