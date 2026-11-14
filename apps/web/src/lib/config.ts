@@ -8,6 +8,9 @@ export const config = {
   coreAccountId: env.VITE_PONTIS_CORE_ACCOUNT_ID ?? "pontis-core.pontis.testnet",
   networkId: "testnet" as const,
   explorerUrl: "https://testnet.nearblocks.io",
+  // Lending runs on Ethereum Sepolia (docs/morpho-sepolia-lending.md). Read-only calls only.
+  evmRpcUrl: env.VITE_SEPOLIA_RPC_URL ?? "https://ethereum-sepolia-rpc.publicnode.com",
+  evmExplorerUrl: "https://sepolia.etherscan.io",
 };
 
 export const isMock = config.apiMode === "mock";
