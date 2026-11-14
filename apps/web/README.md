@@ -40,18 +40,20 @@ The API's `CORS_ORIGIN` must include the web origin. Live mode uses the NEAR wal
 
 ## Routes
 
-| Path                  | Screen                                                                |
-| --------------------- | --------------------------------------------------------------------- |
-| `/`                   | Landing page                                                          |
-| `/app`                | Overview: registry stats, vault depth, compatibility matrix, activity |
-| `/app/assets`         | Asset catalog                                                         |
-| `/app/assets/:id`     | Asset detail: claim, representation, issuer, relationships, evidence  |
-| `/app/issuers[/:id]`  | Issuers and issuer record                                             |
-| `/app/compare`        | Compare two representations and explain the classification            |
-| `/app/convert`        | Amount, signed quote with 60 s countdown, wallet signing              |
-| `/app/activity[/:id]` | History, and one conversion's timeline, receipt and contract events   |
-| `/app/wallet`         | Balances read from the token contracts, and the faucet                |
-| `/app/reconciliation` | Operator report (admin key held in memory only)                       |
+| Path                  | Screen                                                                 |
+| --------------------- | ---------------------------------------------------------------------- |
+| `/`                   | Landing page                                                           |
+| `/app`                | Overview: registry stats, vault depth, compatibility matrix, activity  |
+| `/app/assets`         | Asset catalog                                                          |
+| `/app/assets/:id`     | Asset detail: claim, representation, issuer, relationships, evidence   |
+| `/app/issuers[/:id]`  | Issuers and issuer record                                              |
+| `/app/compare`        | Compare two representations and explain the classification             |
+| `/app/convert`        | Amount, signed quote with 60 s countdown, wallet signing               |
+| `/app/borrow`         | Lending markets, collateral registry, the wallet's eligible collateral |
+| `/app/borrow/:id`     | One market: position, eligibility, deposit / borrow / repay / withdraw |
+| `/app/activity[/:id]` | History, and one conversion's timeline, receipt and contract events    |
+| `/app/wallet`         | Balances read from the token contracts, and the faucet                 |
+| `/app/reconciliation` | Operator report (admin key held in memory only)                        |
 
 ## Layout
 
@@ -59,6 +61,7 @@ The API's `CORS_ORIGIN` must include the web origin. Live mode uses the NEAR wal
 src/
   lib/         config, API client, query hooks, formatting (bigint only), copy
   wallet/      wallet adapter: NEAR wallet selector (live) and simulated wallet (mock)
+  evm/         EVM wallet for lending: injected wallet on Sepolia (live) and simulated (mock)
   mocks/       MSW handlers and the in-memory mock database / chain
   components/  design system (ui/), labels, the Span visual, charts, shell
   pages/       one file per screen
