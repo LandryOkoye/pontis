@@ -19,9 +19,15 @@ const PLAIN_COMPACT = new Intl.NumberFormat("en-US", {
 });
 const INT = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
-export const usd = (n: number): string => USD.format(n);
-export const usdCompact = (n: number): string => COMPACT.format(n);
-export const compact = (n: number): string => PLAIN_COMPACT.format(n);
+/** A figure the API does not have renders as a dash, never as zero. */
+const orDash =
+  (format: (n: number) => string) =>
+  (n: number | null | undefined): string =>
+    n === null || n === undefined ? "—" : format(n);
+
+export const usd = orDash((n) => USD.format(n));
+export const usdCompact = orDash((n) => COMPACT.format(n));
+export const compact = orDash((n) => PLAIN_COMPACT.format(n));
 export const integer = (n: number): string => INT.format(n);
 
 /** "+1.23%" / "-0.40%" from a fraction. */

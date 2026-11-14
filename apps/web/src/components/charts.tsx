@@ -178,7 +178,7 @@ export function Meter({
 }
 
 // ---------------------------------------------------------------------------------------------
-// Market charts (synthetic data in mock mode; see BACKEND-REQUESTS.md §6).
+// Market charts. The data is simulated by the demo feed and labelled as such.
 
 const UP = "#4fc98d";
 const DOWN = "#e8705f";

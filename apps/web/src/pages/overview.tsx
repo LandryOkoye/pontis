@@ -30,7 +30,8 @@ import type { MarketRow } from "../lib/market-types.ts";
 import { keys, useAssets, useMarketAssets, useTransactions } from "../lib/queries.ts";
 import { useWallet } from "../wallet/context.tsx";
 
-function Change({ value }: { value: number }) {
+function Change({ value }: { value: number | null }) {
+  if (value === null) return <span className="num text-faint">—</span>;
   return (
     <span className={cn("num", value >= 0 ? "text-parity" : "text-danger")}>
       <span aria-hidden>{value >= 0 ? "▲ " : "▼ "}</span>
@@ -210,18 +211,25 @@ export function Overview() {
   });
 
   const all = market.data ?? [];
-  const totalCap = all.reduce((s, r) => s + r.marketCapUsd, 0);
-  const totalVol = all.reduce((s, r) => s + r.volume24hUsd, 0);
+  // Totals cover only the assets that have the figure. With no market cap at all (no supply
+  // snapshot yet) the card shows a dash rather than a zero.
+  const capped = all.filter(
+    (r): r is MarketRow & { marketCapUsd: number; priceUsd: number } =>
+      r.marketCapUsd !== null && r.priceUsd !== null && r.priceUsd > 0,
+  );
+  const totalCap = capped.length ? capped.reduce((s, r) => s + r.marketCapUsd, 0) : null;
+  const volumes = all.flatMap((r) => (r.volume24hUsd === null ? [] : [r.volume24hUsd]));
+  const totalVol = volumes.length ? volumes.reduce((s, v) => s + v, 0) : null;
   // Weighted 24h change and a summed 7 day line for the headline cards.
-  const capChange =
-    totalCap === 0 ? 0 : all.reduce((s, r) => s + r.change24h * r.marketCapUsd, 0) / totalCap;
-  const capSeries =
-    all.length === 0
-      ? []
-      : (all[0] as MarketRow).sparkline.map((_, i) =>
-          all.reduce((s, r) => s + (r.sparkline[i] ?? 0) * (r.marketCapUsd / r.priceUsd), 0),
-        );
-  const movers = [...all].sort((a, b) => b.change24h - a.change24h);
+  const capChange = totalCap
+    ? capped.reduce((s, r) => s + (r.change24h ?? 0) * r.marketCapUsd, 0) / totalCap
+    : undefined;
+  const capSeries = (capped[0]?.sparkline ?? []).map((_, i) =>
+    capped.reduce((s, r) => s + (r.sparkline[i] ?? 0) * (r.marketCapUsd / r.priceUsd), 0),
+  );
+  const movers = all
+    .filter((r): r is MarketRow & { change24h: number } => r.change24h !== null)
+    .sort((a, b) => b.change24h - a.change24h);
 
   const txs = transactions.data ?? [];
   const slices = (
@@ -267,8 +275,8 @@ export function Overview() {
         <Stat
           label="Synthetic market cap"
           value={market.isLoading ? "…" : usdCompact(totalCap)}
-          change={capChange}
-          series={capSeries}
+          {...(capChange !== undefined ? { change: capChange } : {})}
+          {...(capSeries.length > 1 ? { series: capSeries } : {})}
           note="24h"
         />
         <Stat
@@ -293,7 +301,7 @@ export function Overview() {
           <div>
             <h2 className="text-[15px] font-medium">Tokenized assets</h2>
             <p className="eyebrow mt-0.5">
-              Prices and volumes are synthetic, generated for the demo.
+              Prices and volumes are simulated for the demo. A dash means the API has no figure.
             </p>
           </div>
           <Segmented<Filter>
@@ -372,7 +380,14 @@ export function Overview() {
                       <td className="num px-3 py-3 text-right">{usdCompact(row.volume24hUsd)}</td>
                       <td className="px-3 py-3">
                         <div className="flex justify-end">
-                          <Sparkline values={row.sparkline} label={`${row.symbol}, last 7 days`} />
+                          {row.sparkline.length > 1 ? (
+                            <Sparkline
+                              values={row.sparkline}
+                              label={`${row.symbol}, last 7 days`}
+                            />
+                          ) : (
+                            <span className="text-faint">—</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-5 py-3 text-right">

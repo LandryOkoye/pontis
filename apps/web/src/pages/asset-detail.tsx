@@ -24,7 +24,7 @@ import {
 import { cn } from "../lib/cn.ts";
 import { CLASSIFICATION } from "../lib/copy.ts";
 import { formatDate, ratioText, wholeTokenRate } from "../lib/format.ts";
-import { compact, integer, pct, usd, usdCompact } from "../lib/market-format.ts";
+import { compact, pct, usd, usdCompact } from "../lib/market-format.ts";
 import type { ChartRange, MarketAsset } from "../lib/market-types.ts";
 import { CHART_RANGES } from "../lib/market-types.ts";
 import {
@@ -116,7 +116,8 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "about", label: "About" },
 ];
 
-function Delta({ value }: { value: number }) {
+function Delta({ value }: { value: number | null }) {
+  if (value === null) return <span className="num text-faint">—</span>;
   return (
     <span className={cn("num", value >= 0 ? "text-parity" : "text-danger")}>
       <span aria-hidden>{value >= 0 ? "▲ " : "▼ "}</span>
@@ -155,32 +156,6 @@ function Pill({ children, to }: { children: React.ReactNode; to?: string }) {
   );
 }
 
-function RangeBar({ low, high, price }: { low: number; high: number; price: number }) {
-  const at = Math.max(0, Math.min(1, (price - low) / (high - low || 1))) * 100;
-  return (
-    <div className="px-4 pb-4 pt-3">
-      <p className="mb-2 text-center text-[12px] text-muted">52-week range (synthetic)</p>
-      <div className="mb-1.5 flex justify-between text-[13px]">
-        <span className="num">{usd(low)}</span>
-        <span className="num">{usd(high)}</span>
-      </div>
-      <div
-        className="relative h-1.5 rounded-full bg-panel-3"
-        role="meter"
-        aria-label="Price within its 52 week range"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(at)}
-      >
-        <span
-          className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink bg-text"
-          style={{ left: `${at}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function LeftRail({ a, m }: { a: Asset; m: MarketAsset | undefined }) {
   return (
     <aside className="space-y-5" aria-label="Key figures">
@@ -202,13 +177,24 @@ function LeftRail({ a, m }: { a: Asset; m: MarketAsset | undefined }) {
           {m ? (
             <>
               <p className="num flex flex-wrap items-baseline gap-3 text-[34px] font-light leading-none tracking-tight">
-                {usd(m.priceUsd)}
-                <span className="text-sm">
-                  <Delta value={m.change24h} /> <span className="text-faint">24h</span>
-                </span>
+                {m.priceUsd === null ? (
+                  <span className="text-faint">No price</span>
+                ) : (
+                  usd(m.priceUsd)
+                )}
+                {m.priceUsd !== null && (
+                  <span className="text-sm">
+                    <Delta value={m.change24h} /> <span className="text-faint">24h</span>
+                  </span>
+                )}
               </p>
               <p className="mt-2 text-[12.5px] text-faint">
-                Synthetic price · 1 {a.symbol} = {compact(m.canonicalUnitsPerToken)} canonical{" "}
+                {m.priceUsd === null
+                  ? "No price feed"
+                  : m.simulated
+                    ? "Simulated price"
+                    : "Testnet price"}{" "}
+                · 1 {a.symbol} = {compact(m.canonicalUnitsPerToken)} canonical{" "}
                 {m.canonicalUnitsPerToken === 1 ? "unit" : "units"}
               </p>
             </>
@@ -223,23 +209,24 @@ function LeftRail({ a, m }: { a: Asset; m: MarketAsset | undefined }) {
           <div className="grid grid-cols-2 divide-x divide-line">
             <div className="divide-y divide-line">
               <Stat label="Market cap">{usdCompact(m.marketCapUsd)}</Stat>
-              <Stat label="FDV">{usdCompact(m.fdvUsd)}</Stat>
               <Stat label="Circulating">{compact(m.circulatingSupply)}</Stat>
-              <Stat label="Holders">{integer(m.holders)}</Stat>
+              <Stat label="Test vault (TVL)">{usdCompact(m.tvlUsd)}</Stat>
             </div>
             <div className="divide-y divide-line">
               <Stat label="Volume (24h)">{usdCompact(m.volume24hUsd)}</Stat>
-              <Stat label="Vol / Mkt cap">{m.volumeToMarketCap.toFixed(4)}</Stat>
-              <Stat label="Test vault (TVL)">{usdCompact(m.tvlUsd)}</Stat>
+              <Stat label="Vol / Mkt cap">
+                {m.marketCapUsd && m.volume24hUsd !== null
+                  ? (m.volume24hUsd / m.marketCapUsd).toFixed(4)
+                  : "—"}
+              </Stat>
               <Stat label="Change (7d)">
                 <Delta value={m.change7d} />
               </Stat>
             </div>
           </div>
         ) : (
-          <Skeleton className="h-64" />
+          <Skeleton className="h-48" />
         )}
-        {m && <RangeBar low={m.low52w} high={m.high52w} price={m.priceUsd} />}
       </div>
 
       <dl className="divide-y divide-line/60 px-1">
@@ -266,9 +253,6 @@ function LeftRail({ a, m }: { a: Asset; m: MarketAsset | undefined }) {
         </MetaRow>
         <MetaRow label="Unit multiplier">
           <Pill>{ratioText(a.unitMultiplier)}</Pill>
-        </MetaRow>
-        <MetaRow label="Registered">
-          <Pill>{m ? formatDate(m.listedAt) : "…"}</Pill>
         </MetaRow>
         <MetaRow label="Last reviewed">
           <Pill>{a.lastReviewedAt ? formatDate(a.lastReviewedAt) : "Never"}</Pill>
@@ -342,7 +326,7 @@ function ChartTab({ a, m }: { a: Asset; m: MarketAsset | undefined }) {
           <PriceChart
             points={chart.data.points}
             range={range}
-            multiplier={mode === "cap" && m ? m.circulatingSupply : 1}
+            multiplier={mode === "cap" && m?.circulatingSupply ? m.circulatingSupply : 1}
             ariaLabel={`${a.symbol} ${mode === "cap" ? "market cap" : "price"}, ${range}, synthetic data`}
           />
         )}
@@ -378,8 +362,6 @@ function MarketsTable({ a }: { a: Asset }) {
                   <th className="px-3 py-3 font-medium">Pair</th>
                   <th className="px-3 py-3 text-right font-medium">Price</th>
                   <th className="px-3 py-3 text-right font-medium">Depth</th>
-                  <th className="px-3 py-3 text-right font-medium">Vol (24h)</th>
-                  <th className="px-3 py-3 text-right font-medium">Vol %</th>
                   <th className="px-5 py-3 text-right font-medium">Route</th>
                 </tr>
               </thead>
@@ -391,12 +373,6 @@ function MarketsTable({ a }: { a: Asset }) {
                     <td className="num px-3 py-4 text-right">{usd(p.priceUsd)}</td>
                     <td className="num px-3 py-4 text-right">
                       {p.depthUsd ? usdCompact(p.depthUsd) : "—"}
-                    </td>
-                    <td className="num px-3 py-4 text-right">
-                      {p.volume24hUsd ? usdCompact(p.volume24hUsd) : "—"}
-                    </td>
-                    <td className="num px-3 py-4 text-right">
-                      {p.volumeShare ? `${(p.volumeShare * 100).toFixed(2)}%` : "—"}
                     </td>
                     <td className="px-5 py-4 text-right">
                       <Chip tone={p.kind === "Parity route" ? "parity" : "neutral"} dot>
@@ -463,13 +439,9 @@ function TokensTable({ a }: { a: Asset }) {
                         )}
                       </Link>
                     </td>
-                    <td className="num px-3 py-4 text-right">{row ? usd(row.priceUsd) : "—"}</td>
-                    <td className="num px-3 py-4 text-right">
-                      {row ? usdCompact(row.marketCapUsd) : "—"}
-                    </td>
-                    <td className="num px-3 py-4 text-right">
-                      {row ? usdCompact(row.volume24hUsd) : "—"}
-                    </td>
+                    <td className="num px-3 py-4 text-right">{usd(row?.priceUsd)}</td>
+                    <td className="num px-3 py-4 text-right">{usdCompact(row?.marketCapUsd)}</td>
+                    <td className="num px-3 py-4 text-right">{usdCompact(row?.volume24hUsd)}</td>
                     <td className="px-5 py-4 text-right">
                       {asset.id === a.id ? (
                         <span className="text-faint">—</span>
